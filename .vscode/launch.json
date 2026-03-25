@@ -1,0 +1,55 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "JobHunter: Full Pipeline",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.main",
+            "args": ["pipeline"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/Scripts/python.exe",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "JobHunter: Scrape Only",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.main",
+            "args": ["scrape"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/Scripts/python.exe",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "JobHunter: Tailor Only",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.main",
+            "args": ["tailor"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/Scripts/python.exe",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "JobHunter: Apply Only",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.main",
+            "args": ["apply"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/Scripts/python.exe",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "JobHunter: Status",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.main",
+            "args": ["status"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/Scripts/python.exe",
+            "console": "integratedTerminal"
+        }
+    ]
+}

@@ -1,0 +1,56 @@
+# ============================================================
+# JobHunter — Search & System Settings
+# ============================================================
+# Copy this file to settings.yaml and customize for your search.
+# settings.yaml is gitignored — your preferences stay private.
+# ============================================================
+
+job_search:
+  roles:
+    - "data engineer"
+    - "data scientist"
+    - "software engineer"
+  locations:
+    - "San Francisco, CA"
+    - "Seattle, WA"
+    - "New York, NY"
+    - "Chicago, IL"
+  remote: true              # also include remote jobs
+  job_type: "fulltime"      # fulltime, parttime, contract, internship
+  experience_levels:
+    - "entry"
+    - "mid"
+    - "senior"
+  sites:
+    - "indeed"
+    - "linkedin"
+    - "glassdoor"
+    - "zip_recruiter"
+    - "google"
+  results_per_search: 50    # per role × location × site
+  hours_old: 72             # only jobs posted in last N hours
+
+openai:
+  model: "gpt-4o"
+  temperature: 0.7
+
+automation:
+  auto_submit: true
+  max_applications_per_day: 25
+  delay_between_applications_seconds: 30
+  screenshot_before_submit: true
+  skip_captcha_sites: true
+
+scheduler:
+  enabled: true
+  run_time: "09:00"
+  log_dir: "data/logs"
+
+filters:
+  exclude_companies: []              # e.g. ["CompanyX", "CompanyY"]
+  min_salary: 0                      # 0 = no minimum
+  keywords_required: []              # at least one must appear in description
+  keywords_exclude:
+    - "clearance"
+    - "ts/sci"
+    - "top secret"

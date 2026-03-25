@@ -1,0 +1,64 @@
+# ============================================================
+# JobHunter — Personal Profile
+# ============================================================
+# Fill in your details below. This file is used by the LLM to
+# answer application form questions and personalize documents.
+# Copy this file to profile.yaml and fill in your info.
+# profile.yaml is gitignored — your data stays private.
+# ============================================================
+
+personal:
+  first_name: ""
+  last_name: ""
+  email: ""
+  phone: ""
+  address:
+    street: ""
+    city: ""
+    state: ""
+    zip_code: ""
+    country: "United States"
+  date_of_birth: ""  # optional — some applications ask for this
+
+work_authorization:
+  authorized_us: true
+  requires_sponsorship: false
+
+education:
+  - degree: ""          # e.g. "Bachelor of Science", "Master of Science"
+    field: ""           # e.g. "Computer Science", "Data Science"
+    school: ""          # e.g. "University of Washington"
+    graduation_year: ""
+    gpa: ""             # optional
+
+work_experience:
+  - title: ""           # e.g. "Data Engineer"
+    company: ""
+    start_date: ""      # e.g. "2022-01"
+    end_date: ""        # e.g. "2024-06" or "present"
+    description: ""     # brief summary — the LLM uses your full resume for details
+
+skills:
+  languages: []         # e.g. ["Python", "SQL", "Java"]
+  frameworks: []        # e.g. ["Spark", "Airflow", "React"]
+  tools: []             # e.g. ["AWS", "Docker", "Kubernetes"]
+
+links:
+  linkedin: ""
+  github: ""
+  portfolio: ""         # optional
+
+preferences:
+  desired_salary_min: 0
+  desired_salary_max: 0
+  willing_to_relocate: true
+  remote_preference: "any"  # remote, hybrid, onsite, any
+  start_date: "immediately"
+
+# Common application questions — LLM uses these as base answers
+# Leave blank to skip / let LLM use "Prefer not to answer"
+diversity:
+  gender: ""
+  ethnicity: ""
+  veteran_status: ""
+  disability_status: ""

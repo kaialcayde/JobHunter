@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(pip --version)",
+      "Bash(pip show:*)",
+      "Bash(venv/Scripts/playwright install:*)",
+      "Bash(venv/Scripts/python -m src.main)",
+      "Bash(venv/Scripts/python -m src.main status)",
+      "Bash(venv/Scripts/python -c \":*)",
+      "Bash(rm -f \"c:/Users/kaina/OneDrive/Documents/JobHunter/data/jobhunter.db\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\kaina\\OneDrive\\Documents\\JobHunter"
+    ]
+  }
+}

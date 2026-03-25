@@ -1,0 +1,21 @@
+# Personal data — never commit
+.env
+config/profile.yaml
+config/settings.yaml
+templates/base_resume.docx
+templates/base_cover_letter.docx
+
+# Generated output
+applications/
+data/
+screenshots/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
