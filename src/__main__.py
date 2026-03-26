@@ -1,4 +1,4 @@
 """Allow running as: python -m src.main"""
-from .main import main
+from .cli import main
 
 main()

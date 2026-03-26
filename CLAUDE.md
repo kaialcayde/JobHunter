@@ -5,7 +5,7 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 
 ## Architecture
 - **Python 3.12** project, venv at `venv/`
-- **CLI entry point**: `python -m src.main <command>` (pipeline, scrape, tailor, apply, status, list)
+- **CLI entry point**: `python -m src <command>` (pipeline, scrape, tailor, apply, status, list)
 - **Config**: `config/profile.yaml` (personal info), `config/settings.yaml` (search params), `.env` (API keys)
 - **Templates**: `templates/base_resume.docx`, `templates/base_cover_letter.docx`
 - **Output**: `applications/{Company}/{Position}/` with tailored DOCX/PDF + metadata JSON
@@ -14,14 +14,20 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 - **Scheduler**: `run_pipeline.bat` via Windows Task Scheduler
 
 ## Key Modules
-- `src/scraper.py` - JobSpy wrapper, multi-board search, dedup, filtering
-- `src/tailoring.py` - OpenAI integration, hardcoded anti-fabrication safeguard in SYSTEM_PROMPT
-- `src/document.py` - DOCX/PDF generation, one-page resume enforcement
-- `src/applicant.py` - Playwright form filling, ATS detection, LLM-driven field inference
-- `src/database.py` - SQLite schema (jobs, applications, application_log tables)
-- `src/models.py` - Pydantic models validating profile.yaml and settings.yaml
-- `src/profile.py` - Config loading through Pydantic validation
-- `src/main.py` - CLI orchestrator, pipeline flow
+- `src/cli.py` - CLI orchestrator, pipeline flow
+- `src/db.py` - SQLite schema (jobs, applications, application_log, scrape_cache tables)
+- `src/utils.py` - Path constants, directory helpers, filename sanitization
+- `src/config/` - Configuration loading and validation
+  - `models.py` - Pydantic models validating profile.yaml and settings.yaml
+  - `loader.py` - YAML loading through Pydantic validation, profile summary generation
+- `src/core/` - Core business logic
+  - `scraper.py` - JobSpy wrapper, multi-board search, dedup, filtering
+  - `tailoring.py` - OpenAI integration, hardcoded anti-fabrication safeguard in SYSTEM_PROMPT
+  - `document.py` - DOCX/PDF generation, one-page resume enforcement
+- `src/automation/` - Browser automation
+  - `applicant.py` - Application orchestration, round-robin distribution, batch processing
+  - `detection.py` - CAPTCHA/login detection, modal dismissal, Apply/Next/Submit button clicking
+  - `forms.py` - Form field extraction via DOM inspection, LLM-inferred filling, file uploads
 
 ## Important Conventions
 - **Never fabricate resume content** - the SYSTEM_PROMPT in tailoring.py is hardcoded and must not be weakened
@@ -40,8 +46,9 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 
 ## Running
 - VS Code launch configs in `.vscode/launch.json` (F5 to run)
-- Or: `venv\Scripts\python -m src.main pipeline`
+- Or: `venv\Scripts\python -m src pipeline`
 - Daily automation: Windows Task Scheduler runs `run_pipeline.bat` at 09:00
 
-## TODO
-See `TODO.md` for pending features and improvements.
+## References
+- See `ARCHITECTURE.md` for the full directory guide, data flow, and import graph
+- See `TODO.md` for pending features and improvements

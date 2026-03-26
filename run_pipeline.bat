@@ -11,4 +11,4 @@ REM Create log directory if needed
 if not exist "data\logs" mkdir "data\logs"
 
 REM Run the full pipeline, logging output
-python -m src.main pipeline >> "data\logs\pipeline_%date:~-4%-%date:~4,2%-%date:~7,2%.log" 2>&1
+python -m src pipeline >> "data\logs\pipeline_%date:~-4%-%date:~4,2%-%date:~7,2%.log" 2>&1

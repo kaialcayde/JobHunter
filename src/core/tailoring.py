@@ -2,18 +2,21 @@
 
 import os
 import json
+import logging
 import time
 from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from .profile import load_profile, get_profile_summary
-from .utils import TEMPLATES_DIR
+from ..config import load_profile, get_profile_summary
+from ..utils import TEMPLATES_DIR
 
 load_dotenv()
 
-# ── Anti-fabrication safeguard — HARDCODED, not configurable ─────────
+logger = logging.getLogger(__name__)
+
+# -- Anti-fabrication safeguard -- HARDCODED, not configurable ---------
 SYSTEM_PROMPT = """You are a professional resume and cover letter writer.
 
 CRITICAL RULES (non-negotiable):
@@ -65,8 +68,8 @@ def _call_with_retry(client: OpenAI, settings: dict, prompt: str,
             if attempt == max_retries - 1:
                 raise
             wait = 2 ** (attempt + 1)  # 2s, 4s
-            print(f"  OpenAI API error (attempt {attempt+1}/{max_retries}): {e}")
-            print(f"  Retrying in {wait}s...")
+            logger.warning(f"OpenAI API error (attempt {attempt+1}/{max_retries}): {e}")
+            logger.info(f"Retrying in {wait}s...")
             time.sleep(wait)
 
 
@@ -238,8 +241,14 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
 Return ONLY valid JSON — no explanation, no markdown fences.
 """
 
+    field_labels = [f.get("label", f.get("id", "?")) for f in fields]
+    logger.info(f"Form filling: {len(fields)} fields for {job.get('company', '?')} - {job.get('title', '?')}")
+    logger.debug(f"Form fields: {field_labels}")
+
+    start_time = time.time()
     for attempt in range(3):
         try:
+            logger.debug(f"OpenAI API call for form filling (attempt {attempt+1}/3)...")
             response = client.chat.completions.create(
                 model=_get_model(settings),
                 temperature=0.3,  # Lower temperature for form filling — want precision
@@ -248,6 +257,12 @@ Return ONLY valid JSON — no explanation, no markdown fences.
                     {"role": "user", "content": prompt},
                 ],
             )
+            elapsed = time.time() - start_time
+            usage = response.usage
+            logger.info(
+                f"Form filling API response: {elapsed:.1f}s, "
+                f"{usage.prompt_tokens} prompt + {usage.completion_tokens} completion = {usage.total_tokens} tokens"
+            )
             break
         except KeyboardInterrupt:
             raise
@@ -255,8 +270,8 @@ Return ONLY valid JSON — no explanation, no markdown fences.
             if attempt == 2:
                 raise
             wait = 2 ** (attempt + 1)
-            print(f"  OpenAI API error (attempt {attempt+1}/3): {e}")
-            print(f"  Retrying in {wait}s...")
+            logger.warning(f"OpenAI API error (attempt {attempt+1}/3): {e}")
+            logger.info(f"Retrying in {wait}s...")
             time.sleep(wait)
 
     text = response.choices[0].message.content.strip()
@@ -267,4 +282,6 @@ Return ONLY valid JSON — no explanation, no markdown fences.
         text = text[:-3]
     text = text.strip()
 
-    return json.loads(text)
+    answers = json.loads(text)
+    logger.debug(f"Form answers: {json.dumps(answers, indent=2)}")
+    return answers

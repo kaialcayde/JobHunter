@@ -1,4 +1,4 @@
-"""JobHunter CLI - main entry point and pipeline orchestrator."""
+"""JobHunter CLI -- main entry point and pipeline orchestrator."""
 
 import os
 import sys
@@ -14,12 +14,13 @@ from rich.console import Console
 from rich.table import Table
 from rich.box import ASCII
 
-from .database import (
+from .db import (
     get_connection, get_jobs_by_status, update_job_status,
-    count_jobs_by_status, get_job_by_id, count_applications_today
+    count_jobs_by_status, get_job_by_id, count_applications_today,
+    reset_failed_jobs, delete_failed_jobs
 )
-from .profile import load_settings
-from .utils import LOGS_DIR, ensure_dirs
+from .config import load_settings
+from .utils import LOGS_DIR, LINKEDIN_AUTH_STATE, ensure_dirs
 
 console = Console(force_terminal=True)
 
@@ -71,15 +72,15 @@ def setup_logging():
 def cmd_scrape():
     """Run the job scraper."""
     console.print("[bold blue]== Job Scraper ==[/]")
-    from .scraper import scrape_jobs
+    from .core.scraper import scrape_jobs
     scrape_jobs()
 
 
 def cmd_tailor():
     """Generate tailored resumes and cover letters for new jobs."""
     console.print("[bold blue]== Resume & Cover Letter Tailoring ==[/]")
-    from .tailoring import tailor_resume, tailor_cover_letter
-    from .document import create_resume_docx, create_cover_letter_docx, create_resume_pdf, create_cover_letter_pdf
+    from .core.tailoring import tailor_resume, tailor_cover_letter
+    from .core.document import create_resume_docx, create_cover_letter_docx, create_resume_pdf, create_cover_letter_pdf
 
     settings = load_settings()
     conn = get_connection()
@@ -140,10 +141,66 @@ def cmd_tailor():
     console.print("[bold green]Tailoring complete![/]")
 
 
+def cmd_login():
+    """Launch a browser for manual LinkedIn login, then save session cookies."""
+    from playwright.sync_api import sync_playwright
+
+    ensure_dirs()
+    console.print("[bold blue]== LinkedIn Login ==[/]\n")
+    console.print("A browser window will open. Log in to LinkedIn manually.")
+    console.print("Handle any 2FA or CAPTCHA prompts in the browser.")
+    console.print("When you see your LinkedIn feed, come back here and press Enter.\n")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)
+
+        # Load existing session if refreshing
+        context_kwargs = {"viewport": {"width": 1280, "height": 900}}
+        if LINKEDIN_AUTH_STATE.exists():
+            context_kwargs["storage_state"] = str(LINKEDIN_AUTH_STATE)
+            console.print("[dim]Loading existing session (refreshing)...[/]")
+
+        context = browser.new_context(**context_kwargs)
+        page = context.new_page()
+        page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded")
+
+        input("Press Enter here after you have logged in...")
+
+        context.storage_state(path=str(LINKEDIN_AUTH_STATE))
+        browser.close()
+
+    console.print(f"\n[green]LinkedIn session saved to {LINKEDIN_AUTH_STATE}[/]")
+    console.print("Future apply/pipeline runs will use this session automatically.")
+
+
+def _check_linkedin_auth() -> bool:
+    """Check for LinkedIn auth state. Prompt user to log in if missing.
+
+    Returns True if auth is available or user chose to continue without it.
+    """
+    if LINKEDIN_AUTH_STATE.exists():
+        return True
+
+    console.print("[yellow]No LinkedIn login found.[/]")
+    console.print("Jobs requiring LinkedIn auth will be skipped without it.")
+    console.print("Run 'python -m src login' to authenticate.\n")
+
+    try:
+        answer = input("Continue without LinkedIn auth? (y/N): ").strip().lower()
+    except EOFError:
+        answer = "y"  # non-interactive environment, continue without auth
+
+    if answer != "y":
+        cmd_login()
+
+    return True
+
+
 def cmd_apply():
     """Run the application automation."""
     console.print("[bold blue]== Application Automation ==[/]")
-    from .applicant import apply_to_jobs
+    _check_linkedin_auth()
+    from .automation import apply_to_jobs
     apply_to_jobs()
 
 
@@ -198,8 +255,10 @@ def cmd_pipeline():
 
     # Step 3: Apply
     console.print("\n[bold magenta]=== Step 3/3: Submitting Applications ===[/]")
+    _check_linkedin_auth()
     try:
-        cmd_apply()
+        from .automation import apply_to_jobs
+        apply_to_jobs()
     except Exception as e:
         console.print(f"[red]Application failed: {e}[/]")
         logger.error(f"Application failed: {e}")
@@ -292,11 +351,36 @@ def cmd_list(status_filter: str = None):
     console.print(table)
 
 
+def cmd_retry():
+    """Reset failed jobs back to ready-for-apply so they can be retried."""
+    conn = get_connection()
+    count = reset_failed_jobs(conn)
+    conn.close()
+    if count:
+        console.print(f"[green]Reset {count} failed jobs back to ready-for-apply.[/]")
+    else:
+        console.print("[yellow]No failed jobs to retry.[/]")
+
+
+def cmd_delete_failed():
+    """Delete all failed jobs from the database."""
+    conn = get_connection()
+    failed = count_jobs_by_status(conn)
+    failed_count = failed.get("failed", 0) + failed.get("failed_captcha", 0)
+    if not failed_count:
+        console.print("[yellow]No failed jobs to delete.[/]")
+        conn.close()
+        return
+    count = delete_failed_jobs(conn)
+    conn.close()
+    console.print(f"[green]Deleted {count} failed jobs.[/]")
+
+
 def main():
     """CLI entry point."""
     if len(sys.argv) < 2:
         console.print("[bold]JobHunter[/] - Automated Job Application System\n")
-        console.print("Usage: python -m src.main <command>\n")
+        console.print("Usage: python -m src <command>\n")
         console.print("Commands:")
         console.print("  [bold]scrape[/]     Scrape job listings from configured boards")
         console.print("  [bold]tailor[/]     Generate tailored resume & cover letter for new jobs")
@@ -304,6 +388,9 @@ def main():
         console.print("  [bold]pipeline[/]   Run full pipeline: scrape -> tailor -> apply")
         console.print("  [bold]status[/]     Show application status summary")
         console.print("  [bold]list[/]       List jobs (optional: list <status>)")
+        console.print("  [bold]login[/]      Save LinkedIn session for authenticated applications")
+        console.print("  [bold]retry[/]      Reset failed jobs back to ready-for-apply")
+        console.print("  [bold]delete-failed[/] Delete all failed jobs from the database")
         return
 
     command = sys.argv[1].lower()
@@ -321,9 +408,15 @@ def main():
     elif command == "list":
         status = sys.argv[2] if len(sys.argv) > 2 else None
         cmd_list(status)
+    elif command == "login":
+        cmd_login()
+    elif command == "retry":
+        cmd_retry()
+    elif command in ("delete-failed", "delete_failed"):
+        cmd_delete_failed()
     else:
         console.print(f"[red]Unknown command: {command}[/]")
-        console.print("Run 'python -m src.main' for usage info.")
+        console.print("Run 'python -m src' for usage info.")
 
 
 if __name__ == "__main__":

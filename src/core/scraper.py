@@ -6,11 +6,11 @@ from datetime import datetime
 
 from rich.console import Console
 
-from .database import (
+from ..db import (
     get_connection, insert_job, count_jobs_by_status,
-    is_scrape_cached, update_scrape_cache
+    update_scrape_cache
 )
-from .profile import load_settings
+from ..config import load_settings
 
 console = Console(force_terminal=True)
 
@@ -35,33 +35,25 @@ def scrape_jobs():
     job_type = search.get("job_type", "fulltime")
     is_remote = search.get("remote", False)
 
-    cache_enabled = scraping_cfg.get("cache_enabled", True)
-    cache_hours = scraping_cfg.get("cache_hours", 12)
     max_workers = scraping_cfg.get("max_workers", 1)
 
     keywords_exclude = [kw.lower() for kw in filters.get("keywords_exclude", [])]
     exclude_companies = [c.lower() for c in filters.get("exclude_companies", [])]
     min_salary = filters.get("min_salary", 0)
+    strict_title_match = filters.get("strict_title_match", False)
 
     conn = get_connection()
 
-    # Build list of searches, skipping cached ones
-    searches = []
-    total_cached = 0
-    for role in roles:
-        for location in locations:
-            if cache_enabled and is_scrape_cached(conn, role, location, cache_hours):
-                console.print(f"  [dim]Skipping (cached):[/] {role} in {location}")
-                total_cached += 1
-            else:
-                searches.append((role, location))
+    # Build list of all role+location searches
+    # Job-level dedup via url_hash UNIQUE handles duplicates, so always re-scrape
+    searches = [(role, loc) for role in roles for loc in locations]
 
     if not searches:
-        console.print("[yellow]All searches cached. Nothing to scrape.[/]")
+        console.print("[yellow]No role+location combos configured. Nothing to scrape.[/]")
         conn.close()
         return
 
-    console.print(f"\n[bold blue]Running {len(searches)} searches in parallel ({total_cached} cached)...[/]\n")
+    console.print(f"\n[bold blue]Running {len(searches)} searches...[/]\n")
 
     # Parallel scraping -- each search runs in its own thread
     results = []
@@ -111,7 +103,8 @@ def scrape_jobs():
             job_data["search_role"] = role
             job_data["search_location"] = location
 
-            if _should_skip(job_data, keywords_exclude, exclude_companies, min_salary):
+            if _should_skip(job_data, keywords_exclude, exclude_companies, min_salary,
+                           roles=roles, strict_title_match=strict_title_match):
                 total_skipped += 1
                 continue
 
@@ -128,8 +121,7 @@ def scrape_jobs():
     console.print(f"\n[bold green]Scraping complete![/]")
     console.print(f"  New jobs added: {total_new}")
     console.print(f"  Filtered out: {total_skipped}")
-    if total_cached > 0:
-        console.print(f"  Skipped (cached): {total_cached} searches")
+
 
     conn = get_connection()
     counts = count_jobs_by_status(conn)
@@ -173,8 +165,37 @@ def _row_to_dict(row) -> dict:
     }
 
 
+# Keywords that indicate a title is related to common search roles.
+# Maps role fragments to accepted title keywords.
+_ROLE_KEYWORDS = {
+    "software": ["software", "developer", "engineer", "swe", "backend", "frontend",
+                  "fullstack", "full-stack", "full stack", "devops", "sre", "platform"],
+    "data engineer": ["data", "engineer", "etl", "pipeline", "analytics", "warehouse",
+                      "database", "dbt", "airflow", "spark"],
+    "data scien": ["data", "scientist", "machine learning", "ml", "ai", "analytics",
+                   "research", "nlp", "deep learning"],
+}
+
+
+def _title_matches_roles(title: str, roles: list[str]) -> bool:
+    """Check if a job title is relevant to at least one search role."""
+    title_lower = title.lower()
+    for role in roles:
+        role_lower = role.lower()
+        # Direct substring match (e.g., "software engineer" in "Senior Software Engineer")
+        if role_lower in title_lower:
+            return True
+        # Check keyword mappings
+        for role_fragment, keywords in _ROLE_KEYWORDS.items():
+            if role_fragment in role_lower:
+                if any(kw in title_lower for kw in keywords):
+                    return True
+    return False
+
+
 def _should_skip(job_data: dict, keywords_exclude: list, exclude_companies: list,
-                 min_salary: float) -> bool:
+                 min_salary: float, roles: list[str] = None,
+                 strict_title_match: bool = False) -> bool:
     """Check if a job should be filtered out."""
     description = (job_data.get("description") or "").lower()
     company = (job_data.get("company") or "").lower()
@@ -196,5 +217,9 @@ def _should_skip(job_data: dict, keywords_exclude: list, exclude_companies: list
                     return True
             except (ValueError, TypeError):
                 pass
+
+    if strict_title_match and roles and title:
+        if not _title_matches_roles(title, roles):
+            return True
 
     return False

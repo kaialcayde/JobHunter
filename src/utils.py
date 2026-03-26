@@ -11,6 +11,7 @@ TEMPLATES_DIR = PROJECT_ROOT / "templates"
 APPLICATIONS_DIR = PROJECT_ROOT / "applications"
 DATA_DIR = PROJECT_ROOT / "data"
 LOGS_DIR = DATA_DIR / "logs"
+LINKEDIN_AUTH_STATE = DATA_DIR / "linkedin_auth.json"
 
 
 def ensure_dirs():

@@ -1,8 +1,8 @@
-"""Load and manage user profile from config/profile.yaml."""
+"""Load and manage user profile and settings from YAML config files."""
 
 import yaml
 from pathlib import Path
-from .utils import CONFIG_DIR
+from ..utils import CONFIG_DIR
 from .models import Profile, Settings
 
 

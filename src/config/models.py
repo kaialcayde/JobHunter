@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-# ── Profile Models ───────────────────────────────────────────
+# -- Profile Models ----------------------------------------------------
 
 class Address(BaseModel):
     street: str = ""
@@ -154,7 +154,7 @@ class Profile(BaseModel):
         return self
 
 
-# ── Settings Models ──────────────────────────────────────────
+# -- Settings Models ---------------------------------------------------
 
 class JobSearch(BaseModel):
     roles: list[str] = ["software engineer"]
@@ -210,6 +210,7 @@ class Automation(BaseModel):
     delay_between_applications_seconds: int = 30
     screenshot_before_submit: bool = True
     skip_captcha_sites: bool = True
+    headless: bool = True
 
     @field_validator("distribution")
     @classmethod
@@ -236,6 +237,7 @@ class Filters(BaseModel):
     min_salary: int = 0
     keywords_required: list[str] = []
     keywords_exclude: list[str] = []
+    strict_title_match: bool = False
 
     @field_validator("min_salary", mode="before")
     @classmethod

@@ -1,4 +1,4 @@
-"""Document generation — creates DOCX and PDF versions of tailored resumes and cover letters."""
+"""Document generation -- creates DOCX and PDF versions of tailored resumes and cover letters."""
 
 import json
 import re
@@ -9,7 +9,7 @@ from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-from .utils import get_application_dir
+from ..utils import get_application_dir
 
 
 def _add_formatted_text(doc: Document, text: str):
@@ -61,7 +61,7 @@ def create_resume_docx(tailored_text: str, company: str, position: str) -> Path:
 
     doc = Document()
 
-    # Set default font — 10.5pt for one-page fit
+    # Set default font -- 10.5pt for one-page fit
     style = doc.styles["Normal"]
     font = style.font
     font.name = "Calibri"

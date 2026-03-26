@@ -84,15 +84,20 @@ def _create_tables(conn: sqlite3.Connection):
     conn.commit()
 
     # Safe column additions for existing databases
-    for col, default in [("search_role", "''"), ("search_location", "''"), ("listing_url", "''")]:
+    for col, coltype, default in [
+        ("search_role", "TEXT", "''"),
+        ("search_location", "TEXT", "''"),
+        ("listing_url", "TEXT", "''"),
+        ("retry_count", "INTEGER", "0"),
+    ]:
         try:
-            conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} TEXT DEFAULT {default}")
+            conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} {coltype} DEFAULT {default}")
             conn.commit()
         except sqlite3.OperationalError:
             pass  # column already exists
 
 
-# ── Scrape Cache ─────────────────────────────────────────────
+# -- Scrape Cache -----------------------------------------------------
 
 def is_scrape_cached(conn: sqlite3.Connection, role: str, location: str, cache_hours: int) -> bool:
     """Check if a role+location was scraped within cache_hours."""
@@ -118,7 +123,7 @@ def update_scrape_cache(conn: sqlite3.Connection, role: str, location: str, job_
     conn.commit()
 
 
-# ── Job CRUD ──────────────────────────────────────────────────
+# -- Job CRUD ----------------------------------------------------------
 
 def insert_job(conn: sqlite3.Connection, job_data: dict) -> Optional[int]:
     """Insert a job if it doesn't already exist. Returns job id or None if duplicate."""
@@ -166,7 +171,7 @@ def insert_job(conn: sqlite3.Connection, job_data: dict) -> Optional[int]:
 def get_jobs_by_status(conn: sqlite3.Connection, status: str, limit: int = 100) -> list[dict]:
     """Get jobs with a given status."""
     rows = conn.execute(
-        "SELECT * FROM jobs WHERE status = ? ORDER BY date_scraped DESC LIMIT ?",
+        "SELECT * FROM jobs WHERE status = ? ORDER BY date_posted DESC NULLS LAST, date_scraped DESC LIMIT ?",
         (status, limit)
     ).fetchall()
     return [dict(r) for r in rows]
@@ -176,6 +181,36 @@ def update_job_status(conn: sqlite3.Connection, job_id: int, status: str):
     """Update a job's status."""
     conn.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
     conn.commit()
+
+
+def increment_retry_count(conn: sqlite3.Connection, job_id: int) -> int:
+    """Increment retry count for a job. Returns new count."""
+    conn.execute("UPDATE jobs SET retry_count = COALESCE(retry_count, 0) + 1 WHERE id = ?", (job_id,))
+    conn.commit()
+    row = conn.execute("SELECT retry_count FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    return row["retry_count"] if row else 0
+
+
+def reset_failed_jobs(conn: sqlite3.Connection, max_retries: int = 2) -> int:
+    """Reset failed jobs back to 'tailored' for retry, if under max retry count.
+
+    Returns count of jobs reset.
+    """
+    cursor = conn.execute(
+        "UPDATE jobs SET status = 'tailored' WHERE status IN ('failed', 'failed_captcha') AND COALESCE(retry_count, 0) < ?",
+        (max_retries,)
+    )
+    conn.commit()
+    return cursor.rowcount
+
+
+def delete_failed_jobs(conn: sqlite3.Connection) -> int:
+    """Delete all failed and failed_captcha jobs. Returns count deleted."""
+    cursor = conn.execute(
+        "DELETE FROM jobs WHERE status IN ('failed', 'failed_captcha')"
+    )
+    conn.commit()
+    return cursor.rowcount
 
 
 def get_job_by_id(conn: sqlite3.Connection, job_id: int) -> Optional[dict]:
@@ -190,7 +225,7 @@ def count_jobs_by_status(conn: sqlite3.Connection) -> dict:
     return {r["status"]: r["count"] for r in rows}
 
 
-# ── Application CRUD ─────────────────────────────────────────
+# -- Application CRUD -------------------------------------------------
 
 def insert_application(conn: sqlite3.Connection, job_id: int, resume_path: str = None,
                        cover_letter_path: str = None) -> int:
@@ -231,7 +266,7 @@ def count_applications_today(conn: sqlite3.Connection) -> int:
     return row["count"] if row else 0
 
 
-# ── Log ──────────────────────────────────────────────────────
+# -- Log ---------------------------------------------------------------
 
 def log_action(conn: sqlite3.Connection, action: str, details: str = None,
                application_id: int = None, job_id: int = None):
