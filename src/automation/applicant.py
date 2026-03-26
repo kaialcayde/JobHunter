@@ -17,10 +17,11 @@ from ..db import (
 from ..core.document import save_application_metadata
 from ..config import load_settings
 from ..core.tailoring import infer_form_answers
-from ..utils import get_application_dir, LINKEDIN_AUTH_STATE, TEMPLATES_DIR
+from ..utils import get_application_dir, move_application_dir, LINKEDIN_AUTH_STATE, TEMPLATES_DIR
 
 from .detection import detect_captcha, detect_login_page, dismiss_modals, click_apply_button, click_next_button, click_submit_button
 from .forms import extract_form_fields, fill_form_fields, handle_file_uploads
+from .vision_agent import run_vision_agent, verify_submission
 
 console = Console(force_terminal=True)
 
@@ -368,85 +369,124 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 log_action(conn, "login_page_detected", page.url, app_id, job_id)
                 return
 
-        # Process form pages
+        # Decide strategy: selectors stay on LinkedIn, vision takes over on external ATS
+        use_vision = settings.get("automation", {}).get("vision_agent", False)
+        on_linkedin = "linkedin.com" in page.url.lower()
         form_answers_all = {}
-        max_pages = 10  # safety limit
 
-        for page_num in range(max_pages):
-            console.print(f"  Processing form page {page_num + 1}...")
-            logger.info(f"Form page {page_num + 1} for job {job_id} ({company} - {position})")
+        if use_vision and not on_linkedin:
+            # -- VISION PATH: we're on an external ATS (Greenhouse, Lever, Workday, etc.)
+            # Selectors can't reliably handle these -- let vision agent drive
+            console.print("  [magenta]External ATS detected -- using vision agent[/]")
+            log_action(conn, "vision_handoff", f"External site: {page.url[:80]}", app_id, job_id)
 
-            # Extract form fields
-            fields = extract_form_fields(page)
-            if not fields:
-                console.print("  [yellow]No form fields found on this page.[/]")
-                logger.info(f"No form fields found on page {page_num + 1}")
-                break
+            # Screenshot before vision takes over
+            if take_screenshot:
+                screenshot_path = app_dir / "pre_submit_screenshot.png"
+                page.screenshot(path=str(screenshot_path), full_page=True)
+                update_application(conn, app_id, screenshot_path=str(screenshot_path))
 
-            field_summary = [f.get("label", f.get("id", "?")) for f in fields]
-            console.print(f"  Found {len(fields)} form fields")
-            logger.info(f"Page {page_num + 1}: {len(fields)} fields: {field_summary}")
+            submitted = run_vision_agent(page, job, settings, resume_file, cl_file)
+        else:
+            # -- SELECTOR PATH: LinkedIn Easy Apply or vision disabled
+            max_pages = 10  # safety limit
 
-            # Use LLM to infer answers
-            try:
-                answers = infer_form_answers(fields, job, settings)
-            except Exception as e:
-                logger.error(f"LLM form filling failed on page {page_num + 1}: {e}")
-                console.print(f"  [yellow]LLM form filling failed: {e} -- using empty answers[/]")
-                answers = {}
-            form_answers_all.update(answers)
-            logger.debug(f"Page {page_num + 1} answers: {json.dumps(answers, indent=2)}")
+            for page_num in range(max_pages):
+                console.print(f"  Processing form page {page_num + 1}...")
+                logger.info(f"Form page {page_num + 1} for job {job_id} ({company} - {position})")
 
-            # Fill in the form
-            fill_form_fields(page, fields, answers)
+                # Extract form fields
+                fields = extract_form_fields(page)
+                if not fields:
+                    console.print("  [yellow]No form fields found on this page.[/]")
+                    logger.info(f"No form fields found on page {page_num + 1}")
+                    break
 
-            # Handle file uploads
-            handle_file_uploads(page, resume_file, cl_file)
+                field_summary = [f.get("label", f.get("id", "?")) for f in fields]
+                console.print(f"  Found {len(fields)} form fields")
+                logger.info(f"Page {page_num + 1}: {len(fields)} fields: {field_summary}")
 
-            # Check for next/continue button
-            if not click_next_button(page):
-                break  # No more pages -- we're at the submit page
+                # Use LLM to infer answers
+                try:
+                    answers = infer_form_answers(fields, job, settings)
+                except Exception as e:
+                    logger.error(f"LLM form filling failed on page {page_num + 1}: {e}")
+                    console.print(f"  [yellow]LLM form filling failed: {e} -- using empty answers[/]")
+                    answers = {}
+                form_answers_all.update(answers)
+                logger.debug(f"Page {page_num + 1} answers: {json.dumps(answers, indent=2)}")
 
-            page.wait_for_timeout(2000)
+                # Fill in the form
+                fill_form_fields(page, fields, answers)
 
-        # Screenshot before submit
-        if take_screenshot:
-            screenshot_path = app_dir / "pre_submit_screenshot.png"
-            page.screenshot(path=str(screenshot_path), full_page=True)
-            update_application(conn, app_id, screenshot_path=str(screenshot_path))
+                # Handle file uploads
+                handle_file_uploads(page, resume_file, cl_file)
 
-        # Submit
-        submitted = click_submit_button(page)
+                # Check for next/continue button
+                if not click_next_button(page):
+                    break  # No more pages -- we're at the submit page
 
+                page.wait_for_timeout(2000)
+
+            # Screenshot before submit
+            if take_screenshot:
+                screenshot_path = app_dir / "pre_submit_screenshot.png"
+                page.screenshot(path=str(screenshot_path), full_page=True)
+                update_application(conn, app_id, screenshot_path=str(screenshot_path))
+
+            submitted = click_submit_button(page)
+
+        # -- VERIFY SUBMISSION with vision (regardless of which path got us here)
         if submitted:
             page.wait_for_timeout(3000)
-            # Screenshot confirmation
             confirm_path = app_dir / "confirmation_screenshot.png"
             page.screenshot(path=str(confirm_path), full_page=True)
 
+            # Vision verification: don't trust selectors/agent blindly
+            if use_vision:
+                console.print("  [dim]Verifying submission with vision...[/]")
+                actually_submitted = verify_submission(page, settings)
+                if not actually_submitted:
+                    console.print("  [yellow]Vision check: NOT actually submitted -- marking as failed[/]")
+                    logger.warning(f"Vision verification rejected submission for {company} - {position}")
+                    increment_retry_count(conn, job_id)
+                    update_job_status(conn, job_id, "failed")
+                    log_action(conn, "false_submission", "Vision verification rejected confirmation", app_id, job_id)
+                    submitted = False
+
+        if submitted:
             update_job_status(conn, job_id, "applied")
             update_application(conn, app_id,
                                submitted_at=datetime.now().isoformat(),
                                form_answers_json=json.dumps(form_answers_all))
             log_action(conn, "applied", f"Submitted to {company}", app_id, job_id)
-            save_application_metadata(company, position, job, form_answers_all)
-            console.print(f"  [green]Successfully applied![/]")
+            save_application_metadata(company, position, job,
+                                      form_answers_all)
+            # Move to success folder
+            final_dir = move_application_dir(company, position, "success")
+            console.print(f"  [green]Successfully applied! (verified)[/]")
+            console.print(f"  [dim]{final_dir}[/]")
         else:
-            # Save debug screenshot so we can see what the page looks like
+            # Not submitted -- save debug screenshot and mark as failed
             debug_path = app_dir / "debug_no_submit.png"
             try:
                 page.screenshot(path=str(debug_path), full_page=True)
-                console.print(f"  [yellow]Could not find submit button -- debug screenshot: {debug_path}[/]")
             except Exception:
-                console.print("  [yellow]Could not find submit button -- marking as failed[/]")
+                pass
             increment_retry_count(conn, job_id)
             update_job_status(conn, job_id, "failed")
-            log_action(conn, "submit_button_not_found", url, app_id, job_id)
+            log_action(conn, "apply_failed", f"Could not complete application at {url}", app_id, job_id)
+            # Move to failed folder
+            final_dir = move_application_dir(company, position, "failed")
+            console.print(f"  [red]Application failed[/]")
+            console.print(f"  [dim]Debug: {final_dir / 'debug_no_submit.png'}[/]")
 
     except Exception as e:
         console.print(f"  [red]Error during application: {e}[/]")
         increment_retry_count(conn, job_id)
         update_job_status(conn, job_id, "failed")
         log_action(conn, "apply_error", str(e), app_id, job_id)
+        final_dir = move_application_dir(company, position, "failed")
+        console.print(f"  [dim]Debug: {final_dir}[/]")
     finally:
         page.close()

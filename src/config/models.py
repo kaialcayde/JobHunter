@@ -211,6 +211,9 @@ class Automation(BaseModel):
     screenshot_before_submit: bool = True
     skip_captcha_sites: bool = True
     headless: bool = True
+    vision_agent: bool = False      # enable LLM vision fallback for form filling
+    vision_model: str = "gpt-4o-mini"  # cheapest vision-capable model
+    vision_logging: bool = True     # log each vision agent step to console and log file
 
     @field_validator("distribution")
     @classmethod

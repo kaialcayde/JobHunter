@@ -49,6 +49,9 @@ automation:
   delay_between_applications_seconds: 30
   screenshot_before_submit: true
   skip_captcha_sites: true
+  vision_agent: true               # use LLM vision fallback when selectors fail
+  vision_model: "gpt-4o-mini"      # cheapest vision model
+  vision_logging: true             # log each vision agent step to console
 
 scheduler:
   enabled: true

@@ -17,10 +17,14 @@ from rich.box import ASCII
 from .db import (
     get_connection, get_jobs_by_status, update_job_status,
     count_jobs_by_status, get_job_by_id, count_applications_today,
-    reset_failed_jobs, delete_failed_jobs
+    reset_failed_jobs, delete_failed_jobs, get_failed_jobs_with_details,
+    nuke_database
 )
 from .config import load_settings
-from .utils import LOGS_DIR, LINKEDIN_AUTH_STATE, ensure_dirs
+from .utils import (
+    LOGS_DIR, LINKEDIN_AUTH_STATE, APPLICATIONS_DIR, ATTEMPTS_DIR,
+    SUCCESS_DIR, FAILED_DIR, DATA_DIR, ensure_dirs, sanitize_filename
+)
 
 console = Console(force_terminal=True)
 
@@ -376,6 +380,205 @@ def cmd_delete_failed():
     console.print(f"[green]Deleted {count} failed jobs.[/]")
 
 
+def cmd_reset():
+    """Full reset: delete applications folder and database."""
+    import shutil
+
+    console.print("[bold red]== Full Reset ==[/]\n")
+    console.print("This will DELETE:")
+    console.print(f"  - All application folders in {APPLICATIONS_DIR}")
+    console.print(f"  - The database at {DATA_DIR / 'jobhunter.db'}")
+    console.print()
+
+    try:
+        answer = input("Are you sure? Type 'yes' to confirm: ").strip().lower()
+    except EOFError:
+        answer = ""
+
+    if answer != "yes":
+        console.print("[yellow]Reset cancelled.[/]")
+        return
+
+    # Delete applications folder
+    deleted_apps = 0
+    if APPLICATIONS_DIR.exists():
+        for item in APPLICATIONS_DIR.iterdir():
+            if item.is_dir():
+                shutil.rmtree(item)
+                deleted_apps += 1
+        console.print(f"  Deleted {deleted_apps} application folders")
+
+    # Nuke database contents
+    conn = get_connection()
+    nuke_database(conn)
+    conn.close()
+    console.print("  Database cleared")
+
+    console.print("\n[green]Reset complete. Fresh start![/]")
+
+
+def cmd_view():
+    """View successful applications -- list applied jobs and open their folders."""
+    import subprocess
+
+    conn = get_connection()
+    applied_jobs = get_jobs_by_status(conn, "applied", limit=100)
+    conn.close()
+
+    if not applied_jobs:
+        console.print("[yellow]No successful applications yet.[/]")
+        return
+
+    console.print(f"\n[bold green]== {len(applied_jobs)} Successful Applications ==[/]\n")
+
+    table = Table(box=ASCII)
+    table.add_column("#", style="dim", width=4)
+    table.add_column("Company", width=20)
+    table.add_column("Position", width=30)
+    table.add_column("Folder", width=40)
+
+    for i, job in enumerate(applied_jobs, 1):
+        company = sanitize_filename(job.get("company", "Unknown"))
+        title = sanitize_filename(job.get("title", "Unknown"))
+        # Check success/ first, then attempts/, then old flat path
+        folder = SUCCESS_DIR / company / title
+        if not folder.exists():
+            folder = ATTEMPTS_DIR / company / title
+        if not folder.exists():
+            folder = APPLICATIONS_DIR / company / title
+        exists = "[green]exists[/]" if folder.exists() else "[red]missing[/]"
+        table.add_row(
+            str(i),
+            job.get("company", "?")[:20],
+            job.get("title", "?")[:30],
+            exists,
+        )
+
+    console.print(table)
+
+    console.print(f"\nSuccess folder: {SUCCESS_DIR}")
+    try:
+        answer = input("\nOpen success folder? (y/N): ").strip().lower()
+    except EOFError:
+        answer = ""
+
+    if answer == "y":
+        target = SUCCESS_DIR if SUCCESS_DIR.exists() else APPLICATIONS_DIR
+        if sys.platform == "darwin":
+            subprocess.run(["open", str(target)])
+        elif sys.platform == "win32":
+            subprocess.run(["explorer", str(target)])
+        else:
+            subprocess.run(["xdg-open", str(target)])
+
+
+def cmd_view_failed():
+    """View failed applications -- list failed jobs and open their folders."""
+    import subprocess
+
+    conn = get_connection()
+    failed_jobs = get_failed_jobs_with_details(conn)
+    conn.close()
+
+    if not failed_jobs:
+        console.print("[yellow]No failed applications.[/]")
+        return
+
+    console.print(f"\n[bold red]== {len(failed_jobs)} Failed Applications ==[/]\n")
+
+    table = Table(box=ASCII)
+    table.add_column("#", style="dim", width=4)
+    table.add_column("Company", width=20)
+    table.add_column("Position", width=30)
+    table.add_column("Status", width=15)
+    table.add_column("Folder", width=10)
+
+    for i, job in enumerate(failed_jobs, 1):
+        company = sanitize_filename(job.get("company", "Unknown"))
+        title = sanitize_filename(job.get("title", "Unknown"))
+        failed_folder = FAILED_DIR / company / title
+        attempts_folder = ATTEMPTS_DIR / company / title
+        old_folder = APPLICATIONS_DIR / company / title
+        if failed_folder.exists():
+            exists = "[dim]failed/[/]"
+        elif attempts_folder.exists():
+            exists = "[yellow]attempts/[/]"
+        elif old_folder.exists():
+            exists = "[yellow]apps/[/]"
+        else:
+            exists = "[red]none[/]"
+        table.add_row(
+            str(i),
+            job.get("company", "?")[:20],
+            job.get("title", "?")[:30],
+            f"[red]{job.get('status', '?')}[/]",
+            exists,
+        )
+
+    console.print(table)
+
+    # Offer to open folder
+    target = FAILED_DIR if FAILED_DIR.exists() else APPLICATIONS_DIR
+    console.print(f"\nFailed folder: {target}")
+    try:
+        answer = input("\nOpen folder? (y/N): ").strip().lower()
+    except EOFError:
+        answer = ""
+
+    if answer == "y":
+        if sys.platform == "darwin":
+            subprocess.run(["open", str(target)])
+        elif sys.platform == "win32":
+            subprocess.run(["explorer", str(target)])
+        else:
+            subprocess.run(["xdg-open", str(target)])
+
+
+def cmd_remove_failed():
+    """Remove failed jobs from DB and move their application folders to _failed/."""
+    import shutil
+
+    conn = get_connection()
+    failed_jobs = get_failed_jobs_with_details(conn)
+
+    if not failed_jobs:
+        console.print("[yellow]No failed jobs to remove.[/]")
+        conn.close()
+        return
+
+    console.print(f"[bold blue]Moving {len(failed_jobs)} failed jobs to {FAILED_DIR}[/]\n")
+
+    moved = 0
+    for job in failed_jobs:
+        company = sanitize_filename(job.get("company", "Unknown"))
+        title = sanitize_filename(job.get("title", "Unknown"))
+
+        # Check attempts/ first, then old flat path
+        src_dir = ATTEMPTS_DIR / company / title
+        if not src_dir.exists():
+            src_dir = APPLICATIONS_DIR / company / title
+
+        if src_dir.exists():
+            dest_dir = FAILED_DIR / company / title
+            dest_dir.parent.mkdir(parents=True, exist_ok=True)
+            if dest_dir.exists():
+                shutil.rmtree(dest_dir)
+            shutil.move(str(src_dir), str(dest_dir))
+            moved += 1
+            console.print(f"  [dim]Moved: {company}/{title}[/]")
+
+            # Clean up empty company folder
+            company_dir = src_dir.parent
+            if company_dir.exists() and not any(company_dir.iterdir()):
+                company_dir.rmdir()
+
+    # Delete from database
+    count = delete_failed_jobs(conn)
+    conn.close()
+
+    console.print(f"\n[green]Removed {count} failed jobs from DB, moved {moved} folders to _failed/[/]")
+
+
 def main():
     """CLI entry point."""
     if len(sys.argv) < 2:
@@ -391,6 +594,10 @@ def main():
         console.print("  [bold]login[/]      Save LinkedIn session for authenticated applications")
         console.print("  [bold]retry[/]      Reset failed jobs back to ready-for-apply")
         console.print("  [bold]delete-failed[/] Delete all failed jobs from the database")
+        console.print("  [bold]view[/]       View successful applications and open folder")
+        console.print("  [bold]view-failed[/] View failed applications and open folder")
+        console.print("  [bold]reset[/]      Full reset: delete all applications and database")
+        console.print("  [bold]remove-failed[/] Move failed apps to _failed/ folder and clean DB")
         return
 
     command = sys.argv[1].lower()
@@ -414,6 +621,14 @@ def main():
         cmd_retry()
     elif command in ("delete-failed", "delete_failed"):
         cmd_delete_failed()
+    elif command == "view":
+        cmd_view()
+    elif command in ("view-failed", "view_failed"):
+        cmd_view_failed()
+    elif command == "reset":
+        cmd_reset()
+    elif command in ("remove-failed", "remove_failed"):
+        cmd_remove_failed()
     else:
         console.print(f"[red]Unknown command: {command}[/]")
         console.print("Run 'python -m src' for usage info.")

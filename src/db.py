@@ -213,6 +213,21 @@ def delete_failed_jobs(conn: sqlite3.Connection) -> int:
     return cursor.rowcount
 
 
+def get_failed_jobs_with_details(conn: sqlite3.Connection) -> list[dict]:
+    """Get failed jobs with company and title for folder cleanup."""
+    rows = conn.execute(
+        "SELECT id, title, company, status FROM jobs WHERE status IN ('failed', 'failed_captcha')"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def nuke_database(conn: sqlite3.Connection):
+    """Drop all data from all tables. Used by the reset command."""
+    for table in ["application_log", "applications", "jobs", "scrape_cache"]:
+        conn.execute(f"DELETE FROM {table}")
+    conn.commit()
+
+
 def get_job_by_id(conn: sqlite3.Connection, job_id: int) -> Optional[dict]:
     """Get a single job by ID."""
     row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()

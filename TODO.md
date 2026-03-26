@@ -8,6 +8,7 @@
 - [ ] need to find a way t0 get around captcha
 - [ ] Option to view jobs we scraped and determine which ones to remove, etc
 - [ ] need to have a remove db and applications pipeline
+- [ ] move folder stuff to a database?
 
 ## Features
 
