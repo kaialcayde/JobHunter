@@ -8,7 +8,15 @@
       "Bash(venv/Scripts/python -m src.main)",
       "Bash(venv/Scripts/python -m src.main status)",
       "Bash(venv/Scripts/python -c \":*)",
-      "Bash(rm -f \"c:/Users/kaina/OneDrive/Documents/JobHunter/data/jobhunter.db\")"
+      "Bash(rm -f \"c:/Users/kaina/OneDrive/Documents/JobHunter/data/jobhunter.db\")",
+      "Bash(venv/Scripts/pip uninstall:*)",
+      "Bash(venv/Scripts/pip install:*)",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/applicant.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/document.py'', doraise=True\\); py_compile.compile\\(''src/main.py'', doraise=True\\); py_compile.compile\\(''src/scraper.py'', doraise=True\\); print\\(''All OK''\\)\")",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/document.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/tailoring.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(venv/Scripts/python -c \"from src.main import main; from src.document import create_resume_pdf, create_cover_letter_pdf; from src.applicant import apply_to_jobs; from src.scraper import scrape_jobs; print\\(''All imports OK''\\)\")",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/applicant.py'', doraise=True\\); py_compile.compile\\(''src/main.py'', doraise=True\\); print\\(''OK''\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\kaina\\OneDrive\\Documents\\JobHunter"

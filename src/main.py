@@ -79,7 +79,7 @@ def cmd_tailor():
     """Generate tailored resumes and cover letters for new jobs."""
     console.print("[bold blue]== Resume & Cover Letter Tailoring ==[/]")
     from .tailoring import tailor_resume, tailor_cover_letter
-    from .document import create_resume_docx, create_cover_letter_docx, convert_to_pdf
+    from .document import create_resume_docx, create_cover_letter_docx, create_resume_pdf, create_cover_letter_pdf
 
     settings = load_settings()
     conn = get_connection()
@@ -114,16 +114,16 @@ def cmd_tailor():
             # Tailor resume
             console.print("  Tailoring resume...")
             resume_text = tailor_resume(job, settings)
-            resume_path = create_resume_docx(resume_text, company, title)
-            resume_pdf = convert_to_pdf(resume_path)
-            console.print(f"  Resume saved to: {resume_path}")
+            resume_docx = create_resume_docx(resume_text, company, title)
+            resume_pdf = create_resume_pdf(resume_text, company, title)
+            console.print(f"  Resume saved: {resume_docx} + {resume_pdf}")
 
             # Tailor cover letter
             console.print("  Tailoring cover letter...")
             cl_text = tailor_cover_letter(job, settings)
-            cl_path = create_cover_letter_docx(cl_text, company, title)
-            cl_pdf = convert_to_pdf(cl_path)
-            console.print(f"  Cover letter saved to: {cl_path}")
+            cl_docx = create_cover_letter_docx(cl_text, company, title)
+            cl_pdf = create_cover_letter_pdf(cl_text, company, title)
+            console.print(f"  Cover letter saved: {cl_docx} + {cl_pdf}")
 
             update_job_status(conn, job["id"], "tailored")
             console.print(f"  [green]Done![/]\n")
@@ -172,12 +172,15 @@ def cmd_pipeline():
         logger.error(f"Scraping failed: {e}")
 
     # Step 2: Tailor
-    console.print("\n[bold magenta]=== Step 2/3: Tailoring Documents ===[/]")
-    try:
-        cmd_tailor()
-    except Exception as e:
-        console.print(f"[red]Tailoring failed: {e}[/]")
-        logger.error(f"Tailoring failed: {e}")
+    if settings.get("tailoring", {}).get("enabled", True):
+        console.print("\n[bold magenta]=== Step 2/3: Tailoring Documents ===[/]")
+        try:
+            cmd_tailor()
+        except Exception as e:
+            console.print(f"[red]Tailoring failed: {e}[/]")
+            logger.error(f"Tailoring failed: {e}")
+    else:
+        console.print("\n[bold magenta]=== Step 2/3: Tailoring (skipped — disabled in settings) ===[/]")
 
     # Step 3: Apply
     console.print("\n[bold magenta]=== Step 3/3: Submitting Applications ===[/]")

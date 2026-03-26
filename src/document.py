@@ -111,18 +111,104 @@ def create_cover_letter_docx(tailored_text: str, company: str, position: str) ->
     return output_path
 
 
-def convert_to_pdf(docx_path: Path) -> Path:
-    """Convert a DOCX file to PDF. Returns the PDF path."""
-    pdf_path = docx_path.with_suffix(".pdf")
-    try:
-        from docx2pdf import convert
-        convert(str(docx_path), str(pdf_path))
-    except Exception as e:
-        # Fallback: if docx2pdf fails (needs Word installed on Windows),
-        # we'll note it but continue — the DOCX is still valid
-        print(f"  Warning: PDF conversion failed ({e}). DOCX file is still available.")
-        return None
-    return pdf_path
+def _sanitize_for_pdf(text: str) -> str:
+    """Replace Unicode characters unsupported by built-in PDF fonts with ASCII equivalents."""
+    replacements = {
+        "\u2013": "-",   # en-dash
+        "\u2014": "--",  # em-dash
+        "\u2018": "'",   # left single quote
+        "\u2019": "'",   # right single quote
+        "\u201c": '"',   # left double quote
+        "\u201d": '"',   # right double quote
+        "\u2026": "...", # ellipsis
+        "\u2022": "-",   # bullet
+        "\u00a0": " ",   # non-breaking space
+        "\u2011": "-",   # non-breaking hyphen
+        "\u00b7": "-",   # middle dot
+        "\u2010": "-",   # hyphen
+    }
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    # Strip any remaining non-latin1 characters
+    return text.encode("latin-1", errors="replace").decode("latin-1")
+
+
+def _pdf_add_formatted_text(pdf, text: str):
+    """Parse LLM-generated text and render it to a PDF via fpdf2."""
+    text = _sanitize_for_pdf(text)
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            pdf.ln(3)
+            continue
+
+        if stripped.startswith("### "):
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.cell(0, 6, stripped[4:], new_x="LMARGIN", new_y="NEXT")
+        elif stripped.startswith("## "):
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.cell(0, 7, stripped[3:], new_x="LMARGIN", new_y="NEXT")
+            pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+            pdf.ln(2)
+        elif stripped.startswith("# "):
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.cell(0, 8, stripped[2:], new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(1)
+        elif stripped.startswith("- ") or stripped.startswith("* "):
+            content = stripped[2:]
+            pdf.set_font("Helvetica", "", 10)
+            pdf.cell(5, 5, "-")  # bullet (ASCII-safe for built-in fonts)
+            _pdf_write_inline(pdf, content, 5)
+        else:
+            pdf.set_font("Helvetica", "", 10)
+            _pdf_write_inline(pdf, stripped, 5)
+
+
+def _pdf_write_inline(pdf, text: str, line_height: float):
+    """Write text with **bold** inline formatting."""
+    parts = re.split(r'(\*\*.*?\*\*)', text)
+    for part in parts:
+        if part.startswith("**") and part.endswith("**"):
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.write(line_height, part[2:-2])
+        else:
+            pdf.set_font("Helvetica", "", 10)
+            pdf.write(line_height, part)
+    pdf.ln(line_height)
+
+
+def create_resume_pdf(tailored_text: str, company: str, position: str) -> Path:
+    """Create a PDF resume directly from tailored text using fpdf2."""
+    from fpdf import FPDF
+
+    app_dir = get_application_dir(company, position)
+    output_path = app_dir / "resume.pdf"
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=10)
+    pdf.set_margins(13, 10, 13)  # tight margins for one-page resume
+
+    _pdf_add_formatted_text(pdf, tailored_text)
+    pdf.output(str(output_path))
+    return output_path
+
+
+def create_cover_letter_pdf(tailored_text: str, company: str, position: str) -> Path:
+    """Create a PDF cover letter directly from tailored text using fpdf2."""
+    from fpdf import FPDF
+
+    app_dir = get_application_dir(company, position)
+    output_path = app_dir / "cover_letter.pdf"
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=25)
+    pdf.set_margins(25, 25, 25)  # standard margins for cover letter
+
+    _pdf_add_formatted_text(pdf, tailored_text)
+    pdf.output(str(output_path))
+    return output_path
 
 
 def save_application_metadata(company: str, position: str, job: dict, form_answers: dict = None):

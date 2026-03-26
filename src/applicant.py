@@ -2,7 +2,7 @@
 
 import json
 import re
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -13,9 +13,7 @@ from .database import (
     get_connection, get_jobs_by_status, update_job_status,
     insert_application, update_application, count_applications_today, log_action
 )
-from .document import (
-    create_resume_docx, create_cover_letter_docx, convert_to_pdf, save_application_metadata
-)
+from .document import save_application_metadata
 from .profile import load_settings
 from .tailoring import tailor_resume, tailor_cover_letter, infer_form_answers
 from .utils import get_application_dir
@@ -93,7 +91,6 @@ def apply_to_jobs():
     max_per_role = automation.get("max_per_role", 0)
     max_per_location = automation.get("max_per_location", 0)
     distribution = automation.get("distribution", "round_robin")
-    delay = automation.get("delay_between_applications_seconds", 30)
     take_screenshot = automation.get("screenshot_before_submit", True)
 
     conn = get_connection()
@@ -131,36 +128,76 @@ def apply_to_jobs():
     console.print(f"  By role: {role_breakdown}")
     console.print(f"  By location: {loc_breakdown}")
 
+    parallel_workers = automation.get("parallel_browsers", 1)
+    # Cap workers at job count and a sane max
+    parallel_workers = min(parallel_workers, len(jobs), 4)
+
     try:
-        from playwright.sync_api import sync_playwright
-
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                viewport={"width": 1280, "height": 900},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
-
+        if parallel_workers <= 1:
+            # Sequential mode — single browser
+            _run_application_batch(jobs, settings, take_screenshot, label="")
+        else:
+            # Parallel mode — split jobs across worker threads, each with own browser
+            batches = [[] for _ in range(parallel_workers)]
             for i, job in enumerate(jobs):
-                console.print(f"\n[bold]({i+1}/{len(jobs)}) {job['title']} at {job['company']}[/]")
-                try:
-                    _apply_to_single_job(context, job, settings, take_screenshot)
-                except Exception as e:
-                    console.print(f"  [red]Failed: {e}[/]")
-                    update_job_status(conn, job["id"], "failed")
-                    log_action(conn, "apply_failed", str(e), job_id=job["id"])
+                batches[i % parallel_workers].append(job)
 
-                if i < len(jobs) - 1:
-                    console.print(f"  Waiting {delay}s before next application...")
-                    time.sleep(delay)
+            console.print(f"[bold]Running {parallel_workers} parallel browsers[/]")
 
-            browser.close()
+            with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+                futures = {}
+                for idx, batch in enumerate(batches):
+                    if not batch:
+                        continue
+                    label = f"[W{idx+1}]"
+                    futures[executor.submit(
+                        _run_application_batch, batch, settings, take_screenshot, label
+                    )] = idx
+
+                for future in as_completed(futures):
+                    worker_idx = futures[future]
+                    try:
+                        future.result()
+                    except Exception as e:
+                        console.print(f"  [red]Worker {worker_idx+1} crashed: {e}[/]")
 
     except ImportError:
         console.print("[red]Playwright not installed. Run: pip install playwright && playwright install chromium[/]")
 
     conn.close()
     console.print("\n[bold green]Application round complete![/]")
+
+
+def _run_application_batch(jobs: list[dict], settings: dict,
+                           take_screenshot: bool, label: str = ""):
+    """Process a batch of applications in a single browser instance.
+
+    Each call launches its own Playwright browser, making it safe to run
+    multiple batches in parallel threads.
+    """
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 900},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+
+        conn = get_connection()
+        for i, job in enumerate(jobs):
+            console.print(f"\n[bold]{label}({i+1}/{len(jobs)}) {job['title']} at {job['company']}[/]")
+            try:
+                _apply_to_single_job(context, job, settings, take_screenshot)
+            except Exception as e:
+                console.print(f"  [red]{label}Failed: {e}[/]")
+                update_job_status(conn, job["id"], "failed")
+                log_action(conn, "apply_failed", str(e), job_id=job["id"])
+
+            # No delay between applications — CAPTCHA detection handles bot protection
+
+        conn.close()
+        browser.close()
 
 
 def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bool):
@@ -208,7 +245,23 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
             return
 
         # Try to find and click "Apply" button if we're on a listing page
-        _click_apply_button(page)
+        apply_result = _click_apply_button(page)
+
+        # If apply button opened a new tab, switch to it
+        if apply_result == "new_tab" and len(page.context.pages) > 1:
+            old_page = page
+            page = page.context.pages[-1]
+            page.wait_for_load_state("domcontentloaded")
+            page.wait_for_timeout(2000)
+            old_page.close()
+            console.print(f"  [dim]Now on: {page.url[:80]}[/]")
+
+            # Check new page for CAPTCHA
+            if _detect_captcha(page):
+                console.print("  [yellow]CAPTCHA on apply page — skipping[/]")
+                update_job_status(conn, job_id, "failed_captcha")
+                log_action(conn, "captcha_detected", page.url, app_id, job_id)
+                return
 
         # Process form pages
         form_answers_all = {}
@@ -264,7 +317,13 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
             save_application_metadata(company, position, job, form_answers_all)
             console.print(f"  [green]Successfully applied![/]")
         else:
-            console.print("  [yellow]Could not find submit button — marking as failed[/]")
+            # Save debug screenshot so we can see what the page looks like
+            debug_path = app_dir / "debug_no_submit.png"
+            try:
+                page.screenshot(path=str(debug_path), full_page=True)
+                console.print(f"  [yellow]Could not find submit button -- debug screenshot: {debug_path}[/]")
+            except Exception:
+                console.print("  [yellow]Could not find submit button — marking as failed[/]")
             update_job_status(conn, job_id, "failed")
             log_action(conn, "submit_button_not_found", url, app_id, job_id)
 
@@ -292,8 +351,53 @@ def _detect_captcha(page) -> bool:
     return False
 
 
+def _dismiss_modals(page):
+    """Try to close any sign-in modals or popups blocking the page."""
+    modal_close_selectors = [
+        'button[aria-label="Dismiss"]',
+        'button[aria-label="Close"]',
+        'button:has-text("Dismiss")',
+        '[data-test-modal-close-btn]',
+        '.modal__dismiss',
+        '.artdeco-modal__dismiss',
+        'button.msg-overlay-bubble-header__control--new-convo-btn',
+        # Generic close buttons
+        'button[class*="close"]',
+        'button[class*="dismiss"]',
+        '[aria-label="close"]',
+    ]
+    for selector in modal_close_selectors:
+        try:
+            btn = page.query_selector(selector)
+            if btn and btn.is_visible():
+                btn.click()
+                page.wait_for_timeout(500)
+        except Exception:
+            continue
+
+
 def _click_apply_button(page):
-    """Try to find and click an 'Apply' button on a job listing page."""
+    """Try to find and click an 'Apply' button on a job listing page.
+
+    Handles LinkedIn external apply links (opens new tab) and standard apply buttons.
+    """
+    # First dismiss any modals/popups (LinkedIn sign-in, etc.)
+    _dismiss_modals(page)
+
+    # For LinkedIn: check if there's an external apply link (opens company's site)
+    current_url = page.url
+    if "linkedin.com" in current_url:
+        # LinkedIn external apply buttons are <a> tags that open a new tab
+        ext_apply = page.query_selector('a[href*="externalApply"], a.jobs-apply-button, a[data-tracking-control-name*="apply"]')
+        if ext_apply:
+            href = ext_apply.get_attribute("href")
+            if href:
+                console.print(f"  [dim]Following LinkedIn external apply link...[/]")
+                page.goto(href, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(2000)
+                _dismiss_modals(page)
+                return True
+
     apply_selectors = [
         'button:has-text("Apply")',
         'a:has-text("Apply")',
@@ -304,12 +408,35 @@ def _click_apply_button(page):
         '.apply-button',
         '#apply-button',
     ]
+
     for selector in apply_selectors:
         try:
             btn = page.query_selector(selector)
             if btn and btn.is_visible():
+                # Check if it's a link that opens externally
+                tag = btn.evaluate("el => el.tagName.toLowerCase()")
+                href = btn.get_attribute("href") if tag == "a" else None
+
+                if href and ("http" in href) and ("linkedin.com" not in href):
+                    # External apply link — navigate directly
+                    console.print(f"  [dim]Following external apply link...[/]")
+                    page.goto(href, wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(2000)
+                    return True
+
+                # Check if click opens a new page/tab
+                pages_before = len(page.context.pages)
                 btn.click()
                 page.wait_for_timeout(2000)
+
+                # If a new tab opened, switch to it
+                if len(page.context.pages) > pages_before:
+                    new_page = page.context.pages[-1]
+                    console.print(f"  [dim]Switched to new tab: {new_page.url[:60]}...[/]")
+                    # We can't switch 'page' reference here, but the caller
+                    # should use context.pages[-1] — handled in _apply_to_single_job
+                    return "new_tab"
+
                 return True
         except Exception:
             continue
@@ -318,76 +445,96 @@ def _click_apply_button(page):
 
 def _extract_form_fields(page) -> list[dict]:
     """Extract all form fields from the current page using DOM inspection."""
-    return page.evaluate("""() => {
+    # Scroll down to trigger lazy-loaded content
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(1000)
+    page.evaluate("window.scrollTo(0, 0)")
+    page.wait_for_timeout(500)
+
+    fields = page.evaluate("""() => {
         const fields = [];
         const seen = new Set();
+        let autoIdx = 0;
+
+        function getSelector(el) {
+            // Build a reliable selector - prefer id, then name, then aria-label, then generate a CSS path
+            if (el.id) return '#' + CSS.escape(el.id);
+            if (el.name) return el.tagName.toLowerCase() + '[name="' + el.name + '"]';
+            if (el.getAttribute('aria-label')) return el.tagName.toLowerCase() + '[aria-label="' + el.getAttribute('aria-label') + '"]';
+            if (el.placeholder) return el.tagName.toLowerCase() + '[placeholder="' + el.placeholder + '"]';
+            // Fallback: nth-of-type path
+            let path = el.tagName.toLowerCase();
+            if (el.type) path += '[type="' + el.type + '"]';
+            return path;
+        }
 
         function getLabel(el) {
-            // Check for associated label
             if (el.id) {
-                const label = document.querySelector(`label[for="${el.id}"]`);
+                const label = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
                 if (label) return label.textContent.trim();
             }
-            // Check parent label
             const parentLabel = el.closest('label');
             if (parentLabel) return parentLabel.textContent.trim();
-            // Check aria-label
             if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
-            // Check placeholder
             if (el.placeholder) return el.placeholder;
-            // Check preceding sibling or parent text
             const prev = el.previousElementSibling;
             if (prev && prev.tagName === 'LABEL') return prev.textContent.trim();
             return el.name || el.id || '';
         }
 
+        function isVisible(el) {
+            const style = window.getComputedStyle(el);
+            const rect = el.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+        }
+
         // Text inputs, emails, numbers, tel, etc.
         document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"])').forEach(el => {
-            const id = el.id || el.name || `input_${fields.length}`;
-            if (seen.has(id)) return;
-            seen.add(id);
-
             const type = el.type || 'text';
-            if (type === 'radio' || type === 'checkbox') return; // handled separately
+            if (type === 'radio' || type === 'checkbox') return;
+
+            const selector = getSelector(el);
+            const uniqueKey = selector + '_' + (el.name || '') + '_' + (el.id || '') + '_' + autoIdx++;
+            if (seen.has(uniqueKey)) return;
+            seen.add(uniqueKey);
 
             fields.push({
-                id: id,
-                selector: el.id ? `#${el.id}` : `[name="${el.name}"]`,
+                id: el.id || el.name || el.getAttribute('aria-label') || 'input_' + autoIdx,
+                selector: selector,
                 label: getLabel(el),
                 type: type,
                 required: el.required,
-                value: el.value || ''
+                value: el.value || '',
+                visible: isVisible(el)
             });
         });
 
         // Textareas
         document.querySelectorAll('textarea').forEach(el => {
-            const id = el.id || el.name || `textarea_${fields.length}`;
-            if (seen.has(id)) return;
-            seen.add(id);
+            const selector = getSelector(el);
             fields.push({
-                id: id,
-                selector: el.id ? `#${el.id}` : `[name="${el.name}"]`,
+                id: el.id || el.name || 'textarea_' + autoIdx++,
+                selector: selector,
                 label: getLabel(el),
                 type: 'textarea',
                 required: el.required,
-                maxLength: el.maxLength > 0 ? el.maxLength : null
+                maxLength: el.maxLength > 0 ? el.maxLength : null,
+                visible: isVisible(el)
             });
         });
 
         // Select dropdowns
         document.querySelectorAll('select').forEach(el => {
-            const id = el.id || el.name || `select_${fields.length}`;
-            if (seen.has(id)) return;
-            seen.add(id);
+            const selector = getSelector(el);
             const options = Array.from(el.options).map(o => o.text.trim()).filter(t => t);
             fields.push({
-                id: id,
-                selector: el.id ? `#${el.id}` : `[name="${el.name}"]`,
+                id: el.id || el.name || 'select_' + autoIdx++,
+                selector: selector,
                 label: getLabel(el),
                 type: 'select',
                 required: el.required,
-                options: options
+                options: options,
+                visible: isVisible(el)
             });
         });
 
@@ -414,10 +561,10 @@ def _extract_form_fields(page) -> list[dict]:
 
         // File uploads
         document.querySelectorAll('input[type="file"]').forEach(el => {
-            const id = el.id || el.name || `file_${fields.length}`;
+            const id = el.id || el.name || 'file_' + autoIdx++;
             fields.push({
                 id: id,
-                selector: el.id ? `#${el.id}` : `[name="${el.name}"]`,
+                selector: getSelector(el),
                 label: getLabel(el),
                 type: 'file',
                 accept: el.accept || ''
@@ -427,6 +574,41 @@ def _extract_form_fields(page) -> list[dict]:
         return fields;
     }""")
 
+    # If no fields found on main page, check iframes
+    if not fields:
+        for frame in page.frames[1:]:
+            try:
+                fields = frame.evaluate("""() => {
+                    const fields = [];
+                    document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"])').forEach(el => {
+                        if (el.type === 'radio' || el.type === 'checkbox' || el.type === 'file') return;
+                        fields.push({
+                            id: el.id || el.name || el.getAttribute('aria-label') || 'input',
+                            selector: el.id ? '#' + CSS.escape(el.id) : el.name ? el.tagName.toLowerCase() + '[name="' + el.name + '"]' : el.tagName.toLowerCase(),
+                            label: el.getAttribute('aria-label') || el.placeholder || el.name || el.id || '',
+                            type: el.type || 'text', required: el.required, value: el.value || '', visible: true
+                        });
+                    });
+                    document.querySelectorAll('textarea, select').forEach(el => {
+                        fields.push({
+                            id: el.id || el.name || el.tagName.toLowerCase(),
+                            selector: el.id ? '#' + CSS.escape(el.id) : el.name ? el.tagName.toLowerCase() + '[name="' + el.name + '"]' : el.tagName.toLowerCase(),
+                            label: el.getAttribute('aria-label') || el.name || el.id || '',
+                            type: el.tagName === 'SELECT' ? 'select' : 'textarea',
+                            required: el.required, visible: true,
+                            options: el.tagName === 'SELECT' ? Array.from(el.options).map(o => o.text.trim()).filter(t => t) : undefined
+                        });
+                    });
+                    return fields;
+                }""")
+                if fields:
+                    console.print(f"  [dim]Found fields inside iframe[/]")
+                    break
+            except Exception:
+                continue
+
+    return fields
+
 
 def _fill_form_fields(page, fields: list[dict], answers: dict):
     """Fill form fields with LLM-inferred answers."""
@@ -435,29 +617,49 @@ def _fill_form_fields(page, fields: list[dict], answers: dict):
         if field_id not in answers or field["type"] == "file":
             continue
 
+        # Skip fields that were detected as not visible
+        if not field.get("visible", True):
+            continue
+
         value = str(answers[field_id])
         selector = field.get("selector", "")
         if not selector:
             continue
 
         try:
+            # Try to find the element first
+            el = page.query_selector(selector)
+            if not el:
+                console.print(f"  [dim]Skipping '{field.get('label', field_id)}' - element not found[/]")
+                continue
+
+            # Scroll into view and wait for visibility
+            el.scroll_into_view_if_needed()
+            page.wait_for_timeout(200)
+
             if field["type"] == "select":
-                page.select_option(selector, label=value)
+                page.select_option(selector, label=value, timeout=5000)
             elif field["type"] == "radio":
-                # Find the radio with matching label text
                 options = page.query_selector_all(f'input[name="{field_id}"]')
                 for opt in options:
                     label = page.evaluate("(el) => { const l = el.closest('label'); return l ? l.textContent.trim() : el.value; }", opt)
                     if value.lower() in label.lower():
+                        opt.scroll_into_view_if_needed()
                         opt.click()
                         break
             elif field["type"] == "textarea":
-                page.fill(selector, value)
+                page.fill(selector, value, timeout=5000)
             else:
-                # Clear existing value and type new one
-                page.fill(selector, value)
+                # Try fill first, fall back to click+type for stubborn inputs
+                try:
+                    page.fill(selector, value, timeout=5000)
+                except Exception:
+                    el.click()
+                    page.wait_for_timeout(100)
+                    page.keyboard.type(value)
         except Exception as e:
-            console.print(f"  [yellow]Could not fill '{field.get('label', field_id)}': {e}[/]")
+            err_msg = str(e).split("\n")[0][:80]
+            console.print(f"  [yellow]Could not fill '{field.get('label', field_id)}': {err_msg}[/]")
 
 
 def _handle_file_uploads(page, resume_file: Optional[Path], cl_file: Optional[Path]):
@@ -499,35 +701,108 @@ def _click_next_button(page) -> bool:
         'input[type="submit"][value*="Continue"]',
         'a:has-text("Next")',
         '[data-testid*="next"]',
+        # Workday
+        'button[data-automation-id="bottom-navigation-next-button"]',
     ]
+
+    # Scroll down to reveal buttons below the fold
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(500)
+
     for selector in next_selectors:
         try:
             btn = page.query_selector(selector)
             if btn and btn.is_visible():
+                btn.scroll_into_view_if_needed()
                 btn.click()
                 return True
         except Exception:
             continue
+
+    # Check iframes
+    for frame in page.frames[1:]:
+        for selector in next_selectors:
+            try:
+                btn = frame.query_selector(selector)
+                if btn and btn.is_visible():
+                    btn.click()
+                    return True
+            except Exception:
+                continue
+
     return False
 
 
 def _click_submit_button(page) -> bool:
     """Try to find and click the Submit/Apply button. Returns True if found."""
     submit_selectors = [
-        'button:has-text("Submit")',
         'button:has-text("Submit Application")',
+        'button:has-text("Submit")',
         'button:has-text("Apply")',
         'button:has-text("Send Application")',
+        'button:has-text("Complete")',
+        'button:has-text("Finish")',
+        'button:has-text("Done")',
         'input[type="submit"]',
         'button[type="submit"]',
         '[data-testid*="submit"]',
+        '[data-testid*="apply"]',
+        # Greenhouse
+        '#submit_app', '#submit-application',
+        'input[value="Submit Application"]',
+        'input[value="Submit"]',
+        # Lever
+        '.posting-btn-submit',
+        'button.postings-btn',
+        # Workday
+        'button[data-automation-id="bottom-navigation-next-button"]',
+        'button[data-automation-id="submit"]',
+        # iCIMS
+        '.iCIMS_Button', 'button.btn-submit',
+        # Generic fallbacks
+        'a:has-text("Submit")',
+        'a:has-text("Apply")',
+        '[role="button"]:has-text("Submit")',
+        '[class*="submit"]',
     ]
+
+    # Scroll down to reveal submit buttons below the fold
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(500)
+
+    # Search main page
     for selector in submit_selectors:
         try:
             btn = page.query_selector(selector)
             if btn and btn.is_visible():
+                btn.scroll_into_view_if_needed()
                 btn.click()
                 return True
         except Exception:
             continue
+
+    # Scroll back to top and try again (button could be at top)
+    page.evaluate("window.scrollTo(0, 0)")
+    page.wait_for_timeout(300)
+    for selector in submit_selectors:
+        try:
+            btn = page.query_selector(selector)
+            if btn and btn.is_visible():
+                btn.scroll_into_view_if_needed()
+                btn.click()
+                return True
+        except Exception:
+            continue
+
+    # Fall back to iframes (Greenhouse, Lever, etc. embed forms in iframes)
+    for frame in page.frames[1:]:
+        for selector in submit_selectors:
+            try:
+                btn = frame.query_selector(selector)
+                if btn and btn.is_visible():
+                    btn.click()
+                    return True
+            except Exception:
+                continue
+
     return False

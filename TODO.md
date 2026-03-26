@@ -6,6 +6,14 @@
 - [ ] parallelize job scraping and searching and application? Seems like it's pretty serial right now
 - [ ] ability to apply to big and small companies
 - [ ] confirm resume and cover letter are being tailored per company / role
+- [ ] ability to turn resume and cover letter tailoring on and off
+- [ ] confirm that with cached searches if new items come up like in 
+  Skipping (cached): software engineer in New York, NY
+  Skipping (cached): software engineer in Chicago, IL
+  All searches cached. Nothing to scrape.
+That we continue to search new instances of thsoe jobs and the city and specific search itself isn't cached, just the results
+- [ ] failed jobs just stay failed. Retry?
+- [ ] Option to view jobs we scraped and determine which ones to remove, etc
 
 ## Features
 

@@ -2,6 +2,7 @@
 
 import os
 import json
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,7 +33,8 @@ def _get_client(settings: dict) -> OpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key or api_key == "your-openai-api-key-here":
         raise ValueError("OPENAI_API_KEY not set in .env file. Please add your key.")
-    return OpenAI(api_key=api_key)
+    timeout = settings.get("openai", {}).get("timeout", 120)
+    return OpenAI(api_key=api_key, timeout=timeout)
 
 
 def _get_model(settings: dict) -> str:
@@ -41,6 +43,31 @@ def _get_model(settings: dict) -> str:
 
 def _get_temperature(settings: dict) -> float:
     return settings.get("openai", {}).get("temperature", 0.7)
+
+
+def _call_with_retry(client: OpenAI, settings: dict, prompt: str,
+                     max_retries: int = 3) -> str:
+    """Call the OpenAI API with retry + exponential backoff for transient failures."""
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=_get_model(settings),
+                temperature=_get_temperature(settings),
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            return response.choices[0].message.content
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            wait = 2 ** (attempt + 1)  # 2s, 4s
+            print(f"  OpenAI API error (attempt {attempt+1}/{max_retries}): {e}")
+            print(f"  Retrying in {wait}s...")
+            time.sleep(wait)
 
 
 def load_base_resume() -> str:
@@ -110,15 +137,7 @@ def tailor_resume(job: dict, settings: dict) -> str:
 7. DO NOT add any skills, experience, or achievements not present in the base resume
 """
 
-    response = client.chat.completions.create(
-        model=_get_model(settings),
-        temperature=_get_temperature(settings),
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    return response.choices[0].message.content
+    return _call_with_retry(client, settings, prompt)
 
 
 def tailor_cover_letter(job: dict, settings: dict) -> str:
@@ -166,15 +185,7 @@ def tailor_cover_letter(job: dict, settings: dict) -> str:
 8. End with a clear call to action
 """
 
-    response = client.chat.completions.create(
-        model=_get_model(settings),
-        temperature=_get_temperature(settings),
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    return response.choices[0].message.content
+    return _call_with_retry(client, settings, prompt)
 
 
 def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
@@ -227,14 +238,26 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
 Return ONLY valid JSON — no explanation, no markdown fences.
 """
 
-    response = client.chat.completions.create(
-        model=_get_model(settings),
-        temperature=0.3,  # Lower temperature for form filling — want precision
-        messages=[
-            {"role": "system", "content": "You fill out job application forms accurately using the applicant's real profile data. Return only valid JSON."},
-            {"role": "user", "content": prompt},
-        ],
-    )
+    for attempt in range(3):
+        try:
+            response = client.chat.completions.create(
+                model=_get_model(settings),
+                temperature=0.3,  # Lower temperature for form filling — want precision
+                messages=[
+                    {"role": "system", "content": "You fill out job application forms accurately using the applicant's real profile data. Return only valid JSON."},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            break
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            if attempt == 2:
+                raise
+            wait = 2 ** (attempt + 1)
+            print(f"  OpenAI API error (attempt {attempt+1}/3): {e}")
+            print(f"  Retrying in {wait}s...")
+            time.sleep(wait)
 
     text = response.choices[0].message.content.strip()
     # Strip markdown code fences if present
