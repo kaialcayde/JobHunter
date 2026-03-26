@@ -18,7 +18,8 @@
       "Bash(venv/Scripts/python -c \"from src.main import main; from src.document import create_resume_pdf, create_cover_letter_pdf; from src.applicant import apply_to_jobs; from src.scraper import scrape_jobs; print\\(''All imports OK''\\)\")",
       "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/applicant.py'', doraise=True\\); py_compile.compile\\(''src/main.py'', doraise=True\\); print\\(''OK''\\)\")",
       "Bash(venv/Scripts/python -c \"import jobspy; help\\(jobspy.scrape_jobs\\)\")",
-      "Bash(venv/Scripts/python -c \"from src.main import main; from src.applicant import apply_to_jobs; from src.scraper import scrape_jobs; from src.database import get_connection; print\\(''All imports OK''\\)\")"
+      "Bash(venv/Scripts/python -c \"from src.main import main; from src.applicant import apply_to_jobs; from src.scraper import scrape_jobs; from src.database import get_connection; print\\(''All imports OK''\\)\")",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/main.py'', doraise=True\\); print\\(''OK''\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\kaina\\OneDrive\\Documents\\JobHunter"

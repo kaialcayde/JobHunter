@@ -196,9 +196,14 @@ class OpenAIConfig(BaseModel):
         return v
 
 
+class Tailoring(BaseModel):
+    enabled: bool = True
+
+
 class Automation(BaseModel):
     auto_submit: bool = True
     max_applications_per_day: int = 25
+    max_applications_per_round: int = 0  # 0 = no per-round limit
     max_per_role: int = 0           # 0 = no per-role limit
     max_per_location: int = 0       # 0 = no per-location limit
     distribution: str = "round_robin"  # round_robin or sequential
@@ -243,6 +248,7 @@ class Filters(BaseModel):
 class Settings(BaseModel):
     job_search: JobSearch = JobSearch()
     openai: OpenAIConfig = OpenAIConfig()
+    tailoring: Tailoring = Tailoring()
     automation: Automation = Automation()
     scraping: Scraping = Scraping()
     scheduler: Scheduler = Scheduler()

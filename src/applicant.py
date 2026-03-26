@@ -88,6 +88,7 @@ def apply_to_jobs():
     settings = load_settings()
     automation = settings.get("automation", {})
     max_per_day = automation.get("max_applications_per_day", 25)
+    max_per_round = automation.get("max_applications_per_round", 0)  # 0 = no round cap
     max_per_role = automation.get("max_per_role", 0)
     max_per_location = automation.get("max_per_location", 0)
     distribution = automation.get("distribution", "round_robin")
@@ -103,6 +104,11 @@ def apply_to_jobs():
         return
 
     remaining = max_per_day - applied_today
+
+    # Apply per-round cap (overrides daily remaining if lower)
+    if max_per_round > 0 and max_per_round < remaining:
+        console.print(f"[dim]Per-round cap: {max_per_round} (daily remaining was {remaining})[/]")
+        remaining = max_per_round
 
     # Get jobs based on distribution strategy
     if distribution == "round_robin":

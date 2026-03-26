@@ -18,7 +18,7 @@
     Good — caching confirmed working correctly: The cache only tracks "when did we last run this search?" (role+location+timestamp). It does NOT cache the job results. Every re-scrape after cache expiry fetches fresh listings from the job boards, and insert_job deduplicates by URL hash so only genuinely new postings get added.
 
     - [ ] need to confirm that I can tweak cache_hours
-
+- [ ] need to find a way t oget around captcha
 - [ ] still tailoring cover letters etc when tailor sett o false
     (1/5) Software Engineer III at Abbott
       Tailoring resume...
@@ -30,6 +30,8 @@ Now let me also check the job dedup logic:
 - [ ] failed jobs just stay failed. Retry?
 - [ ] add debugging print logs to api (when processing a form so many api calls
 - [ ] Option to view jobs we scraped and determine which ones to remove, etc
+- [ ] confirm parallelization works correctly
+- [ ] need to underestand processing form better. Found 2 form field then going to next page, etc leading to so many api chat requests
 
 ## Features
 

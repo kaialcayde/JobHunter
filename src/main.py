@@ -86,7 +86,11 @@ def cmd_tailor():
 
     automation = settings.get("automation", {})
     max_per_day = automation.get("max_applications_per_day", 25)
+    max_per_round = automation.get("max_applications_per_round", 0)
     distribution = automation.get("distribution", "round_robin")
+
+    # Use round cap if set, otherwise daily cap
+    limit = max_per_round if max_per_round > 0 else max_per_day
 
     # Get new jobs that need tailoring
     all_new = get_jobs_by_status(conn, "new", limit=500)
@@ -95,11 +99,11 @@ def cmd_tailor():
         conn.close()
         return
 
-    # Apply round-robin to tailoring too so we don't tailor 50 of one role
+    # Only tailor what we'll actually apply to this round
     if distribution == "round_robin":
-        jobs = _round_robin_select(all_new, max_per_day)
+        jobs = _round_robin_select(all_new, limit)
     else:
-        jobs = all_new[:max_per_day]
+        jobs = all_new[:limit]
 
     console.print(f"Tailoring documents for {len(jobs)} jobs (of {len(all_new)} new)...\n")
 
@@ -180,7 +184,17 @@ def cmd_pipeline():
             console.print(f"[red]Tailoring failed: {e}[/]")
             logger.error(f"Tailoring failed: {e}")
     else:
-        console.print("\n[bold magenta]=== Step 2/3: Tailoring (skipped — disabled in settings) ===[/]")
+        console.print("\n[bold magenta]=== Step 2/3: Tailoring (skipped -- disabled in settings) ===[/]")
+        # Promote "new" jobs straight to "tailored" so apply step picks them up
+        conn = get_connection()
+        new_jobs = get_jobs_by_status(conn, "new", limit=500)
+        promoted = 0
+        for job in new_jobs:
+            update_job_status(conn, job["id"], "tailored")
+            promoted += 1
+        conn.close()
+        if promoted:
+            console.print(f"  Promoted {promoted} jobs to ready-to-apply (no tailoring)")
 
     # Step 3: Apply
     console.print("\n[bold magenta]=== Step 3/3: Submitting Applications ===[/]")
