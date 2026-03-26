@@ -28,6 +28,35 @@ from .vision_agent import run_vision_agent, verify_submission
 console = Console(force_terminal=True)
 
 
+def _is_dead_page(page) -> bool:
+    """Detect if we've landed on a dead/empty LinkedIn page (footer page, expired listing).
+
+    Only flags LinkedIn pages — external ATS sites (Ashby, Greenhouse, etc.) are SPAs
+    that may have minimal text initially while JS renders, so we never flag those.
+    """
+    url = page.url.lower()
+    if "linkedin.com" not in url:
+        return False  # Never flag external ATS pages as dead
+
+    return page.evaluate("""() => {
+        const body = document.body;
+        if (!body) return true;
+
+        // LinkedIn footer-only page: no main content area, just nav + footer links
+        const main = document.querySelector(
+            'main, .scaffold-layout__main, .jobs-search__job-details, ' +
+            '.jobs-unified-top-card, .job-view-layout'
+        );
+        if (main && main.innerText.trim().length > 50) return false;
+
+        // Check total visible text — LinkedIn footer pages have < 300 chars
+        const cleaned = (body.innerText || '').replace(/\\s+/g, ' ').trim();
+        if (cleaned.length < 300) return true;
+
+        return false;
+    }""")
+
+
 def _is_listing_page(page) -> bool:
     """Heuristic: check if we're still on a job listing/description page (not an application form).
 
@@ -459,6 +488,34 @@ def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, 
     return "needs_login"
 
 
+def _check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, verbose) -> bool:
+    """Check for CAPTCHA or login walls. Returns True if blocked (caller should return)."""
+    if detect_captcha(page):
+        if verbose:
+            console.print("  [dim]CAPTCHA detected, attempting solve...[/]")
+        if not try_solve_captcha(page, settings):
+            console.print("  [yellow]CAPTCHA / bot verification detected -- skipping[/]")
+            update_job_status(conn, job_id, "failed_captcha")
+            log_action(conn, "captcha_detected", url, app_id, job_id)
+            return True
+
+    if detect_login_page(page):
+        if verbose:
+            console.print("  [dim]Login page detected[/]")
+        result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
+        if result == "needs_login":
+            update_job_status(conn, job_id, "needs_login")
+            log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
+            return True
+        elif not result:
+            console.print(f"  [yellow]Could not bypass login -- skipping: {page.url[:80]}[/]")
+            update_job_status(conn, job_id, "skipped")
+            log_action(conn, "login_page_detected", url, app_id, job_id)
+            return True
+
+    return False
+
+
 def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bool):
     """Attempt to apply to a single job."""
     conn = get_connection()
@@ -532,44 +589,37 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
         if verbose:
             console.print(f"  [dim]Page loaded: {page.url[:80]}[/]")
 
-        # Check for CAPTCHA / bot detection
-        if detect_captcha(page):
-            if verbose:
-                console.print("  [dim]CAPTCHA detected, attempting solve...[/]")
-            if not try_solve_captcha(page, settings):
-                console.print("  [yellow]CAPTCHA / bot verification detected -- skipping[/]")
-                update_job_status(conn, job_id, "failed_captcha")
-                log_action(conn, "captcha_detected", url, app_id, job_id)
-                return
-
-        # Check for login page (LinkedIn/Indeed redirect)
-        if detect_login_page(page):
-            if verbose:
-                console.print("  [dim]Login page detected[/]")
-            result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
-            if result == "needs_login":
-                update_job_status(conn, job_id, "needs_login")
-                log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
-                return
-            elif not result:
-                console.print(f"  [yellow]Could not bypass login -- skipping: {page.url[:80]}[/]")
-                update_job_status(conn, job_id, "skipped")
-                log_action(conn, "login_page_detected", url, app_id, job_id)
-                return
-
-        # Dismiss any modals (LinkedIn "Share your profile", messaging, etc.)
-        dismiss_modals(page)
+        # Single check for blockers (CAPTCHA / login) on initial page load
+        block = _check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, verbose)
+        if block:
+            return
 
         # Try to find and click "Apply" button if we're on a listing page
+        dismiss_modals(page)
         if verbose:
             console.print("  [dim]Looking for Apply button...[/]")
         url_before_apply = page.url
         apply_result = click_apply_button(page)
+
+        # If Apply button not found, try harder: dismiss modals again and retry,
+        # then fall back to _force_apply_click which extracts URLs from the page
+        if not apply_result:
+            dismiss_modals(page)
+            page.wait_for_timeout(500)
+            apply_result = click_apply_button(page)
+
+        if not apply_result:
+            console.print("  [dim]Apply button not found -- trying URL extraction...[/]")
+            if _force_apply_click(page):
+                apply_result = True
+                # Check if a new tab was opened
+                if len(page.context.pages) > 1:
+                    latest = page.context.pages[-1]
+                    if latest != page and latest.url != "about:blank":
+                        apply_result = "new_tab"
+
         if verbose:
             console.print(f"  [dim]Apply button result: {apply_result}[/]")
-
-        # Dismiss any modals that may have appeared after clicking Apply
-        dismiss_modals(page)
 
         # If apply button opened a new tab, switch to it
         if apply_result == "new_tab" and len(page.context.pages) > 1:
@@ -583,37 +633,50 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
             old_page.close()
             console.print(f"  [dim]Now on: {page.url[:80]}[/]")
 
-            # Check new page for CAPTCHA or login
-            if detect_captcha(page):
-                if not try_solve_captcha(page, settings):
-                    console.print("  [yellow]CAPTCHA on apply page -- skipping[/]")
-                    update_job_status(conn, job_id, "failed_captcha")
-                    log_action(conn, "captcha_detected", page.url, app_id, job_id)
-                    return
-            if detect_login_page(page):
-                result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
-                if result == "needs_login":
-                    update_job_status(conn, job_id, "needs_login")
-                    log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
-                    return
-                elif not result:
-                    console.print(f"  [yellow]Could not bypass login after apply -- skipping: {page.url[:80]}[/]")
-                    update_job_status(conn, job_id, "skipped")
-                    log_action(conn, "login_page_detected", page.url, app_id, job_id)
-                    return
+        # Single check for blockers after navigation (covers new tab, same-page redirect, etc.)
+        block = _check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, verbose)
+        if block:
+            return
 
-        # Also check after clicking apply on the same page
-        if detect_login_page(page):
-            result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
-            if result == "needs_login":
-                update_job_status(conn, job_id, "needs_login")
-                log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
+        # Detect dead/empty LinkedIn pages (footer page, expired listing)
+        if _is_dead_page(page):
+            # Before giving up, try the alternate URL if we have one
+            if listing_url and listing_url != url and "linkedin.com" not in listing_url.lower():
+                console.print(f"  [dim]LinkedIn dead page -- trying direct URL: {listing_url[:60]}[/]")
+                page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=3000)
+                except Exception:
+                    pass
+            else:
+                console.print("  [yellow]Landed on empty/dead LinkedIn page -- job may be expired[/]")
+                update_job_status(conn, job_id, "failed")
+                log_action(conn, "apply_failed", f"Dead page after apply: {page.url[:80]}", app_id, job_id)
+                final_dir = move_application_dir(company, position, "failed")
                 return
-            elif not result:
-                console.print(f"  [yellow]Could not bypass login -- skipping: {page.url[:80]}[/]")
-                update_job_status(conn, job_id, "skipped")
-                log_action(conn, "login_page_detected", page.url, app_id, job_id)
-                return
+
+        # If still stuck on LinkedIn after clicking Apply (no Easy Apply modal opened),
+        # try to navigate to the company's ATS directly
+        still_on_linkedin = "linkedin.com" in page.url.lower()
+        if still_on_linkedin:
+            from .platforms.linkedin import detect_easy_apply_modal
+            if not detect_easy_apply_modal(page):
+                # We're on LinkedIn but NOT in an Easy Apply flow -- try alternate URL
+                if listing_url and "linkedin.com" not in listing_url.lower():
+                    console.print(f"  [dim]Stuck on LinkedIn -- navigating to company page: {listing_url[:60]}[/]")
+                    page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=3000)
+                    except Exception:
+                        pass
+                    still_on_linkedin = "linkedin.com" in page.url.lower()
+
+                if still_on_linkedin and not detect_easy_apply_modal(page):
+                    console.print("  [yellow]Could not leave LinkedIn -- skipping[/]")
+                    update_job_status(conn, job_id, "failed")
+                    log_action(conn, "apply_failed", "Stuck on LinkedIn, no Easy Apply modal", app_id, job_id)
+                    final_dir = move_application_dir(company, position, "failed")
+                    return
 
         # Decide strategy: selectors stay on LinkedIn, vision takes over on external ATS
         use_vision = settings.get("automation", {}).get("vision_agent", False)
@@ -669,6 +732,18 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 console.print(f"  Processing form page {page_num + 1}...")
                 logger.info(f"Form page {page_num + 1} for job {job_id} ({company} - {position})")
 
+                # Guard: check if page context is alive before doing anything
+                try:
+                    page.evaluate("() => document.readyState")
+                except Exception:
+                    console.print("  [dim]Page context lost -- waiting for navigation to settle[/]")
+                    try:
+                        page.wait_for_load_state("domcontentloaded", timeout=5000)
+                        page.evaluate("() => document.readyState")
+                    except Exception:
+                        console.print("  [yellow]Page destroyed -- cannot continue form filling[/]")
+                        break
+
                 # Extract form fields
                 fields = extract_form_fields(page)
                 if not fields:
@@ -700,7 +775,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 try:
                     page.evaluate("() => document.readyState")
                 except Exception:
-                    console.print("  [dim]Page navigated during upload -- waiting for new page[/]")
+                    console.print("  [dim]Page navigated during upload -- waiting for reload[/]")
                     try:
                         page.wait_for_load_state("domcontentloaded", timeout=5000)
                     except Exception:
@@ -711,7 +786,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 if not click_next_button(page):
                     break  # No more pages -- we're at the submit page
 
-                # Wait for next page to render (use smart wait instead of fixed sleep)
+                # Wait for next page to render
                 try:
                     page.wait_for_load_state("domcontentloaded", timeout=3000)
                 except Exception:

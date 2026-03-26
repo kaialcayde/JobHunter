@@ -1,42 +1,40 @@
-"""Page detection and navigation -- CAPTCHA, login, modals, and button clicking."""
+"""Page detection and navigation -- CAPTCHA, login, modals, and button clicking.
+
+All selector-based checks are batched into single page.evaluate() calls
+to minimize browser round-trips and eliminate per-selector waits.
+"""
+
+import logging
 
 from rich.console import Console
 
 from .platforms.linkedin import handle_share_profile, dismiss_linkedin_modals
 
+logger = logging.getLogger(__name__)
+
 console = Console(force_terminal=True)
 
 
 def detect_captcha(page) -> bool:
-    """Check if the page has a CAPTCHA or bot verification."""
-    captcha_indicators = [
-        'iframe[src*="recaptcha"]',
-        'iframe[src*="hcaptcha"]',
-        '.g-recaptcha',
-        '#captcha',
-        '[class*="captcha"]',
-        'iframe[title*="reCAPTCHA"]',
-        # Cloudflare Turnstile / challenge
-        'iframe[src*="challenges.cloudflare.com"]',
-        '[class*="cf-turnstile"]',
-        '#challenge-running',
-        '#challenge-form',
-    ]
-    for selector in captcha_indicators:
-        if page.query_selector(selector):
-            return True
-
-    # Check page text for common verification messages
-    body_text = (page.text_content("body") or "").lower()[:2000]
-    if any(phrase in body_text for phrase in [
-        "verify you are human",
-        "additional verification required",
-        "please verify you're not a robot",
-        "checking your browser",
-    ]):
-        return True
-
-    return False
+    """Check if the page has a CAPTCHA or bot verification (single JS call)."""
+    return page.evaluate("""() => {
+        const selectors = [
+            'iframe[src*="recaptcha"]', 'iframe[src*="hcaptcha"]',
+            '.g-recaptcha', '#captcha', '[class*="captcha"]',
+            'iframe[title*="reCAPTCHA"]',
+            'iframe[src*="challenges.cloudflare.com"]',
+            '[class*="cf-turnstile"]', '#challenge-running', '#challenge-form'
+        ];
+        for (const sel of selectors) {
+            if (document.querySelector(sel)) return true;
+        }
+        const body = (document.body?.textContent || '').toLowerCase().slice(0, 2000);
+        const phrases = [
+            'verify you are human', 'additional verification required',
+            "please verify you're not a robot", 'checking your browser'
+        ];
+        return phrases.some(p => body.includes(p));
+    }""")
 
 
 def try_solve_captcha(page, settings: dict) -> bool:
@@ -112,74 +110,220 @@ def try_solve_captcha(page, settings: dict) -> bool:
 
 
 def detect_login_page(page) -> bool:
-    """Detect if we've landed on a login/signup page instead of an application form."""
-    url = page.url.lower()
+    """Detect if we've landed on a login/signup page (single JS call)."""
+    return page.evaluate("""() => {
+        const url = window.location.href.toLowerCase();
+        const loginPatterns = [
+            'linkedin.com/signup', 'linkedin.com/login', 'linkedin.com/checkpoint',
+            'linkedin.com/uas/login', 'indeed.com/account/login', 'indeed.com/auth',
+            'glassdoor.com/member/auth'
+        ];
+        if (loginPatterns.some(p => url.includes(p))) return true;
 
-    # Known login/signup URL patterns
-    login_patterns = [
-        "linkedin.com/signup",
-        "linkedin.com/login",
-        "linkedin.com/checkpoint",
-        "linkedin.com/uas/login",
-        "indeed.com/account/login",
-        "indeed.com/auth",
-        "glassdoor.com/member/auth",
-    ]
-    if any(pattern in url for pattern in login_patterns):
-        return True
-
-    # Check page content for login indicators
-    body_text = (page.text_content("body") or "").lower()[:2000]
-    login_phrases = [
-        "sign in to continue",
-        "sign in to see who you already know",
-        "join linkedin",
-        "join now",
-        "log in to indeed",
-        "create an account",
-    ]
-    # Must match login phrase AND have a password field (to avoid false positives)
-    if any(phrase in body_text for phrase in login_phrases):
-        if page.query_selector('input[type="password"]'):
-            return True
-
-    return False
+        const body = (document.body?.textContent || '').toLowerCase().slice(0, 2000);
+        const loginPhrases = [
+            'sign in to continue', 'sign in to see who you already know',
+            'join linkedin', 'join now', 'log in to indeed', 'create an account'
+        ];
+        if (loginPhrases.some(p => body.includes(p))) {
+            if (document.querySelector('input[type="password"]')) return true;
+        }
+        return false;
+    }""")
 
 
 def dismiss_modals(page):
     """Try to close any modals or popups blocking the page.
 
-    Delegates to platform-specific handlers for LinkedIn.
+    Delegates to platform-specific handlers for LinkedIn, then does a single
+    JS sweep for generic modals.
     """
-    # LinkedIn-specific handling
     is_linkedin = "linkedin.com" in (page.url or "")
     if is_linkedin:
         handle_share_profile(page)
         dismiss_linkedin_modals(page)
 
-    # Generic modal dismiss (works for all sites)
-    modal_close_selectors = [
-        'button[aria-label="Dismiss"]',
-        'button[aria-label="Close"]',
-        'button:has-text("Dismiss")',
-        'button:has-text("Not now")',
-        'button:has-text("No thanks")',
-        'button:has-text("Skip")',
-        '[data-test-modal-close-btn]',
-        '.modal__dismiss',
-        # Generic close buttons
-        'button[class*="close"]',
-        'button[class*="dismiss"]',
-        '[aria-label="close"]',
+    # Single JS call to dismiss generic modals
+    page.evaluate("""() => {
+        const selectors = [
+            'button[aria-label="Dismiss"]', 'button[aria-label="Close"]',
+            '[data-test-modal-close-btn]', '.modal__dismiss',
+            'button[class*="close"]', 'button[class*="dismiss"]',
+            '[aria-label="close"]'
+        ];
+        const textMatches = ['dismiss', 'not now', 'no thanks', 'skip'];
+
+        for (const sel of selectors) {
+            try {
+                const btn = document.querySelector(sel);
+                if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                    btn.click();
+                    return;
+                }
+            } catch(e) {}
+        }
+
+        // Text-based fallback
+        const buttons = document.querySelectorAll('button');
+        for (const btn of buttons) {
+            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+            const text = (btn.textContent || '').trim().toLowerCase();
+            if (textMatches.some(m => text === m || text.startsWith(m))) {
+                btn.click();
+                return;
+            }
+        }
+    }""")
+
+
+def _click_linkedin_apply(page):
+    """Handle LinkedIn Apply button -- Easy Apply or external redirect.
+
+    LinkedIn lazy-loads the Apply button, so we wait for it. External apply
+    buttons are <button> elements that open a new tab via JS, NOT <a> tags.
+    Returns True if clicked, "new_tab" if a new tab opened, False if not found.
+    """
+    from .platforms.linkedin import dismiss_all_linkedin_modals
+
+    # Dismiss any blocking modals FIRST (Share Profile, etc.)
+    dismiss_all_linkedin_modals(page)
+
+    # Wait for the apply button area to load (LinkedIn lazy-loads this)
+    apply_btn = None
+    apply_selectors = [
+        # LinkedIn-specific classes (most reliable)
+        '.jobs-apply-button',
+        '.jobs-s-apply button',
+        'button.jobs-apply-button',
+        # Aria labels
+        'button[aria-label*="Apply"]',
+        'button[aria-label*="apply"]',
+        # Data attributes
+        '[data-tracking-control-name*="apply"]',
+        # Text-based fallback
+        'button:has-text("Easy Apply")',
+        'button:has-text("Apply")',
     ]
-    for selector in modal_close_selectors:
+
+    # Try each selector, giving the page a moment to render
+    for attempt in range(3):
+        for selector in apply_selectors:
+            try:
+                btn = page.query_selector(selector)
+                if btn and btn.is_visible():
+                    apply_btn = btn
+                    break
+            except Exception:
+                continue
+        if apply_btn:
+            break
+        # Button not found yet -- maybe a modal is still blocking, dismiss and retry
+        if attempt == 0:
+            page.wait_for_timeout(1000)
+        elif attempt == 1:
+            dismiss_all_linkedin_modals(page)
+            page.wait_for_timeout(500)
+
+    if not apply_btn:
+        # Diagnostic: log what's actually on the page
+        diag = page.evaluate("""() => {
+            const dialogs = document.querySelectorAll('[role="dialog"], .artdeco-modal');
+            const visibleDialogs = [];
+            for (const d of dialogs) {
+                if (d.offsetWidth > 0) visibleDialogs.push(d.textContent.trim().slice(0, 100));
+            }
+            const buttons = document.querySelectorAll('button');
+            const visibleButtons = [];
+            for (const b of buttons) {
+                if (b.offsetWidth > 0) {
+                    const t = b.textContent.trim().slice(0, 40);
+                    if (t) visibleButtons.push(t);
+                }
+            }
+            return {
+                url: window.location.href,
+                dialogCount: visibleDialogs.length,
+                dialogs: visibleDialogs.slice(0, 3),
+                buttonTexts: visibleButtons.slice(0, 10),
+                bodyLen: (document.body?.innerText || '').length
+            };
+        }""")
+        logger.info(f"LinkedIn Apply button not found. Page diagnostic: {diag}")
+        console.print(f"  [dim]No Apply button found on LinkedIn page[/]")
+        console.print(f"  [dim]  Visible dialogs: {diag.get('dialogCount', 0)}, buttons: {diag.get('buttonTexts', [])[:5]}[/]")
+        return False
+
+    # Determine what kind of apply this is from the button text/attributes
+    btn_text = (apply_btn.text_content() or "").strip().lower()
+    is_easy_apply = "easy apply" in btn_text
+    logger.info(f"LinkedIn Apply button found: text='{btn_text[:40]}', easy_apply={is_easy_apply}")
+    console.print(f"  [dim]Found Apply button: '{btn_text[:30]}'[/]")
+
+    if is_easy_apply:
+        # Easy Apply stays on LinkedIn -- just click and the modal opens
+        apply_btn.click()
+        page.wait_for_timeout(500)
+        console.print("  [dim]Clicked Easy Apply[/]")
+        return True
+
+    # External apply -- clicking opens a new tab or navigates away
+    url_before = page.url
+    try:
+        with page.context.expect_page(timeout=3000) as popup_info:
+            apply_btn.click()
+        new_page = popup_info.value
+        new_page.wait_for_load_state("domcontentloaded")
         try:
-            btn = page.query_selector(selector)
-            if btn and btn.is_visible():
-                btn.click()
-                page.wait_for_timeout(200)
+            new_page.wait_for_load_state("networkidle", timeout=3000)
         except Exception:
-            continue
+            pass
+        console.print(f"  [dim]External apply opened: {new_page.url[:80]}[/]")
+        return "new_tab"
+    except Exception:
+        # No popup -- check if the page navigated or a new tab appeared silently
+        page.wait_for_timeout(500)
+        if page.url != url_before:
+            console.print(f"  [dim]Navigated to: {page.url[:80]}[/]")
+            return True
+        if len(page.context.pages) > 1:
+            latest = page.context.pages[-1]
+            if latest != page and latest.url != "about:blank":
+                console.print(f"  [dim]New tab detected: {latest.url[:80]}[/]")
+                return "new_tab"
+
+        # Button was clicked but nothing happened -- might be Easy Apply after all
+        console.print("  [dim]Apply clicked but no navigation -- checking for modal...[/]")
+        page.wait_for_timeout(500)
+        # Check if an Easy Apply modal opened
+        modal = page.query_selector('.jobs-easy-apply-modal, .jobs-easy-apply-content, [role="dialog"]')
+        if modal and modal.is_visible():
+            console.print("  [dim]Easy Apply modal detected[/]")
+            return True
+
+        # Last resort: try to extract external URL from page and navigate directly
+        ext_url = page.evaluate("""() => {
+            const el = document.querySelector(
+                'a[href*="externalApply"], [data-job-apply-url], [data-apply-url]'
+            );
+            if (el) return el.href || el.getAttribute('data-job-apply-url') || el.getAttribute('data-apply-url');
+            const links = document.querySelectorAll('a[href]');
+            for (const link of links) {
+                const href = link.href || '';
+                if (href.includes('externalApply') || href.includes('applyUrl')) return href;
+            }
+            return null;
+        }""")
+        if ext_url:
+            console.print(f"  [dim]Found external apply URL: {ext_url[:80]}[/]")
+            page.goto(ext_url, wait_until="domcontentloaded", timeout=30000)
+            try:
+                page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
+            return True
+
+        console.print("  [dim]Apply button clicked but nothing happened[/]")
+        return True  # Button was clicked, assume something happened
 
 
 def click_apply_button(page):
@@ -192,69 +336,63 @@ def click_apply_button(page):
     current_url = page.url
     on_linkedin = "linkedin.com" in current_url
 
-    # --- LinkedIn fast path ---
+    # --- LinkedIn path ---
     if on_linkedin:
-        # External apply (opens company's ATS)
-        ext_apply = page.query_selector('a[href*="externalApply"], a.jobs-apply-button, a[data-tracking-control-name*="apply"]')
-        if ext_apply:
-            href = ext_apply.get_attribute("href")
-            if href:
-                console.print(f"  [dim]Following LinkedIn external apply link...[/]")
-                page.goto(href, wait_until="domcontentloaded", timeout=30000)
-                try:
-                    page.wait_for_load_state("networkidle", timeout=3000)
-                except Exception:
-                    pass
-                dismiss_modals(page)
-                return True
+        return _click_linkedin_apply(page)
 
-        # Easy Apply button (stays on LinkedIn)
-        easy_apply = page.query_selector('button:has-text("Easy Apply"), button.jobs-apply-button')
-        if easy_apply and easy_apply.is_visible():
-            easy_apply.click()
-            page.wait_for_timeout(500)
-            return True
 
-        # Generic Apply on LinkedIn
-        apply_btn = page.query_selector('button:has-text("Apply")')
-        if apply_btn and apply_btn.is_visible():
-            apply_btn.click()
-            page.wait_for_timeout(500)
-            return True
+    # --- Non-LinkedIn: single JS call to find apply element ---
+    result = page.evaluate("""() => {
+        // Check links first
+        const links = document.querySelectorAll('a');
+        for (const a of links) {
+            if (a.offsetWidth === 0 || a.offsetHeight === 0) continue;
+            const text = (a.textContent || '').trim().toLowerCase();
+            if ((text === 'apply now' || text === 'apply') && a.href && a.href.startsWith('http')) {
+                return { type: 'link', href: a.href };
+            }
+        }
 
+        // Check buttons
+        const buttons = document.querySelectorAll(
+            'button, [data-testid*="apply"], .apply-button, #apply-button'
+        );
+        for (const btn of buttons) {
+            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+            const text = (btn.textContent || '').trim().toLowerCase();
+            if (text.includes('apply')) {
+                const tag = btn.tagName.toLowerCase();
+                const href = tag === 'a' ? btn.href : null;
+                if (href && href.startsWith('http')) return { type: 'link', href: href };
+                return { type: 'button' };
+            }
+        }
+        return null;
+    }""")
+
+    if not result:
         return False
 
-    # --- Non-LinkedIn: check for external links first (no popup wait needed) ---
-    apply_selectors = [
-        'a:has-text("Apply Now")',
-        'a:has-text("Apply")',
-        'button:has-text("Apply Now")',
-        'button:has-text("Apply")',
-        '[data-testid*="apply"]',
-        '.apply-button',
-        '#apply-button',
-    ]
+    if result["type"] == "link":
+        console.print(f"  [dim]Following apply link...[/]")
+        page.goto(result["href"], wait_until="domcontentloaded", timeout=30000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=3000)
+        except Exception:
+            pass
+        return True
 
+    # Button click with popup detection
+    apply_selectors = [
+        'button:has-text("Apply Now")', 'button:has-text("Apply")',
+        '[data-testid*="apply"]', '.apply-button', '#apply-button',
+    ]
     for selector in apply_selectors:
         try:
             btn = page.query_selector(selector)
             if not btn or not btn.is_visible():
                 continue
 
-            tag = btn.evaluate("el => el.tagName.toLowerCase()")
-            href = btn.get_attribute("href") if tag == "a" else None
-
-            # Direct link -- navigate without popup detection
-            if href and href.startswith("http"):
-                console.print(f"  [dim]Following apply link...[/]")
-                page.goto(href, wait_until="domcontentloaded", timeout=30000)
-                try:
-                    page.wait_for_load_state("networkidle", timeout=3000)
-                except Exception:
-                    pass
-                return True
-
-            # Button -- try popup detection with short timeout
             url_before = page.url
             try:
                 with page.context.expect_page(timeout=2000) as popup_info:
@@ -264,18 +402,14 @@ def click_apply_button(page):
                 console.print(f"  [dim]Popup opened: {new_page.url[:80]}[/]")
                 return "new_tab"
             except Exception:
-                # No popup -- check if navigated
-                page.wait_for_timeout(500)
+                page.wait_for_timeout(300)
                 if page.url != url_before:
                     return True
-
-                # Check for new tab (race condition)
                 if len(page.context.pages) > 1:
                     latest = page.context.pages[-1]
                     if latest != page and latest.url != "about:blank":
                         console.print(f"  [dim]New tab detected: {latest.url[:80]}[/]")
                         return "new_tab"
-
                 return True
         except Exception:
             continue
@@ -283,144 +417,167 @@ def click_apply_button(page):
 
 
 def click_next_button(page) -> bool:
-    """Try to find and click a Next/Continue button. Returns True if found."""
-    next_selectors = [
-        # LinkedIn Easy Apply
-        'button[aria-label="Continue to next step"]',
-        'button[aria-label="Next"]',
-        '.jobs-easy-apply-modal button:has-text("Next")',
-        '.jobs-easy-apply-content button:has-text("Next")',
-        'button:has-text("Review")',
-        # Generic
-        'button:has-text("Next")',
-        'button:has-text("Continue")',
-        'input[type="submit"][value*="Next"]',
-        'input[type="submit"][value*="Continue"]',
-        'a:has-text("Next")',
-        '[data-testid*="next"]',
-        # Workday
-        'button[data-automation-id="bottom-navigation-next-button"]',
-    ]
+    """Try to find and click a Next/Continue button via single JS call.
 
-    # Scroll down to reveal buttons below the fold
-    try:
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        page.wait_for_timeout(300)
-    except Exception:
-        return False  # Page was destroyed (navigation during upload, etc.)
+    Returns True if found and clicked.
+    """
+    # Single JS call: scroll to bottom, find and click the button
+    clicked = page.evaluate("""() => {
+        window.scrollTo(0, document.body.scrollHeight);
 
-    for selector in next_selectors:
+        const selectors = [
+            'button[aria-label="Continue to next step"]',
+            'button[aria-label="Next"]',
+            'button[data-automation-id="bottom-navigation-next-button"]',
+            '[data-testid*="next"]',
+        ];
+        for (const sel of selectors) {
+            const btn = document.querySelector(sel);
+            if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                btn.scrollIntoView({ block: 'center' });
+                btn.click();
+                return true;
+            }
+        }
+
+        // Text-based search
+        const textMatches = ['next', 'continue', 'review'];
+        const buttons = document.querySelectorAll('button, input[type="submit"], a');
+        for (const btn of buttons) {
+            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+            const text = (btn.textContent || btn.value || '').trim().toLowerCase();
+            if (textMatches.some(m => text === m || text.startsWith(m + ' '))) {
+                btn.scrollIntoView({ block: 'center' });
+                btn.click();
+                return true;
+            }
+        }
+        return false;
+    }""")
+
+    if clicked:
+        return True
+
+    # Fallback: check iframes (some ATS embed forms)
+    for frame in page.frames[1:]:
         try:
-            btn = page.query_selector(selector)
-            if btn and btn.is_visible():
-                btn.scroll_into_view_if_needed()
-                btn.click()
+            clicked = frame.evaluate("""() => {
+                const textMatches = ['next', 'continue', 'review'];
+                const buttons = document.querySelectorAll('button, input[type="submit"], a');
+                for (const btn of buttons) {
+                    if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+                    const text = (btn.textContent || btn.value || '').trim().toLowerCase();
+                    if (textMatches.some(m => text === m || text.startsWith(m + ' '))) {
+                        btn.click();
+                        return true;
+                    }
+                }
+                return false;
+            }""")
+            if clicked:
                 return True
         except Exception:
             continue
-
-    # Check iframes
-    for frame in page.frames[1:]:
-        for selector in next_selectors:
-            try:
-                btn = frame.query_selector(selector)
-                if btn and btn.is_visible():
-                    btn.click()
-                    return True
-            except Exception:
-                continue
 
     return False
 
 
-def _safe_scroll_bottom(page):
-    """Scroll to bottom, ignoring errors if page was destroyed."""
+def click_submit_button(page) -> bool:
+    """Try to find and click the Submit/Apply button via single JS call.
+
+    Returns True if found and clicked.
+    """
+    clicked = page.evaluate("""() => {
+        window.scrollTo(0, document.body.scrollHeight);
+
+        // Priority selectors (exact matches first)
+        const selectors = [
+            'button[aria-label="Submit application"]', 'button[aria-label="Submit"]',
+            '#submit_app', '#submit-application',
+            'button[data-automation-id="submit"]',
+            '.posting-btn-submit', 'button.postings-btn',
+            '.iCIMS_Button', 'button.btn-submit',
+            '[data-testid*="submit"]', '[data-testid*="apply"]',
+            'input[type="submit"]', 'button[type="submit"]',
+        ];
+        for (const sel of selectors) {
+            const btn = document.querySelector(sel);
+            if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                btn.scrollIntoView({ block: 'center' });
+                btn.click();
+                return true;
+            }
+        }
+
+        // Text-based search (ordered by specificity)
+        const textMatches = [
+            'submit application', 'submit', 'send application',
+            'apply', 'complete', 'finish', 'done'
+        ];
+        const buttons = document.querySelectorAll('button, input[type="submit"], a, [role="button"]');
+        for (const match of textMatches) {
+            for (const btn of buttons) {
+                if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+                const text = (btn.textContent || btn.value || '').trim().toLowerCase();
+                if (text === match || text.startsWith(match)) {
+                    btn.scrollIntoView({ block: 'center' });
+                    btn.click();
+                    return true;
+                }
+            }
+        }
+
+        // Try top of page too
+        window.scrollTo(0, 0);
+        return false;
+    }""")
+
+    if clicked:
+        return True
+
+    # Second pass from top of page
     try:
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        page.wait_for_timeout(300)
+        clicked = page.evaluate("""() => {
+            const selectors = [
+                'input[type="submit"]', 'button[type="submit"]',
+                '[data-testid*="submit"]', '[class*="submit"]',
+            ];
+            for (const sel of selectors) {
+                const btn = document.querySelector(sel);
+                if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                    btn.scrollIntoView({ block: 'center' });
+                    btn.click();
+                    return true;
+                }
+            }
+            return false;
+        }""")
+        if clicked:
+            return True
     except Exception:
         pass
 
-
-def click_submit_button(page) -> bool:
-    """Try to find and click the Submit/Apply button. Returns True if found."""
-    submit_selectors = [
-        # LinkedIn Easy Apply
-        'button[aria-label="Submit application"]',
-        'button[aria-label="Submit"]',
-        '.jobs-easy-apply-modal button:has-text("Submit application")',
-        '.jobs-easy-apply-content button:has-text("Submit application")',
-        # Generic
-        'button:has-text("Submit Application")',
-        'button:has-text("Submit")',
-        'button:has-text("Apply")',
-        'button:has-text("Send Application")',
-        'button:has-text("Complete")',
-        'button:has-text("Finish")',
-        'button:has-text("Done")',
-        'input[type="submit"]',
-        'button[type="submit"]',
-        '[data-testid*="submit"]',
-        '[data-testid*="apply"]',
-        # Greenhouse
-        '#submit_app', '#submit-application',
-        'input[value="Submit Application"]',
-        'input[value="Submit"]',
-        # Lever
-        '.posting-btn-submit',
-        'button.postings-btn',
-        # Workday
-        'button[data-automation-id="bottom-navigation-next-button"]',
-        'button[data-automation-id="submit"]',
-        # iCIMS
-        '.iCIMS_Button', 'button.btn-submit',
-        # Generic fallbacks
-        'a:has-text("Submit")',
-        'a:has-text("Apply")',
-        '[role="button"]:has-text("Submit")',
-        '[class*="submit"]',
-    ]
-
-    # Scroll down to reveal submit buttons below the fold
-    _safe_scroll_bottom(page)
-
-
-    # Search main page
-    for selector in submit_selectors:
-        try:
-            btn = page.query_selector(selector)
-            if btn and btn.is_visible():
-                btn.scroll_into_view_if_needed()
-                btn.click()
-                return True
-        except Exception:
-            continue
-
-    # Scroll back to top and try again (button could be at top)
-    try:
-        page.evaluate("window.scrollTo(0, 0)")
-        page.wait_for_timeout(300)
-    except Exception:
-        return False
-    for selector in submit_selectors:
-        try:
-            btn = page.query_selector(selector)
-            if btn and btn.is_visible():
-                btn.scroll_into_view_if_needed()
-                btn.click()
-                return True
-        except Exception:
-            continue
-
-    # Fall back to iframes (Greenhouse, Lever, etc. embed forms in iframes)
+    # Fallback: check iframes
     for frame in page.frames[1:]:
-        for selector in submit_selectors:
-            try:
-                btn = frame.query_selector(selector)
-                if btn and btn.is_visible():
-                    btn.click()
-                    return True
-            except Exception:
-                continue
+        try:
+            clicked = frame.evaluate("""() => {
+                const textMatches = ['submit', 'apply', 'send application', 'complete'];
+                const buttons = document.querySelectorAll('button, input[type="submit"], a, [role="button"]');
+                for (const match of textMatches) {
+                    for (const btn of buttons) {
+                        if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+                        const text = (btn.textContent || btn.value || '').trim().toLowerCase();
+                        if (text === match || text.startsWith(match)) {
+                            btn.click();
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }""")
+            if clicked:
+                return True
+        except Exception:
+            continue
 
     return False

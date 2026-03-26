@@ -39,7 +39,7 @@ def ensure_dirs():
 
 def sanitize_filename(name: str) -> str:
     """Convert a string to a safe directory/file name."""
-    name = re.sub(r'[<>:"/\\|?*,]', '', name)
+    name = re.sub(r'[<>:"/\\|?*,()\[\]{}$!\'&;`~#]', '', name)
     name = re.sub(r'\s+', '_', name.strip())
     name = re.sub(r'_+', '_', name)
     return name[:100]  # cap length
