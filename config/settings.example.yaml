@@ -24,19 +24,28 @@ job_search:
   sites:
     - "indeed"
     - "linkedin"
-    - "glassdoor"
+    # - "glassdoor" # broken
     - "zip_recruiter"
     - "google"
   results_per_search: 50    # per role × location × site
   hours_old: 72             # only jobs posted in last N hours
 
+scraping:
+  cache_enabled: true
+  cache_hours: 12
+  max_workers: 1            # parallel scrape threads (1 = no parallelization, reduces rate limit risk)
+
 openai:
   model: "gpt-4o"
   temperature: 0.7
 
+tailoring:
+  enabled: false
+
 automation:
   auto_submit: true
   max_applications_per_day: 25
+  max_applications_per_round: 5
   delay_between_applications_seconds: 30
   screenshot_before_submit: true
   skip_captcha_sites: true

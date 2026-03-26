@@ -37,6 +37,7 @@ def scrape_jobs():
 
     cache_enabled = scraping_cfg.get("cache_enabled", True)
     cache_hours = scraping_cfg.get("cache_hours", 12)
+    max_workers = scraping_cfg.get("max_workers", 1)
 
     keywords_exclude = [kw.lower() for kw in filters.get("keywords_exclude", [])]
     exclude_companies = [c.lower() for c in filters.get("exclude_companies", [])]
@@ -64,7 +65,7 @@ def scrape_jobs():
 
     # Parallel scraping -- each search runs in its own thread
     results = []
-    max_workers = min(4, len(searches))  # cap at 4 to avoid rate limits
+    max_workers = min(max_workers, len(searches))
 
     def _do_scrape(role, location):
         """Scrape a single role+location combo. Returns (role, location, dataframe_or_none, error)."""
