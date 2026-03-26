@@ -18,6 +18,8 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 MAX_STEPS = 30  # safety limit per application
+MAX_REPEATS = 2  # bail after this many identical consecutive actions
+MAX_CONSECUTIVE_SCROLLS = 2  # force stop scrolling after this many in a row
 VISION_MODEL_DEFAULT = "gpt-4o-mini"
 
 SYSTEM_PROMPT = """You are a job application assistant controlling a web browser via screenshots.
@@ -51,7 +53,7 @@ Return ONLY valid JSON (no markdown fences) with these fields:
 - "stuck": cannot proceed (CAPTCHA, login wall, error, unrecoverable)
 
 ## Critical Rules
-1. SCROLL DOWN FIRST to see ALL form fields before filling anything. Many forms extend below the visible area.
+1. Start filling visible fields IMMEDIATELY, working TOP to BOTTOM. Do NOT scroll first — fill what you can see, then scroll down to reveal more fields.
 2. Fill ALL required fields before attempting to click Apply/Submit. If the button looks greyed out or disabled, there are likely unfilled required fields — scroll up and check.
 3. For CONSENT CHECKBOXES (e.g., "I consent to receiving text messages", terms of service): you MUST check these before Apply/Submit will be enabled. Use "check" action.
 4. For DROPDOWNS/SELECT fields: use "select" action. Click the dropdown first, then the option will appear.
@@ -63,8 +65,26 @@ Return ONLY valid JSON (no markdown fences) with these fields:
 10. For "How did you hear about us", use "Job Board".
 11. Click coordinates should target the CENTER of the element.
 12. If the page looks UNCHANGED after your last action, try a DIFFERENT approach (scroll, click elsewhere, etc.). Do NOT repeat the same action.
-13. Work TOP to BOTTOM through the form systematically.
+13. Only scroll when you have filled all visible fields and need to reveal more, OR when you need to reach a Submit/Apply button below.
+14. IMPORTANT: If you see a JOB LISTING page (job description, qualifications, "About us", etc.) instead of an APPLICATION FORM, you need to find and click the "Apply" or "Apply Now" button to get to the actual form. The button is often near the TOP of the page or in a sticky header/sidebar. If clicking it doesn't work, try scrolling UP to find it, or look for it in a fixed header bar.
+15. If clicking "Apply" opens nothing (page doesn't change), the button might open a popup that was blocked. Report "stuck" with the reason so the system can handle it.
 """
+
+
+def _is_repeat_action(action: dict, recent_actions: list[dict]) -> bool:
+    """Check if the current action matches the last MAX_REPEATS-1 actions (same type + nearby coords)."""
+    if len(recent_actions) < MAX_REPEATS - 1:
+        return False
+    tail = recent_actions[-(MAX_REPEATS - 1):]
+    for prev in tail:
+        if prev.get("action") != action.get("action"):
+            return False
+        # Same type — check if coordinates are within 30px
+        if abs(prev.get("x", 0) - action.get("x", 0)) > 30:
+            return False
+        if abs(prev.get("y", 0) - action.get("y", 0)) > 30:
+            return False
+    return True
 
 
 def _get_vision_client(settings: dict) -> OpenAI:
@@ -85,6 +105,11 @@ def _is_vision_logging(settings: dict) -> bool:
     return settings.get("automation", {}).get("vision_logging", True)
 
 
+def _get_vision_detail(settings: dict) -> str:
+    """Get image detail level from settings. 'low' = 85 tokens, 'high' = 12-17K tokens."""
+    return settings.get("automation", {}).get("vision_detail", "high")
+
+
 def _take_screenshot(page) -> str:
     """Take a screenshot and return as base64-encoded string."""
     screenshot_bytes = page.screenshot(type="png")
@@ -92,7 +117,8 @@ def _take_screenshot(page) -> str:
 
 
 def _decide_action(client: OpenAI, model: str, screenshot_b64: str,
-                   system_prompt: str, history: list[str]) -> dict:
+                   system_prompt: str, history: list[str],
+                   detail: str = "low") -> dict:
     """Send screenshot to vision model, get structured action back."""
     # Build context from recent history
     history_text = ""
@@ -106,7 +132,7 @@ def _decide_action(client: OpenAI, model: str, screenshot_b64: str,
             {"type": "text", "text": f"What should I do next?{history_text}"},
             {"type": "image_url", "image_url": {
                 "url": f"data:image/png;base64,{screenshot_b64}",
-                "detail": "high"  # high detail so model can READ form labels and field values
+                "detail": detail,
             }}
         ]}
     ]
@@ -184,8 +210,12 @@ def _execute_action(page, action: dict, resume_file, cl_file) -> str:
     elif act == "scroll":
         direction = action.get("direction", "down")
         delta = -400 if direction == "up" else 400
+        scroll_before = page.evaluate("() => window.scrollY")
         page.mouse.wheel(0, delta)
         page.wait_for_timeout(800)
+        scroll_after = page.evaluate("() => window.scrollY")
+        if scroll_before == scroll_after:
+            return f"Scroll {direction} had NO EFFECT (already at {'bottom' if direction == 'down' else 'top'}). Do NOT scroll {direction} again."
         return f"Scrolled {direction}: {reasoning}"
 
     elif act == "upload_resume":
@@ -256,6 +286,7 @@ def verify_submission(page, settings: dict) -> bool:
     """
     client = _get_vision_client(settings)
     model = _get_vision_model(settings)
+    detail = _get_vision_detail(settings)
     screenshot_b64 = _take_screenshot(page)
 
     messages = [
@@ -281,7 +312,7 @@ Signs it was NOT submitted:
 Be strict: if in doubt, return false."""},
             {"type": "image_url", "image_url": {
                 "url": f"data:image/png;base64,{screenshot_b64}",
-                "detail": "high"
+                "detail": detail,
             }}
         ]}
     ]
@@ -342,18 +373,34 @@ def run_vision_agent(page, job: dict, settings: dict,
 
     client = _get_vision_client(settings)
     model = _get_vision_model(settings)
+    detail = _get_vision_detail(settings)
     vision_logging = _is_vision_logging(settings)
     history = []
+    recent_actions = []  # raw action dicts for repeat detection
+    warned_repeat = False  # True after we've warned the model once
+    consecutive_scrolls = 0  # track scrolls to enforce hard cap
 
-    console.print(f"  [magenta]Vision agent active (model: {model})[/]")
+    console.print(f"  [magenta]Vision agent active (model: {model}, detail: {detail})[/]")
 
     for step in range(MAX_STEPS):
         try:
             # 1. Screenshot
             screenshot_b64 = _take_screenshot(page)
 
-            # 2. Ask model what to do
-            action = _decide_action(client, model, screenshot_b64, system_prompt, history)
+            # 2. Ask model what to do (with rate-limit retry)
+            for attempt in range(3):
+                try:
+                    action = _decide_action(client, model, screenshot_b64,
+                                            system_prompt, history, detail=detail)
+                    break
+                except Exception as api_err:
+                    if "429" in str(api_err) and attempt < 2:
+                        wait = (attempt + 1) * 1.0  # 1s, 2s backoff
+                        logger.warning(f"Vision step {step+1}: rate limited, retrying in {wait}s")
+                        time.sleep(wait)
+                    else:
+                        raise
+
             act_type = action.get("action", "stuck")
             reasoning = action.get("reasoning", "")
 
@@ -370,12 +417,57 @@ def run_vision_agent(page, job: dict, settings: dict,
                 console.print(f"  [yellow]Vision agent stuck: {reasoning}[/]")
                 return False
 
+            # 3b. Hard cap on consecutive scrolls — model loves to scroll forever
+            if act_type == "scroll":
+                consecutive_scrolls += 1
+                if consecutive_scrolls > MAX_CONSECUTIVE_SCROLLS:
+                    history.append(
+                        "WARNING: You have scrolled too many times without filling any fields. "
+                        "STOP scrolling. Fill the form fields visible on screen NOW, starting "
+                        "from the top. If no fields are visible, report 'stuck'."
+                    )
+                    if vision_logging:
+                        console.print(f"  [yellow]  Step {step+1}: scroll cap hit, forcing model to fill fields[/]")
+                    continue
+            else:
+                consecutive_scrolls = 0
+
+            # 3c. Check for repeated actions (stuck in a loop)
+            if _is_repeat_action(action, recent_actions):
+                if not warned_repeat:
+                    # First repeat: warn the model via history, don't execute the repeated action
+                    warned_repeat = True
+                    prev_act = action.get("action")
+                    prev_x, prev_y = action.get("x", 0), action.get("y", 0)
+                    history.append(
+                        f"WARNING: You already tried '{prev_act}' at ({prev_x}, {prev_y}) "
+                        f"multiple times but the page did NOT change. The button may be disabled, "
+                        f"coordinates may be wrong, or a required field is unfilled. "
+                        f"You MUST try something different: scroll to find unfilled fields, "
+                        f"click at different coordinates, or report 'stuck'."
+                    )
+                    if vision_logging:
+                        console.print(f"  [yellow]  Step {step+1}: repeat detected, warning model to try something else[/]")
+                    continue
+                else:
+                    # Already warned and still repeating — bail out
+                    console.print(f"  [yellow]Vision agent stuck: repeated '{act_type}' at same location after warning[/]")
+                    logger.warning(f"Vision agent bailing: repeated {act_type} near ({action.get('x')}, {action.get('y')}) after warning")
+                    return False
+
+            # Reset repeat warning if the model chose a different action
+            warned_repeat = False
+
             # 4. Execute action
             result = _execute_action(page, action, resume_file, cl_file)
             history.append(result)
+            recent_actions.append(action)
 
             if vision_logging:
                 logger.info(f"Vision step {step+1} result: {result}")
+
+            # Small delay between steps to avoid rate limits
+            time.sleep(0.5)
 
         except json.JSONDecodeError as e:
             logger.warning(f"Vision step {step+1}: invalid JSON from model: {e}")

@@ -39,6 +39,78 @@ def detect_captcha(page) -> bool:
     return False
 
 
+def try_solve_captcha(page, settings: dict) -> bool:
+    """Attempt to solve a CAPTCHA if solving is enabled.
+
+    Returns True if solved (page should be rechecked), False if not solved.
+    """
+    if not settings.get("automation", {}).get("captcha_solving", False):
+        return False
+
+    from .captcha_solver import solve_captcha
+    solved = solve_captcha(page)
+    if solved:
+        # Wait for page to process the token and redirect/refresh
+        page.wait_for_timeout(3000)
+        if not detect_captcha(page):
+            console.print("  [green]CAPTCHA solved![/]")
+            return True
+
+        # Token injected but page didn't auto-advance -- try multiple submit strategies
+        submit_strategies = [
+            # 1. Click any visible submit/verify button
+            """() => {
+                const btns = document.querySelectorAll('button, input[type="submit"], [role="button"]');
+                for (const btn of btns) {
+                    const text = (btn.textContent || btn.value || '').toLowerCase();
+                    if (text.match(/submit|verify|continue|proceed|check/)) {
+                        btn.click();
+                        return 'clicked: ' + text.trim().substring(0, 30);
+                    }
+                }
+                return null;
+            }""",
+            # 2. Submit the form containing the recaptcha response
+            """() => {
+                const ta = document.querySelector('[id*="g-recaptcha-response"]');
+                if (ta) {
+                    const form = ta.closest('form');
+                    if (form) { form.submit(); return 'form.submit'; }
+                }
+                return null;
+            }""",
+            # 3. Submit any form on the page
+            """() => {
+                const form = document.querySelector('form');
+                if (form) { form.submit(); return 'fallback form.submit'; }
+                return null;
+            }""",
+            # 4. Click inside the reCAPTCHA iframe checkbox (triggers verification)
+            None,  # handled separately below
+        ]
+
+        for strategy in submit_strategies:
+            if strategy is None:
+                # Try clicking the recaptcha checkbox iframe
+                try:
+                    frame = page.frame_locator('iframe[src*="recaptcha"]').first
+                    frame.locator('#recaptcha-anchor').click(timeout=3000)
+                except Exception:
+                    continue
+            else:
+                result = page.evaluate(strategy)
+                if not result:
+                    continue
+
+            page.wait_for_timeout(4000)
+            if not detect_captcha(page):
+                console.print("  [green]CAPTCHA solved![/]")
+                return True
+
+        console.print("  [yellow]CAPTCHA token injected but page unchanged[/]")
+    return False
+
+
 def detect_login_page(page) -> bool:
     """Detect if we've landed on a login/signup page instead of an application form."""
     url = page.url.lower()
@@ -105,7 +177,7 @@ def dismiss_modals(page):
             btn = page.query_selector(selector)
             if btn and btn.is_visible():
                 btn.click()
-                page.wait_for_timeout(500)
+                page.wait_for_timeout(200)
         except Exception:
             continue
 
@@ -116,29 +188,48 @@ def click_apply_button(page):
     Handles LinkedIn external apply links (opens new tab) and standard apply buttons.
     Returns True if clicked, "new_tab" if a new tab opened, False if not found.
     """
-    # First dismiss any modals/popups (LinkedIn sign-in, etc.)
     dismiss_modals(page)
-
-    # For LinkedIn: check if there's an external apply link (opens company's site)
     current_url = page.url
-    if "linkedin.com" in current_url:
-        # LinkedIn external apply buttons are <a> tags that open a new tab
+    on_linkedin = "linkedin.com" in current_url
+
+    # --- LinkedIn fast path ---
+    if on_linkedin:
+        # External apply (opens company's ATS)
         ext_apply = page.query_selector('a[href*="externalApply"], a.jobs-apply-button, a[data-tracking-control-name*="apply"]')
         if ext_apply:
             href = ext_apply.get_attribute("href")
             if href:
                 console.print(f"  [dim]Following LinkedIn external apply link...[/]")
                 page.goto(href, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(2000)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=3000)
+                except Exception:
+                    pass
                 dismiss_modals(page)
                 return True
 
+        # Easy Apply button (stays on LinkedIn)
+        easy_apply = page.query_selector('button:has-text("Easy Apply"), button.jobs-apply-button')
+        if easy_apply and easy_apply.is_visible():
+            easy_apply.click()
+            page.wait_for_timeout(500)
+            return True
+
+        # Generic Apply on LinkedIn
+        apply_btn = page.query_selector('button:has-text("Apply")')
+        if apply_btn and apply_btn.is_visible():
+            apply_btn.click()
+            page.wait_for_timeout(500)
+            return True
+
+        return False
+
+    # --- Non-LinkedIn: check for external links first (no popup wait needed) ---
     apply_selectors = [
-        'button:has-text("Apply")',
+        'a:has-text("Apply Now")',
         'a:has-text("Apply")',
         'button:has-text("Apply Now")',
-        'a:has-text("Apply Now")',
-        'button:has-text("Easy Apply")',
+        'button:has-text("Apply")',
         '[data-testid*="apply"]',
         '.apply-button',
         '#apply-button',
@@ -147,28 +238,43 @@ def click_apply_button(page):
     for selector in apply_selectors:
         try:
             btn = page.query_selector(selector)
-            if btn and btn.is_visible():
-                # Check if it's a link that opens externally
-                tag = btn.evaluate("el => el.tagName.toLowerCase()")
-                href = btn.get_attribute("href") if tag == "a" else None
+            if not btn or not btn.is_visible():
+                continue
 
-                if href and ("http" in href) and ("linkedin.com" not in href):
-                    # External apply link -- navigate directly
-                    console.print(f"  [dim]Following external apply link...[/]")
-                    page.goto(href, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(2000)
+            tag = btn.evaluate("el => el.tagName.toLowerCase()")
+            href = btn.get_attribute("href") if tag == "a" else None
+
+            # Direct link -- navigate without popup detection
+            if href and href.startswith("http"):
+                console.print(f"  [dim]Following apply link...[/]")
+                page.goto(href, wait_until="domcontentloaded", timeout=30000)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=3000)
+                except Exception:
+                    pass
+                return True
+
+            # Button -- try popup detection with short timeout
+            url_before = page.url
+            try:
+                with page.context.expect_page(timeout=2000) as popup_info:
+                    btn.click()
+                new_page = popup_info.value
+                new_page.wait_for_load_state("domcontentloaded")
+                console.print(f"  [dim]Popup opened: {new_page.url[:80]}[/]")
+                return "new_tab"
+            except Exception:
+                # No popup -- check if navigated
+                page.wait_for_timeout(500)
+                if page.url != url_before:
                     return True
 
-                # Check if click opens a new page/tab
-                pages_before = len(page.context.pages)
-                btn.click()
-                page.wait_for_timeout(2000)
-
-                # If a new tab opened, switch to it
-                if len(page.context.pages) > pages_before:
-                    new_page = page.context.pages[-1]
-                    console.print(f"  [dim]Switched to new tab: {new_page.url[:60]}...[/]")
-                    return "new_tab"
+                # Check for new tab (race condition)
+                if len(page.context.pages) > 1:
+                    latest = page.context.pages[-1]
+                    if latest != page and latest.url != "about:blank":
+                        console.print(f"  [dim]New tab detected: {latest.url[:80]}[/]")
+                        return "new_tab"
 
                 return True
         except Exception:
@@ -197,8 +303,11 @@ def click_next_button(page) -> bool:
     ]
 
     # Scroll down to reveal buttons below the fold
-    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-    page.wait_for_timeout(500)
+    try:
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_timeout(300)
+    except Exception:
+        return False  # Page was destroyed (navigation during upload, etc.)
 
     for selector in next_selectors:
         try:
@@ -222,6 +331,15 @@ def click_next_button(page) -> bool:
                 continue
 
     return False
+
+
+def _safe_scroll_bottom(page):
+    """Scroll to bottom, ignoring errors if page was destroyed."""
+    try:
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_timeout(300)
+    except Exception:
+        pass
 
 
 def click_submit_button(page) -> bool:
@@ -264,8 +382,8 @@ def click_submit_button(page) -> bool:
     ]
 
     # Scroll down to reveal submit buttons below the fold
-    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-    page.wait_for_timeout(500)
+    _safe_scroll_bottom(page)
+
 
     # Search main page
     for selector in submit_selectors:
@@ -279,8 +397,11 @@ def click_submit_button(page) -> bool:
             continue
 
     # Scroll back to top and try again (button could be at top)
-    page.evaluate("window.scrollTo(0, 0)")
-    page.wait_for_timeout(300)
+    try:
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(300)
+    except Exception:
+        return False
     for selector in submit_selectors:
         try:
             btn = page.query_selector(selector)

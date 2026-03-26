@@ -16,18 +16,30 @@ FAILED_DIR = APPLICATIONS_DIR / "failed"
 DATA_DIR = PROJECT_ROOT / "data"
 LOGS_DIR = DATA_DIR / "logs"
 LINKEDIN_AUTH_STATE = DATA_DIR / "linkedin_auth.json"
+SITE_AUTH_DIR = DATA_DIR / "site_auth"
+
+# Shared user agent -- must be identical across login and apply contexts,
+# otherwise LinkedIn sees a different device and invalidates the session.
+import platform
+_os = platform.system()
+if _os == "Darwin":
+    USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+elif _os == "Windows":
+    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+else:
+    USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
 
 def ensure_dirs():
     """Create required directories if they don't exist."""
     for d in [CONFIG_DIR, TEMPLATES_DIR, APPLICATIONS_DIR, ATTEMPTS_DIR,
-              SUCCESS_DIR, FAILED_DIR, DATA_DIR, LOGS_DIR]:
+              SUCCESS_DIR, FAILED_DIR, DATA_DIR, LOGS_DIR, SITE_AUTH_DIR]:
         d.mkdir(parents=True, exist_ok=True)
 
 
 def sanitize_filename(name: str) -> str:
     """Convert a string to a safe directory/file name."""
-    name = re.sub(r'[<>:"/\\|?*]', '', name)
+    name = re.sub(r'[<>:"/\\|?*,]', '', name)
     name = re.sub(r'\s+', '_', name.strip())
     name = re.sub(r'_+', '_', name)
     return name[:100]  # cap length

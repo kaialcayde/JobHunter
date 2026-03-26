@@ -11,10 +11,13 @@ console = Console(force_terminal=True)
 def extract_form_fields(page) -> list[dict]:
     """Extract all form fields from the current page using DOM inspection."""
     # Scroll down to trigger lazy-loaded content
-    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-    page.wait_for_timeout(1000)
-    page.evaluate("window.scrollTo(0, 0)")
-    page.wait_for_timeout(500)
+    try:
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_timeout(400)
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(200)
+    except Exception:
+        return []  # Page was destroyed (navigation during upload, etc.)
 
     fields = page.evaluate("""() => {
         const fields = [];
@@ -253,7 +256,7 @@ def fill_form_fields(page, fields: list[dict], answers: dict):
 
             # Scroll into view and wait for visibility
             el.scroll_into_view_if_needed()
-            page.wait_for_timeout(200)
+            page.wait_for_timeout(100)
 
             if field["type"] == "select":
                 page.select_option(selector, label=value, timeout=5000)
@@ -357,22 +360,30 @@ def handle_file_uploads(page, resume_file: Optional[Path], cl_file: Optional[Pat
             if any(kw in label for kw in ["resume", "cv", "curriculum"]):
                 if resume_file and resume_file.exists():
                     file_input.set_input_files(str(resume_file))
+                    page.wait_for_timeout(800)
                     console.print(f"  Uploaded resume: {resume_file.name}")
             elif any(kw in label for kw in ["cover letter", "cover_letter", "coverletter"]):
                 if cl_file and cl_file.exists():
                     file_input.set_input_files(str(cl_file))
+                    page.wait_for_timeout(800)
                     console.print(f"  Uploaded cover letter: {cl_file.name}")
             else:
                 # Generic file upload -- use position: first=resume, second=cover letter
                 if generic_upload_idx == 0 and resume_file and resume_file.exists():
                     file_input.set_input_files(str(resume_file))
+                    page.wait_for_timeout(800)
                     console.print(f"  Uploaded resume (position {generic_upload_idx + 1}): {resume_file.name}")
                 elif generic_upload_idx == 1 and cl_file and cl_file.exists():
                     file_input.set_input_files(str(cl_file))
+                    page.wait_for_timeout(800)
                     console.print(f"  Uploaded cover letter (position {generic_upload_idx + 1}): {cl_file.name}")
                 elif resume_file and resume_file.exists():
                     file_input.set_input_files(str(resume_file))
+                    page.wait_for_timeout(800)
                     console.print(f"  Uploaded file (defaulting to resume): {resume_file.name}")
                 generic_upload_idx += 1
         except Exception as e:
+            if "navigation" in str(e).lower() or "destroyed" in str(e).lower():
+                console.print(f"  [dim]Upload triggered page navigation -- continuing[/]")
+                return  # Page navigated, stop processing stale file inputs
             console.print(f"  [yellow]File upload failed: {e}[/]")

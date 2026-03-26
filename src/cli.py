@@ -158,8 +158,12 @@ def cmd_login():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
 
-        # Load existing session if refreshing
-        context_kwargs = {"viewport": {"width": 1280, "height": 900}}
+        # Load existing session if refreshing -- use same UA as apply context
+        from .utils import USER_AGENT
+        context_kwargs = {
+            "viewport": {"width": 1280, "height": 900},
+            "user_agent": USER_AGENT,
+        }
         if LINKEDIN_AUTH_STATE.exists():
             context_kwargs["storage_state"] = str(LINKEDIN_AUTH_STATE)
             console.print("[dim]Loading existing session (refreshing)...[/]")
@@ -553,7 +557,7 @@ def cmd_remove_failed():
         company = sanitize_filename(job.get("company", "Unknown"))
         title = sanitize_filename(job.get("title", "Unknown"))
 
-        # Check attempts/ first, then old flat path
+        # Check attempts/ first, then old flat path, then failed/
         src_dir = ATTEMPTS_DIR / company / title
         if not src_dir.exists():
             src_dir = APPLICATIONS_DIR / company / title
@@ -571,12 +575,53 @@ def cmd_remove_failed():
             company_dir = src_dir.parent
             if company_dir.exists() and not any(company_dir.iterdir()):
                 company_dir.rmdir()
+        else:
+            # Already in failed/ — just delete it
+            failed_path = FAILED_DIR / company / title
+            if failed_path.exists():
+                shutil.rmtree(failed_path)
+                moved += 1
+                console.print(f"  [dim]Deleted: {company}/{title} (already in failed/)[/]")
+
+                # Clean up empty company folder
+                company_dir = failed_path.parent
+                if company_dir.exists() and not any(company_dir.iterdir()):
+                    company_dir.rmdir()
 
     # Delete from database
     count = delete_failed_jobs(conn)
     conn.close()
 
     console.print(f"\n[green]Removed {count} failed jobs from DB, moved {moved} folders to _failed/[/]")
+
+
+def cmd_login_sites():
+    """Open a visible browser to log in to sites that blocked applications, then retry those jobs."""
+    from .db import get_jobs_by_status
+    from .automation.applicant import _run_application_batch
+
+    conn = get_connection()
+    needs_login = get_jobs_by_status(conn, "needs_login")
+
+    if not needs_login:
+        console.print("[yellow]No jobs pending login. All clear![/]")
+        conn.close()
+        return
+
+    console.print(f"[bold blue]{len(needs_login)} jobs need login to apply[/]\n")
+    for j in needs_login:
+        console.print(f"  {j['title']} at {j['company']}")
+
+    console.print(f"\n[yellow]Opening a visible browser -- log in when prompted, then jobs will retry.[/]")
+
+    # Override headless to false so user can interact
+    settings = load_settings()
+    settings.setdefault("automation", {})["headless"] = False
+    take_screenshot = settings.get("automation", {}).get("screenshot_before_submit", True)
+
+    conn.close()
+
+    _run_application_batch(needs_login, settings, take_screenshot, label="[login-retry] ")
 
 
 def main():
@@ -598,6 +643,7 @@ def main():
         console.print("  [bold]view-failed[/] View failed applications and open folder")
         console.print("  [bold]reset[/]      Full reset: delete all applications and database")
         console.print("  [bold]remove-failed[/] Move failed apps to _failed/ folder and clean DB")
+        console.print("  [bold]login-sites[/]  Log in to sites that blocked apps, then retry those jobs")
         return
 
     command = sys.argv[1].lower()
@@ -629,6 +675,8 @@ def main():
         cmd_reset()
     elif command in ("remove-failed", "remove_failed"):
         cmd_remove_failed()
+    elif command in ("login-sites", "login_sites"):
+        cmd_login_sites()
     else:
         console.print(f"[red]Unknown command: {command}[/]")
         console.print("Run 'python -m src' for usage info.")

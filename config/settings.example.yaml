@@ -49,9 +49,13 @@ automation:
   delay_between_applications_seconds: 30
   screenshot_before_submit: true
   skip_captcha_sites: true
+  captcha_solving: true              # solve CAPTCHAs via 2Captcha API (requires CAPTCHA_API_KEY in .env)
+  parallel_browsers_per_site: 1      # 1 = sequential, >1 = parallel browsers (one per job site, same-site jobs stay sequential to avoid bans), max 3
+  verbose_logging: true              # show step-by-step progress (page loads, captcha, apply button, etc.)
   vision_agent: true               # use LLM vision fallback when selectors fail
   vision_model: "gpt-4o-mini"      # cheapest vision model
   vision_logging: true             # log each vision agent step to console
+  vision_detail: "high"            # "low" = 85 tokens/image, "high" = 12-17K tokens/image
 
 scheduler:
   enabled: true

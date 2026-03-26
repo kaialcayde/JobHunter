@@ -2,8 +2,10 @@
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +19,157 @@ from ..db import (
 from ..core.document import save_application_metadata
 from ..config import load_settings
 from ..core.tailoring import infer_form_answers
-from ..utils import get_application_dir, move_application_dir, LINKEDIN_AUTH_STATE, TEMPLATES_DIR
+from ..utils import get_application_dir, move_application_dir, LINKEDIN_AUTH_STATE, SITE_AUTH_DIR, TEMPLATES_DIR, USER_AGENT
 
-from .detection import detect_captcha, detect_login_page, dismiss_modals, click_apply_button, click_next_button, click_submit_button
+from .detection import detect_captcha, try_solve_captcha, detect_login_page, dismiss_modals, click_apply_button, click_next_button, click_submit_button
 from .forms import extract_form_fields, fill_form_fields, handle_file_uploads
 from .vision_agent import run_vision_agent, verify_submission
 
 console = Console(force_terminal=True)
+
+
+def _is_listing_page(page) -> bool:
+    """Heuristic: check if we're still on a job listing/description page (not an application form).
+
+    Returns True if the page looks like a listing with no form fields.
+    """
+    # If there are form inputs (text fields, selects, file uploads), it's likely a form
+    form_inputs = page.query_selector_all(
+        'input[type="text"], input[type="email"], input[type="tel"], '
+        'textarea, select, input[type="file"]'
+    )
+    visible_inputs = [el for el in form_inputs if el.is_visible()]
+    if len(visible_inputs) >= 2:
+        return False  # Probably a form page
+
+    # Check for common listing page indicators
+    body_text = (page.text_content("body") or "").lower()[:5000]
+    listing_signals = [
+        "job description", "responsibilities", "qualifications",
+        "about the role", "what you'll do", "requirements",
+        "benefits", "life at", "about us",
+    ]
+    matches = sum(1 for s in listing_signals if s in body_text)
+    return matches >= 2
+
+
+def _force_apply_click(page) -> bool:
+    """More aggressive attempt to navigate to the apply page.
+
+    Strategy:
+    1. Extract application URL from the page (links, scripts, onclick handlers)
+    2. Intercept window.open() calls and capture the target URL
+    3. Fall back to JS click on the Apply button
+
+    Returns True if navigation happened.
+    """
+    # --- Strategy 1: Find the apply URL embedded in the page ---
+    apply_url = page.evaluate("""() => {
+        // Check all links for apply/workday/greenhouse URLs
+        const links = document.querySelectorAll('a[href]');
+        for (const link of links) {
+            const href = link.href;
+            const text = (link.textContent || '').toLowerCase().trim();
+            // Match "Apply" links pointing to ATS domains
+            if (text.includes('apply') && href.startsWith('http')) {
+                const ats = ['myworkdayjobs.com', 'workday.com', 'greenhouse.io',
+                             'lever.co', 'icims.com', 'smartrecruiters.com',
+                             'ashbyhq.com', 'taleo.net', 'jobvite.com'];
+                for (const domain of ats) {
+                    if (href.includes(domain)) return href;
+                }
+                // Also return any external link from an Apply button
+                if (!href.includes(window.location.hostname)) return href;
+            }
+        }
+
+        // Check onclick handlers and data attributes for URLs
+        const buttons = document.querySelectorAll(
+            'button[onclick], a[onclick], [data-apply-url], [data-href], [data-url]'
+        );
+        for (const btn of buttons) {
+            const text = (btn.textContent || '').toLowerCase();
+            if (!text.includes('apply')) continue;
+            // Check data attributes
+            for (const attr of ['data-apply-url', 'data-href', 'data-url']) {
+                const val = btn.getAttribute(attr);
+                if (val && val.startsWith('http')) return val;
+            }
+            // Check onclick for URLs
+            const onclick = btn.getAttribute('onclick') || '';
+            const match = onclick.match(/(?:window\\.open|location\\.href|location\\.assign)\\s*\\(\\s*['"]([^'"]+)['"]/);
+            if (match) return match[1];
+        }
+
+        return null;
+    }""")
+
+    if apply_url:
+        console.print(f"  [dim]Found apply URL in page: {apply_url[:80]}[/]")
+        page.goto(apply_url, wait_until="domcontentloaded", timeout=30000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=2000)
+        except Exception:
+            pass
+        return True
+
+    # --- Strategy 2: Intercept window.open() by overriding it, then click ---
+    page.evaluate("""() => {
+        window.__captured_popup_url = null;
+        const origOpen = window.open;
+        window.open = function(url) {
+            window.__captured_popup_url = url;
+            return origOpen.apply(this, arguments);
+        };
+    }""")
+
+    apply_selectors = [
+        'a:has-text("Apply Now")',
+        'button:has-text("Apply Now")',
+        'a:has-text("Apply")',
+        'button:has-text("Apply")',
+        '[data-testid*="apply"]',
+        '.apply-button',
+        '#apply-button',
+    ]
+
+    for selector in apply_selectors:
+        try:
+            btn = page.query_selector(selector)
+            if btn and btn.is_visible():
+                # Try getting the href directly for <a> tags
+                tag = btn.evaluate("el => el.tagName.toLowerCase()")
+                if tag == "a":
+                    href = btn.get_attribute("href")
+                    if href and href.startswith("http"):
+                        console.print(f"  [dim]Direct navigation to: {href[:80]}[/]")
+                        page.goto(href, wait_until="domcontentloaded", timeout=30000)
+                        return True
+
+                # Force JS click (bypasses overlays and event issues)
+                btn.evaluate("el => el.click()")
+                try:
+                    page.wait_for_load_state("networkidle", timeout=2000)
+                except Exception:
+                    pass
+
+                # Check if window.open was called
+                popup_url = page.evaluate("() => window.__captured_popup_url")
+                if popup_url:
+                    console.print(f"  [dim]Intercepted popup URL: {popup_url[:80]}[/]")
+                    page.goto(popup_url, wait_until="domcontentloaded", timeout=30000)
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=2000)
+                    except Exception:
+                        pass
+                    return True
+
+                # Check if URL changed from click
+                return True
+        except Exception:
+            continue
+
+    return False
 
 
 def _get_round_robin_jobs(conn, remaining: int, max_per_role: int, max_per_location: int) -> list[dict]:
@@ -139,38 +285,39 @@ def apply_to_jobs():
     console.print(f"  By role: {role_breakdown}")
     console.print(f"  By location: {loc_breakdown}")
 
-    parallel_workers = automation.get("parallel_browsers", 1)
-    # Cap workers at job count and a sane max
-    parallel_workers = min(parallel_workers, len(jobs), 4)
+    parallel_per_site = automation.get("parallel_browsers_per_site", 1)
 
     try:
-        if parallel_workers <= 1:
-            # Sequential mode -- single browser
+        if parallel_per_site <= 1:
+            # Sequential mode -- single browser, all jobs
             _run_application_batch(jobs, settings, take_screenshot, label="")
         else:
-            # Parallel mode -- split jobs across worker threads, each with own browser
-            batches = [[] for _ in range(parallel_workers)]
-            for i, job in enumerate(jobs):
-                batches[i % parallel_workers].append(job)
+            # Parallel mode -- group jobs by site, one browser per site
+            by_site = {}
+            for job in jobs:
+                site = job.get("site", "unknown") or "unknown"
+                by_site.setdefault(site, []).append(job)
 
-            console.print(f"[bold]Running {parallel_workers} parallel browsers[/]")
+            # Cap total concurrent browsers
+            max_concurrent = min(len(by_site), parallel_per_site, 4)
+            console.print(f"[bold]Running up to {max_concurrent} parallel browsers ({len(by_site)} sites)[/]")
+            for site, site_jobs in by_site.items():
+                console.print(f"  [dim]{site}: {len(site_jobs)} jobs[/]")
 
-            with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+            with ThreadPoolExecutor(max_workers=max_concurrent) as executor:
                 futures = {}
-                for idx, batch in enumerate(batches):
-                    if not batch:
-                        continue
-                    label = f"[W{idx+1}]"
+                for site, site_jobs in by_site.items():
+                    label = f"[{site}]"
                     futures[executor.submit(
-                        _run_application_batch, batch, settings, take_screenshot, label
-                    )] = idx
+                        _run_application_batch, site_jobs, settings, take_screenshot, label
+                    )] = site
 
                 for future in as_completed(futures):
-                    worker_idx = futures[future]
+                    site = futures[future]
                     try:
                         future.result()
                     except Exception as e:
-                        console.print(f"  [red]Worker {worker_idx+1} crashed: {e}[/]")
+                        console.print(f"  [red]{site} worker crashed: {e}[/]")
 
     except ImportError:
         console.print("[red]Playwright not installed. Run: pip install playwright && playwright install chromium[/]")
@@ -194,8 +341,8 @@ def _run_application_batch(jobs: list[dict], settings: dict,
         browser = p.chromium.launch(headless=headless)
 
         context_kwargs = {
-            "viewport": {"width": 1280, "height": 900},
-            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "viewport": {"width": 1280, "height": 2400},
+            "user_agent": USER_AGENT,
         }
         if LINKEDIN_AUTH_STATE.exists():
             context_kwargs["storage_state"] = str(LINKEDIN_AUTH_STATE)
@@ -222,6 +369,94 @@ def _run_application_batch(jobs: list[dict], settings: dict,
 
         conn.close()
         browser.close()
+
+
+def _get_site_domain(url: str) -> str:
+    """Extract the main domain from a URL (e.g. 'workday.com' from 'company.wd5.myworkdayjobs.com')."""
+    from urllib.parse import urlparse
+    hostname = urlparse(url).hostname or ""
+    # Collapse common ATS subdomains to their base
+    for ats in ["myworkdayjobs.com", "workday.com", "greenhouse.io", "lever.co",
+                "icims.com", "taleo.net", "smartrecruiters.com", "ashbyhq.com"]:
+        if hostname.endswith(ats):
+            return ats
+    parts = hostname.rsplit(".", 2)
+    return ".".join(parts[-2:]) if len(parts) >= 2 else hostname
+
+
+def _get_site_auth_path(url: str) -> Path:
+    """Get the cookie storage path for a given site URL."""
+    domain = _get_site_domain(url)
+    safe = re.sub(r'[^a-zA-Z0-9._-]', '_', domain)
+    return SITE_AUTH_DIR / f"{safe}.json"
+
+
+def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, job_id) -> bool:
+    """Try to recover from a login page. Returns True if recovered.
+
+    Strategy:
+    1. LinkedIn with stored cookies: warm up session via /feed/, then retry
+    2. Other sites with stored cookies: load cookies, retry
+    3. No stored cookies: open visible browser, prompt user to log in, save cookies
+    """
+    current_url = page.url
+
+    # --- LinkedIn recovery ---
+    if "linkedin.com" in current_url.lower() and LINKEDIN_AUTH_STATE.exists():
+        console.print("  [yellow]Login redirect -- warming up LinkedIn session...[/]")
+        page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=30000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=3000)
+        except Exception:
+            pass
+
+        if not detect_login_page(page):
+            # Session is active -- retry the job URL
+            job_url = original_url
+            li_match = re.search(r'(?:jobs/view/|currentJobId=|jobId=)(\d+)', original_url) or \
+                       re.search(r'(?:jobs/view/|currentJobId=|jobId=)(\d+)', listing_url or "")
+            if li_match:
+                job_url = f"https://www.linkedin.com/jobs/view/{li_match.group(1)}/"
+            console.print(f"  [dim]Session active -- retrying: {job_url[:70]}[/]")
+            log_action(conn, "login_fallback", f"Retrying after session warmup: {job_url}", app_id, job_id)
+            page.goto(job_url, wait_until="domcontentloaded", timeout=30000)
+            try:
+                page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
+            if not detect_login_page(page):
+                return True
+
+    # --- Generic site recovery: check for stored cookies ---
+    site_auth = _get_site_auth_path(current_url)
+    if site_auth.exists():
+        console.print(f"  [dim]Found stored cookies for {_get_site_domain(current_url)}, retrying...[/]")
+        page.context.add_cookies(json.loads(site_auth.read_text()))
+        page.goto(original_url, wait_until="domcontentloaded", timeout=30000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=3000)
+        except Exception:
+            pass
+        if not detect_login_page(page):
+            return True
+        console.print(f"  [yellow]Stored cookies expired for {_get_site_domain(current_url)}[/]")
+
+    # --- Alternate URL fallback ---
+    if listing_url and listing_url != original_url:
+        console.print(f"  [yellow]Login wall -- trying alternate URL: {listing_url[:60]}[/]")
+        log_action(conn, "login_fallback", f"Trying {listing_url}", app_id, job_id)
+        page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=3000)
+        except Exception:
+            pass
+        if not detect_login_page(page):
+            return True
+
+    # --- Auto-skip: never block the pipeline on manual input ---
+    domain = _get_site_domain(current_url)
+    console.print(f"  [yellow]Login required for {domain} -- auto-skipping[/]")
+    return "needs_login"
 
 
 def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bool):
@@ -284,30 +519,40 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
         except ImportError:
             pass
 
+        verbose = settings.get("automation", {}).get("verbose_logging", True)
+
+        if verbose:
+            console.print(f"  [dim]Loading: {url[:80]}[/]")
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_timeout(2000)  # Let JS render
+        # Wait for JS to finish rendering (up to 3s, but returns early if idle)
+        try:
+            page.wait_for_load_state("networkidle", timeout=3000)
+        except Exception:
+            pass  # Timed out waiting for idle -- page is usable enough
+        if verbose:
+            console.print(f"  [dim]Page loaded: {page.url[:80]}[/]")
 
         # Check for CAPTCHA / bot detection
         if detect_captcha(page):
-            console.print("  [yellow]CAPTCHA / bot verification detected -- skipping[/]")
-            update_job_status(conn, job_id, "failed_captcha")
-            log_action(conn, "captcha_detected", url, app_id, job_id)
-            return
+            if verbose:
+                console.print("  [dim]CAPTCHA detected, attempting solve...[/]")
+            if not try_solve_captcha(page, settings):
+                console.print("  [yellow]CAPTCHA / bot verification detected -- skipping[/]")
+                update_job_status(conn, job_id, "failed_captcha")
+                log_action(conn, "captcha_detected", url, app_id, job_id)
+                return
 
         # Check for login page (LinkedIn/Indeed redirect)
         if detect_login_page(page):
-            if listing_url and listing_url != url:
-                console.print(f"  [yellow]Login wall -- trying alternate URL: {listing_url[:60]}[/]")
-                log_action(conn, "login_fallback", f"Trying {listing_url}", app_id, job_id)
-                page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(2000)
-                if detect_login_page(page):
-                    console.print("  [yellow]Alternate URL also requires login -- skipping[/]")
-                    update_job_status(conn, job_id, "skipped")
-                    log_action(conn, "login_page_detected", listing_url, app_id, job_id)
-                    return
-            else:
-                console.print("  [yellow]Landed on login page -- skipping (needs direct apply URL)[/]")
+            if verbose:
+                console.print("  [dim]Login page detected[/]")
+            result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
+            if result == "needs_login":
+                update_job_status(conn, job_id, "needs_login")
+                log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
+                return
+            elif not result:
+                console.print(f"  [yellow]Could not bypass login -- skipping: {page.url[:80]}[/]")
                 update_job_status(conn, job_id, "skipped")
                 log_action(conn, "login_page_detected", url, app_id, job_id)
                 return
@@ -316,7 +561,12 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
         dismiss_modals(page)
 
         # Try to find and click "Apply" button if we're on a listing page
+        if verbose:
+            console.print("  [dim]Looking for Apply button...[/]")
+        url_before_apply = page.url
         apply_result = click_apply_button(page)
+        if verbose:
+            console.print(f"  [dim]Apply button result: {apply_result}[/]")
 
         # Dismiss any modals that may have appeared after clicking Apply
         dismiss_modals(page)
@@ -326,45 +576,41 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
             old_page = page
             page = page.context.pages[-1]
             page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(2000)
+            try:
+                page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
             old_page.close()
             console.print(f"  [dim]Now on: {page.url[:80]}[/]")
 
             # Check new page for CAPTCHA or login
             if detect_captcha(page):
-                console.print("  [yellow]CAPTCHA on apply page -- skipping[/]")
-                update_job_status(conn, job_id, "failed_captcha")
-                log_action(conn, "captcha_detected", page.url, app_id, job_id)
-                return
+                if not try_solve_captcha(page, settings):
+                    console.print("  [yellow]CAPTCHA on apply page -- skipping[/]")
+                    update_job_status(conn, job_id, "failed_captcha")
+                    log_action(conn, "captcha_detected", page.url, app_id, job_id)
+                    return
             if detect_login_page(page):
-                if listing_url and listing_url != url:
-                    console.print(f"  [yellow]Login wall after apply -- trying alternate: {listing_url[:60]}[/]")
-                    page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(2000)
-                    if detect_login_page(page):
-                        console.print("  [yellow]Alternate also requires login -- skipping[/]")
-                        update_job_status(conn, job_id, "skipped")
-                        log_action(conn, "login_page_detected", listing_url, app_id, job_id)
-                        return
-                else:
-                    console.print("  [yellow]Redirected to login -- skipping[/]")
+                result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
+                if result == "needs_login":
+                    update_job_status(conn, job_id, "needs_login")
+                    log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
+                    return
+                elif not result:
+                    console.print(f"  [yellow]Could not bypass login after apply -- skipping: {page.url[:80]}[/]")
                     update_job_status(conn, job_id, "skipped")
                     log_action(conn, "login_page_detected", page.url, app_id, job_id)
                     return
 
         # Also check after clicking apply on the same page
         if detect_login_page(page):
-            if listing_url and listing_url != url:
-                console.print(f"  [yellow]Login wall -- trying alternate: {listing_url[:60]}[/]")
-                page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(2000)
-                if detect_login_page(page):
-                    console.print("  [yellow]Alternate also requires login -- skipping[/]")
-                    update_job_status(conn, job_id, "skipped")
-                    log_action(conn, "login_page_detected", listing_url, app_id, job_id)
-                    return
-            else:
-                console.print("  [yellow]Landed on login page -- skipping[/]")
+            result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
+            if result == "needs_login":
+                update_job_status(conn, job_id, "needs_login")
+                log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
+                return
+            elif not result:
+                console.print(f"  [yellow]Could not bypass login -- skipping: {page.url[:80]}[/]")
                 update_job_status(conn, job_id, "skipped")
                 log_action(conn, "login_page_detected", page.url, app_id, job_id)
                 return
@@ -376,7 +622,35 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
 
         if use_vision and not on_linkedin:
             # -- VISION PATH: we're on an external ATS (Greenhouse, Lever, Workday, etc.)
-            # Selectors can't reliably handle these -- let vision agent drive
+
+            # Check if we're still on the listing page (Apply button didn't navigate)
+            still_on_listing = _is_listing_page(page)
+            if still_on_listing and page.url == url_before_apply:
+                console.print("  [yellow]Still on listing page -- extracting apply URL[/]")
+                navigated = _force_apply_click(page)
+
+                # Check for popup
+                if len(page.context.pages) > 1:
+                    latest = page.context.pages[-1]
+                    if latest != page and latest.url != "about:blank":
+                        old_page = page
+                        page = latest
+                        page.wait_for_load_state("domcontentloaded")
+                        try:
+                            page.wait_for_load_state("networkidle", timeout=2000)
+                        except Exception:
+                            pass
+                        old_page.close()
+                        console.print(f"  [dim]Now on: {page.url[:80]}[/]")
+
+                # If still stuck on the listing page, skip -- vision agent can't help here
+                if _is_listing_page(page) and page.url == url_before_apply:
+                    console.print("  [yellow]Could not reach application form -- skipping[/]")
+                    update_job_status(conn, job_id, "failed")
+                    log_action(conn, "apply_failed", "Stuck on listing page, Apply button unresponsive", app_id, job_id)
+                    final_dir = move_application_dir(company, position, "failed")
+                    return
+
             console.print("  [magenta]External ATS detected -- using vision agent[/]")
             log_action(conn, "vision_handoff", f"External site: {page.url[:80]}", app_id, job_id)
 
@@ -422,11 +696,26 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 # Handle file uploads
                 handle_file_uploads(page, resume_file, cl_file)
 
+                # Check if page context is still alive (uploads can trigger navigation)
+                try:
+                    page.evaluate("() => document.readyState")
+                except Exception:
+                    console.print("  [dim]Page navigated during upload -- waiting for new page[/]")
+                    try:
+                        page.wait_for_load_state("domcontentloaded", timeout=5000)
+                    except Exception:
+                        pass
+                    continue
+
                 # Check for next/continue button
                 if not click_next_button(page):
                     break  # No more pages -- we're at the submit page
 
-                page.wait_for_timeout(2000)
+                # Wait for next page to render (use smart wait instead of fixed sleep)
+                try:
+                    page.wait_for_load_state("domcontentloaded", timeout=3000)
+                except Exception:
+                    pass
 
             # Screenshot before submit
             if take_screenshot:
@@ -438,7 +727,11 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
 
         # -- VERIFY SUBMISSION with vision (regardless of which path got us here)
         if submitted:
-            page.wait_for_timeout(3000)
+            # Wait for submission to process (page may redirect/update)
+            try:
+                page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
             confirm_path = app_dir / "confirmation_screenshot.png"
             page.screenshot(path=str(confirm_path), full_page=True)
 

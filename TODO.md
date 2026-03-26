@@ -9,7 +9,10 @@
 - [ ] Option to view jobs we scraped and determine which ones to remove, etc
 - [ ] need to have a remove db and applications pipeline
 - [ ] move folder stuff to a database?
-
+- [ ] refactor and make everything clean once were done prototyping
+- [ ] once this works separate scraping and apply parallelization. apply can be parallelized i think
+- [ ] how to fix issue with otp - just skip? Right now just giving up if get otp
+- [ ] takes too long for a single application
 ## Features
 
 - [ ] Add email-based application support (some jobs accept resume via email) (Much later do not do right now)
@@ -18,6 +21,7 @@
 - [ ] Add a web dashboard for viewing job status and tailored docs
 - [ ] think about DB and how that would look like for multiple people (much later do this later)
 - [ ] have option to auto make profile based on input docx (Much later do this later)
+- [ ] DO MUCH LATER if i make this paid determine where costs are coming from and price baesd on that 
 
 ## Improvements
 

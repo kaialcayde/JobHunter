@@ -36,6 +36,8 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 - **Salary values in YAML** - must be plain integers, no commas (e.g., `150000` not `150,000`)
 - **Config changes go through Pydantic** - `load_profile()` and `load_settings()` validate via models before returning dicts
 - **Personal files are gitignored** - .env, profile.yaml, settings.yaml, templates/, applications/, data/
+- **New CLI commands must have a VS Code launch config** - when adding a new `python -m src <command>`, always add a matching entry in `.vscode/launch.json` so the user can run it via the green button (F5)
+- **Config edits must mirror to example files** - when editing `config/settings.yaml` or `config/profile.yaml`, always apply the same structural changes (new keys, removed keys, reordering) to `config/settings.example.yaml` or `config/profile.example.yaml` respectively. Example files are checked into git; the real config files are gitignored
 
 ## User Context
 - Kai is a Data Engineer at Intuitive Surgical (current employer - excluded from job search)

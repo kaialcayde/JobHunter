@@ -210,10 +210,14 @@ class Automation(BaseModel):
     delay_between_applications_seconds: int = 30
     screenshot_before_submit: bool = True
     skip_captcha_sites: bool = True
+    captcha_solving: bool = False  # solve CAPTCHAs via 2Captcha API (requires CAPTCHA_API_KEY in .env)
+    parallel_browsers_per_site: int = Field(default=1, ge=1, le=3)  # 1 = sequential, >1 = one browser per job site in parallel
+    verbose_logging: bool = True    # show step-by-step progress (loading, captcha, apply button, etc.)
     headless: bool = True
     vision_agent: bool = False      # enable LLM vision fallback for form filling
     vision_model: str = "gpt-4o-mini"  # cheapest vision-capable model
     vision_logging: bool = True     # log each vision agent step to console and log file
+    vision_detail: str = "high"     # "low" (85 tokens) or "high" (12-17K tokens) per screenshot
 
     @field_validator("distribution")
     @classmethod
