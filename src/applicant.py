@@ -237,11 +237,18 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(2000)  # Let JS render
 
-        # Check for CAPTCHA
+        # Check for CAPTCHA / bot detection
         if _detect_captcha(page):
-            console.print("  [yellow]CAPTCHA detected — skipping[/]")
+            console.print("  [yellow]CAPTCHA / bot verification detected — skipping[/]")
             update_job_status(conn, job_id, "failed_captcha")
             log_action(conn, "captcha_detected", url, app_id, job_id)
+            return
+
+        # Check for login page (LinkedIn/Indeed redirect)
+        if _detect_login_page(page):
+            console.print("  [yellow]Landed on login page — skipping (needs direct apply URL)[/]")
+            update_job_status(conn, job_id, "skipped")
+            log_action(conn, "login_page_detected", url, app_id, job_id)
             return
 
         # Try to find and click "Apply" button if we're on a listing page
@@ -256,12 +263,24 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
             old_page.close()
             console.print(f"  [dim]Now on: {page.url[:80]}[/]")
 
-            # Check new page for CAPTCHA
+            # Check new page for CAPTCHA or login
             if _detect_captcha(page):
                 console.print("  [yellow]CAPTCHA on apply page — skipping[/]")
                 update_job_status(conn, job_id, "failed_captcha")
                 log_action(conn, "captcha_detected", page.url, app_id, job_id)
                 return
+            if _detect_login_page(page):
+                console.print("  [yellow]Redirected to login — skipping[/]")
+                update_job_status(conn, job_id, "skipped")
+                log_action(conn, "login_page_detected", page.url, app_id, job_id)
+                return
+
+        # Also check after clicking apply on the same page
+        if _detect_login_page(page):
+            console.print("  [yellow]Landed on login page — skipping[/]")
+            update_job_status(conn, job_id, "skipped")
+            log_action(conn, "login_page_detected", page.url, app_id, job_id)
+            return
 
         # Process form pages
         form_answers_all = {}
@@ -336,7 +355,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
 
 
 def _detect_captcha(page) -> bool:
-    """Check if the page has a CAPTCHA."""
+    """Check if the page has a CAPTCHA or bot verification."""
     captcha_indicators = [
         'iframe[src*="recaptcha"]',
         'iframe[src*="hcaptcha"]',
@@ -344,10 +363,61 @@ def _detect_captcha(page) -> bool:
         '#captcha',
         '[class*="captcha"]',
         'iframe[title*="reCAPTCHA"]',
+        # Cloudflare Turnstile / challenge
+        'iframe[src*="challenges.cloudflare.com"]',
+        '[class*="cf-turnstile"]',
+        '#challenge-running',
+        '#challenge-form',
     ]
     for selector in captcha_indicators:
         if page.query_selector(selector):
             return True
+
+    # Check page text for common verification messages
+    body_text = (page.text_content("body") or "").lower()[:2000]
+    if any(phrase in body_text for phrase in [
+        "verify you are human",
+        "additional verification required",
+        "please verify you're not a robot",
+        "checking your browser",
+    ]):
+        return True
+
+    return False
+
+
+def _detect_login_page(page) -> bool:
+    """Detect if we've landed on a login/signup page instead of an application form."""
+    url = page.url.lower()
+
+    # Known login/signup URL patterns
+    login_patterns = [
+        "linkedin.com/signup",
+        "linkedin.com/login",
+        "linkedin.com/checkpoint",
+        "linkedin.com/uas/login",
+        "indeed.com/account/login",
+        "indeed.com/auth",
+        "glassdoor.com/member/auth",
+    ]
+    if any(pattern in url for pattern in login_patterns):
+        return True
+
+    # Check page content for login indicators
+    body_text = (page.text_content("body") or "").lower()[:2000]
+    login_phrases = [
+        "sign in to continue",
+        "sign in to see who you already know",
+        "join linkedin",
+        "join now",
+        "log in to indeed",
+        "create an account",
+    ]
+    # Must match login phrase AND have a password field (to avoid false positives)
+    if any(phrase in body_text for phrase in login_phrases):
+        if page.query_selector('input[type="password"]'):
+            return True
+
     return False
 
 

@@ -40,7 +40,8 @@ def _create_tables(conn: sqlite3.Connection):
             url_hash TEXT UNIQUE,
             title_company_hash TEXT,
             search_role TEXT DEFAULT '',
-            search_location TEXT DEFAULT ''
+            search_location TEXT DEFAULT '',
+            listing_url TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS applications (
@@ -83,7 +84,7 @@ def _create_tables(conn: sqlite3.Connection):
     conn.commit()
 
     # Safe column additions for existing databases
-    for col, default in [("search_role", "''"), ("search_location", "''")]:
+    for col, default in [("search_role", "''"), ("search_location", "''"), ("listing_url", "''")]:
         try:
             conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} TEXT DEFAULT {default}")
             conn.commit()
@@ -136,8 +137,8 @@ def insert_job(conn: sqlite3.Connection, job_data: dict) -> Optional[int]:
         cursor = conn.execute("""
             INSERT INTO jobs (title, company, location, url, description, salary_min, salary_max,
                               job_type, site, date_posted, date_scraped, status, url_hash, title_company_hash,
-                              search_role, search_location)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?)
+                              search_role, search_location, listing_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?)
         """, (
             job_data.get("title"),
             job_data.get("company"),
@@ -154,6 +155,7 @@ def insert_job(conn: sqlite3.Connection, job_data: dict) -> Optional[int]:
             tc_hash,
             job_data.get("search_role", ""),
             job_data.get("search_location", ""),
+            job_data.get("listing_url", ""),
         ))
         conn.commit()
         return cursor.lastrowid

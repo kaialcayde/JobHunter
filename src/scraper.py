@@ -152,11 +152,17 @@ def _row_to_dict(row) -> dict:
         except Exception:
             return default
 
+    # Prefer direct apply URL (company's ATS) over listing URL (LinkedIn/Indeed page)
+    direct_url = safe_get("job_url_direct")
+    listing_url = safe_get("job_url", safe_get("link", ""))
+    url = direct_url if direct_url else listing_url
+
     return {
         "title": safe_get("title", ""),
         "company": safe_get("company_name", safe_get("company", "")),
         "location": safe_get("location", ""),
-        "url": safe_get("job_url", safe_get("link", "")),
+        "url": url,
+        "listing_url": listing_url,  # keep original for reference
         "description": safe_get("description", ""),
         "salary_min": safe_get("min_amount"),
         "salary_max": safe_get("max_amount"),

@@ -8,11 +8,27 @@
 - [ ] confirm resume and cover letter are being tailored per company / role
 - [ ] ability to turn resume and cover letter tailoring on and off
 - [ ] confirm that with cached searches if new items come up like in 
-  Skipping (cached): software engineer in New York, NY
-  Skipping (cached): software engineer in Chicago, IL
-  All searches cached. Nothing to scrape.
-That we continue to search new instances of thsoe jobs and the city and specific search itself isn't cached, just the results
+    Skipping (cached): software engineer in New York, NY
+    Skipping (cached): software engineer in Chicago, IL
+    All searches cached. Nothing to scrape.
+    That we continue to search new instances of thsoe jobs and the city and specific search itself isn't cached, just the results
+
+    Note: 
+    Caching is fine — it only caches when a role+location combo was last scraped (timestamp), not the results themselves. After cache_hours (12h default) expires, it re-scrapes that same role+location and gets fresh results. Individual jobs are deduped by URL hash, so new postings get added while duplicates are skipped.
+    Good — caching confirmed working correctly: The cache only tracks "when did we last run this search?" (role+location+timestamp). It does NOT cache the job results. Every re-scrape after cache expiry fetches fresh listings from the job boards, and insert_job deduplicates by URL hash so only genuinely new postings get added.
+
+    - [ ] need to confirm that I can tweak cache_hours
+
+- [ ] still tailoring cover letters etc when tailor sett o false
+    (1/5) Software Engineer III at Abbott
+      Tailoring resume...
+    2026-03-25 17:16:30,600 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+      Resume saved: C:\Users\kaina\OneDrive\Documents\JobHunter\applications\Abbott\Software_Engineer_III\resume.docx + 
+    C:\Users\kaina\OneDrive\Documents\JobHunter\applications\Abbott\Software_Engineer_III\resume.pdf
+      Tailoring cover letter...
+Now let me also check the job dedup logic:
 - [ ] failed jobs just stay failed. Retry?
+- [ ] add debugging print logs to api (when processing a form so many api calls
 - [ ] Option to view jobs we scraped and determine which ones to remove, etc
 
 ## Features
