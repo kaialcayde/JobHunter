@@ -212,6 +212,32 @@ def cmd_apply():
     apply_to_jobs()
 
 
+def cmd_apply_job():
+    """Apply to a specific job by ID, or the next available job if no ID given."""
+    if len(sys.argv) >= 3:
+        try:
+            job_id = int(sys.argv[2])
+        except ValueError:
+            console.print(f"[red]Invalid job ID: {sys.argv[2]}[/]")
+            return
+    else:
+        # No ID given -- pick the next available job
+        conn = get_connection()
+        jobs = get_jobs_by_status(conn, "new", limit=1)
+        if not jobs:
+            jobs = get_jobs_by_status(conn, "tailored", limit=1)
+        conn.close()
+        if not jobs:
+            console.print("[yellow]No jobs available to apply to (no 'new' or 'tailored' jobs).[/]")
+            return
+        job_id = jobs[0]["id"]
+        console.print(f"[bold]Auto-selected next job: #{job_id} - {jobs[0].get('title', '?')} @ {jobs[0].get('company', '?')}[/]")
+    console.print(f"[bold blue]== Test Apply: Job #{job_id} ==[/]")
+    _check_linkedin_auth()
+    from .automation import apply_to_single_job_by_id
+    apply_to_single_job_by_id(job_id)
+
+
 def cmd_pipeline():
     """Run the full pipeline: scrape -> tailor -> apply."""
     logger = setup_logging()
@@ -595,10 +621,67 @@ def cmd_remove_failed():
     console.print(f"\n[green]Removed {count} failed jobs from DB, moved {moved} folders to _failed/[/]")
 
 
+def cmd_answers():
+    """Review and fill in unanswered form questions from the answer bank."""
+    from .db import get_unanswered_questions, get_saved_answers, save_answer
+
+    conn = get_connection()
+    unanswered = get_unanswered_questions(conn)
+    all_answers = get_saved_answers(conn)
+
+    answered_count = sum(1 for v in all_answers.values() if v != "N/A")
+    na_count = len(unanswered)
+
+    console.print(f"\n[bold blue]== Answer Bank ==[/]\n")
+    console.print(f"Total saved: {len(all_answers)} ({answered_count} answered, {na_count} need your input)\n")
+
+    if not unanswered:
+        console.print("[green]All questions have been answered! Nothing to do.[/]")
+
+        # Show all saved answers for reference
+        if all_answers:
+            table = Table(title="Saved Answers", box=ASCII)
+            table.add_column("Question", width=40)
+            table.add_column("Answer", width=40)
+            for q, a in sorted(all_answers.items()):
+                table.add_row(q[:40], a[:40])
+            console.print(table)
+
+        conn.close()
+        return
+
+    console.print(f"[yellow]{na_count} questions need your answer.[/]")
+    console.print("Type your answer, or press Enter to skip. Type 'q' to quit.\n")
+
+    filled = 0
+    for item in unanswered:
+        label = item["question_label"]
+        console.print(f"  [bold]{label}[/]")
+        try:
+            answer = input("  > ").strip()
+        except EOFError:
+            break
+
+        if answer.lower() == "q":
+            break
+        if answer:
+            save_answer(conn, label, answer, source="user")
+            filled += 1
+            console.print(f"  [green]Saved![/]\n")
+        else:
+            console.print(f"  [dim]Skipped[/]\n")
+
+    conn.close()
+    console.print(f"\n[bold green]Done! Filled {filled} answers.[/]")
+    if na_count - filled > 0:
+        console.print(f"[dim]{na_count - filled} questions still need answers. Run 'python -m src answers' again.[/]")
+
+
 def cmd_login_sites():
-    """Open a visible browser to log in to sites that blocked applications, then retry those jobs."""
-    from .db import get_jobs_by_status
-    from .automation.applicant import _run_application_batch
+    """Open a visible browser to log in to sites that blocked applications one at a time, save cookies, then retry."""
+    from playwright.sync_api import sync_playwright
+    from .db import get_jobs_by_status, update_job_status
+    from .automation.applicant import _get_site_domain, _get_site_auth_path, _run_application_batch
 
     conn = get_connection()
     needs_login = get_jobs_by_status(conn, "needs_login")
@@ -608,20 +691,85 @@ def cmd_login_sites():
         conn.close()
         return
 
-    console.print(f"[bold blue]{len(needs_login)} jobs need login to apply[/]\n")
+    # Group jobs by site domain
+    from collections import defaultdict
+    sites = defaultdict(list)
     for j in needs_login:
-        console.print(f"  {j['title']} at {j['company']}")
+        url = j.get("url", "") or j.get("listing_url", "")
+        domain = _get_site_domain(url) if url else "unknown"
+        sites[domain].append(j)
 
-    console.print(f"\n[yellow]Opening a visible browser -- log in when prompted, then jobs will retry.[/]")
+    console.print(f"[bold blue]{len(needs_login)} jobs need login across {len(sites)} site(s)[/]\n")
+    for domain, jobs in sites.items():
+        console.print(f"  [bold]{domain}[/] -- {len(jobs)} job(s)")
+        for j in jobs:
+            console.print(f"    {j['title']} at {j['company']}")
 
-    # Override headless to false so user can interact
-    settings = load_settings()
-    settings.setdefault("automation", {})["headless"] = False
-    take_screenshot = settings.get("automation", {}).get("screenshot_before_submit", True)
+    console.print(f"\n[yellow]You will log in to each site one at a time.[/]")
+    console.print("[yellow]After logging in, come back here and press Enter.[/]\n")
+
+    from .utils import USER_AGENT, SITE_AUTH_DIR
+    SITE_AUTH_DIR.mkdir(parents=True, exist_ok=True)
+
+    logged_in_domains = set()
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)
+
+        for domain, jobs in sites.items():
+            # Pick a representative URL for this domain
+            sample_url = jobs[0].get("url", "") or jobs[0].get("listing_url", "")
+            site_auth = _get_site_auth_path(sample_url)
+
+            console.print(f"\n[bold blue]== Log in to {domain} ==[/]")
+            console.print(f"  Opening: {sample_url[:80]}")
+
+            # Load existing cookies if any
+            context_kwargs = {
+                "viewport": {"width": 1280, "height": 900},
+                "user_agent": USER_AGENT,
+            }
+            context = browser.new_context(**context_kwargs)
+            page = context.new_page()
+
+            # Load existing cookies if any
+            if site_auth.exists():
+                try:
+                    import json
+                    cookies = json.loads(site_auth.read_text())
+                    if isinstance(cookies, list):
+                        context.add_cookies(cookies)
+                    console.print("  [dim]Loading existing cookies (refreshing)...[/]")
+                except Exception:
+                    pass
+            page.goto(sample_url, wait_until="domcontentloaded", timeout=30000)
+
+            input(f"  Press Enter here after you have logged in to {domain}...")
+
+            # Save cookies for this domain
+            import json
+            state = context.storage_state()
+            site_auth.write_text(json.dumps(state.get("cookies", []), indent=2))
+            console.print(f"  [green]Cookies saved for {domain} -> {site_auth}[/]")
+            logged_in_domains.add(domain)
+
+            context.close()
+
+        browser.close()
+
+    # Retry jobs for domains we logged into
+    if logged_in_domains:
+        retry_jobs = [j for j in needs_login
+                      if _get_site_domain(j.get("url", "") or j.get("listing_url", "")) in logged_in_domains]
+
+        if retry_jobs:
+            console.print(f"\n[bold blue]Retrying {len(retry_jobs)} jobs with new cookies...[/]")
+            # Reset status to new so they get picked up
+            for j in retry_jobs:
+                update_job_status(conn, j["id"], "new")
+            console.print("[green]Jobs reset to 'new' -- run 'python -m src apply' to retry.[/]")
 
     conn.close()
-
-    _run_application_batch(needs_login, settings, take_screenshot, label="[login-retry] ")
 
 
 def main():
@@ -644,6 +792,8 @@ def main():
         console.print("  [bold]reset[/]      Full reset: delete all applications and database")
         console.print("  [bold]remove-failed[/] Move failed apps to _failed/ folder and clean DB")
         console.print("  [bold]login-sites[/]  Log in to sites that blocked apps, then retry those jobs")
+        console.print("  [bold]answers[/]     Review and fill in unanswered form questions")
+        console.print("  [bold]apply-job[/]   Apply to a specific job by ID (testing/debugging)")
         return
 
     command = sys.argv[1].lower()
@@ -677,6 +827,10 @@ def main():
         cmd_remove_failed()
     elif command in ("login-sites", "login_sites"):
         cmd_login_sites()
+    elif command == "answers":
+        cmd_answers()
+    elif command in ("apply-job", "apply_job"):
+        cmd_apply_job()
     else:
         console.print(f"[red]Unknown command: {command}[/]")
         console.print("Run 'python -m src' for usage info.")

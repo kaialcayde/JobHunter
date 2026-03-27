@@ -218,6 +218,9 @@ class Automation(BaseModel):
     vision_model: str = "gpt-4o-mini"  # cheapest vision-capable model
     vision_logging: bool = True     # log each vision agent step to console and log file
     vision_detail: str = "high"     # "low" (85 tokens) or "high" (12-17K tokens) per screenshot
+    manual_login: bool = False      # pause and open browser for manual login when login is required
+    manual_otp: bool = False        # prompt in terminal for OTP/verification codes
+    manual_verification: bool = False  # prompt in terminal for general verification challenges
 
     @field_validator("distribution")
     @classmethod

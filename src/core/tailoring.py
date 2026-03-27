@@ -191,8 +191,73 @@ def tailor_cover_letter(job: dict, settings: dict) -> str:
     return _call_with_retry(client, settings, prompt)
 
 
+def _direct_map_profile_fields(fields: list[dict], profile: dict) -> dict:
+    """Directly map known profile fields to form field IDs without LLM.
+
+    This catches common fields like first_name, email, phone that the LLM
+    sometimes returns N/A for despite the data being in the profile.
+    """
+    personal = profile.get("personal", {})
+    address = personal.get("address", {})
+    work_auth = profile.get("work_authorization", {})
+    links = profile.get("links", {})
+    education_list = profile.get("education", [])
+    edu = education_list[0] if education_list else {}
+
+    # Map of lowercased label keywords -> profile value
+    # Order matters: more specific patterns first
+    label_map = [
+        # Name fields
+        (["first name", "first_name", "given name", "fname"], personal.get("first_name", "")),
+        (["last name", "last_name", "family name", "surname", "lname"], personal.get("last_name", "")),
+        (["full name", "full_name", "name"], f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip()),
+        (["preferred name", "preferred first", "nickname"], personal.get("first_name", "")),
+        # Contact
+        (["email", "e-mail"], personal.get("email", "")),
+        (["phone", "telephone", "mobile", "cell"], personal.get("phone", "")),
+        # Address
+        (["street", "address line 1", "address_line1"], address.get("street", "")),
+        (["city"], address.get("city", "")),
+        (["state", "province"], address.get("state", "")),
+        (["zip", "postal", "zip_code"], address.get("zip_code", "")),
+        (["country"], address.get("country", "")),
+        # Links
+        (["linkedin"], links.get("linkedin", "")),
+        (["github"], links.get("github", "")),
+        (["portfolio", "website", "personal site"], links.get("portfolio", "")),
+        # Education
+        (["school", "university", "college", "institution"], edu.get("school", "")),
+        (["degree"], edu.get("degree", "")),
+        (["major", "field of study"], edu.get("field", "")),
+        (["gpa", "grade"], edu.get("gpa", "")),
+        (["graduation year", "grad year"], edu.get("graduation_year", "")),
+    ]
+
+    mapped = {}
+    for field in fields:
+        label = field.get("label", "").strip().lower()
+        if not label:
+            continue
+        for keywords, value in label_map:
+            if not value:
+                continue
+            if any(kw in label for kw in keywords):
+                mapped[field["id"]] = str(value)
+                break
+
+    return mapped
+
+
 def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
     """Use LLM to infer answers for application form fields.
+
+    Checks the answer bank first for previously saved answers. For fields the LLM
+    can't answer from the profile, returns "N/A" and saves the question to the
+    answer bank for the user to fill in later via `python -m src answers`.
+
+    When fabricate_answers is enabled in settings, the LLM will generate answers
+    for subjective questions (e.g. "What excites you about X?") based on the
+    resume and cover letter content.
 
     Args:
         fields: List of form field dicts with keys: id, label, type, options (if select), required
@@ -202,9 +267,41 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
     Returns:
         Dict mapping field id to answer value
     """
+    from ..db import get_connection, get_saved_answers, save_answers_batch
+
     client = _get_client(settings)
     profile = load_profile()
     profile_summary = get_profile_summary(profile)
+    fabricate = settings.get("automation", {}).get("fabricate_answers", False)
+
+    # Check answer bank for previously answered questions
+    conn = get_connection()
+    saved = get_saved_answers(conn)
+
+    # Direct-map known profile fields (first_name, email, phone, etc.)
+    # This prevents the LLM from returning N/A for data that's in the profile
+    profile_mapped = _direct_map_profile_fields(fields, profile)
+
+    # Pre-fill from answer bank, then profile direct-map
+    prefilled = {}
+    remaining_fields = []
+    for field in fields:
+        fid = field["id"]
+        label = field.get("label", "").strip()
+        if label in saved and saved[label] != "N/A":
+            prefilled[fid] = saved[label]
+        elif fid in profile_mapped:
+            prefilled[fid] = profile_mapped[fid]
+        else:
+            remaining_fields.append(field)
+
+    if prefilled:
+        logger.info(f"Pre-filled {len(prefilled)} fields from answer bank + profile")
+
+    # If all fields are pre-filled, return early
+    if not remaining_fields:
+        conn.close()
+        return prefilled
 
     # Include diversity info if available
     diversity = profile.get("diversity", {})
@@ -213,6 +310,43 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
         if val:
             diversity_lines.append(f"  {key}: {val}")
     diversity_text = "\n".join(diversity_lines) if diversity_lines else "  (Not provided — use 'Prefer not to answer' or 'Decline to self-identify' when available)"
+
+    # Build fabrication context if enabled
+    fabrication_section = ""
+    fabrication_rules = ""
+    if fabricate:
+        try:
+            resume_text = load_base_resume()
+        except FileNotFoundError:
+            resume_text = ""
+        try:
+            cl_text = load_base_cover_letter()
+        except FileNotFoundError:
+            cl_text = ""
+
+        if resume_text or cl_text:
+            fabrication_section = f"""
+## Resume Content (for generating answers to subjective questions)
+{resume_text[:3000] if resume_text else '(not available)'}
+
+## Cover Letter Content (for tone and motivation)
+{cl_text[:2000] if cl_text else '(not available)'}
+"""
+            fabrication_rules = """
+7. For subjective/motivational questions (e.g. "What excites you about [company]?", "Why are you interested in this role?"):
+   Generate a thoughtful, professional answer based on the resume, cover letter, and job details. Keep it concise (2-3 sentences).
+8. For yes/no factual questions about deadlines, accommodations, or scheduling constraints: answer "No" unless the profile says otherwise.
+9. For "additional information" or open-ended optional fields: provide a brief, professional response drawing from the resume/cover letter, or leave as "N/A" if truly irrelevant.
+10. STILL never fabricate skills, experience, credentials, or qualifications not in the resume.
+11. If you truly cannot determine the answer, return "N/A"."""
+        else:
+            fabrication_rules = """
+7. Only use real information from the profile — never fabricate
+8. If you cannot determine the answer from the profile, return "N/A" for that field — do NOT guess or make up answers"""
+    else:
+        fabrication_rules = """
+7. Only use real information from the profile — never fabricate
+8. If you cannot determine the answer from the profile, return "N/A" for that field — do NOT guess or make up answers"""
 
     prompt = f"""You are filling out a job application form. Given the applicant's profile and the form fields below, return a JSON object mapping each field's "id" to the value that should be entered.
 
@@ -225,9 +359,9 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
 ## Job Being Applied For
 - Title: {job.get('title', 'N/A')}
 - Company: {job.get('company', 'N/A')}
-
+{fabrication_section}
 ## Form Fields
-{json.dumps(fields, indent=2)}
+{json.dumps([{k: v for k, v in f.items() if k != '_locator'} for f in remaining_fields], indent=2)}
 
 ## Rules
 1. For text fields: provide the appropriate value from the profile
@@ -236,7 +370,7 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
 4. For fields about salary: use the candidate's desired salary range
 5. For diversity questions with no profile data: prefer "Decline to self-identify" or "Prefer not to answer" if available
 6. For "How did you hear about us": use "Job Board" or similar generic option
-7. Only use real information from the profile — never fabricate
+{fabrication_rules}
 
 Return ONLY valid JSON — no explanation, no markdown fences.
 """
@@ -284,4 +418,20 @@ Return ONLY valid JSON — no explanation, no markdown fences.
 
     answers = json.loads(text)
     logger.debug(f"Form answers: {json.dumps(answers, indent=2)}")
+
+    # Save N/A questions to the answer bank for the user to fill in later
+    na_questions = []
+    for field in remaining_fields:
+        fid = field["id"]
+        label = field.get("label", "").strip()
+        if label and answers.get(fid) == "N/A":
+            na_questions.append(label)
+    if na_questions:
+        save_answers_batch(conn, na_questions, source="auto")
+        logger.info(f"Saved {len(na_questions)} unanswered questions to answer bank")
+
+    conn.close()
+
+    # Merge prefilled answers with LLM answers
+    answers.update(prefilled)
     return answers

@@ -76,8 +76,18 @@ def _create_tables(conn: sqlite3.Connection):
             UNIQUE(role, location)
         );
 
+        CREATE TABLE IF NOT EXISTS answer_bank (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question_label TEXT NOT NULL UNIQUE,
+            answer TEXT NOT NULL DEFAULT 'N/A',
+            source TEXT DEFAULT 'auto',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
         CREATE INDEX IF NOT EXISTS idx_jobs_url_hash ON jobs(url_hash);
+        CREATE INDEX IF NOT EXISTS idx_answer_bank_label ON answer_bank(question_label);
         CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications(job_id);
         CREATE INDEX IF NOT EXISTS idx_jobs_search ON jobs(search_role, search_location);
     """)
@@ -290,4 +300,42 @@ def log_action(conn: sqlite3.Connection, action: str, details: str = None,
         INSERT INTO application_log (application_id, job_id, timestamp, action, details)
         VALUES (?, ?, ?, ?, ?)
     """, (application_id, job_id, datetime.now().isoformat(), action, details))
+    conn.commit()
+
+
+# -- Answer Bank -------------------------------------------------------
+
+def get_saved_answers(conn: sqlite3.Connection) -> dict[str, str]:
+    """Get all saved answers as {question_label: answer}."""
+    rows = conn.execute("SELECT question_label, answer FROM answer_bank").fetchall()
+    return {r["question_label"]: r["answer"] for r in rows}
+
+
+def get_unanswered_questions(conn: sqlite3.Connection) -> list[dict]:
+    """Get questions that still have N/A answers."""
+    rows = conn.execute(
+        "SELECT id, question_label, created_at FROM answer_bank WHERE answer = 'N/A' ORDER BY created_at DESC"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def save_answer(conn: sqlite3.Connection, question_label: str, answer: str, source: str = "auto"):
+    """Save or update an answer in the answer bank."""
+    now = datetime.now().isoformat()
+    conn.execute("""
+        INSERT INTO answer_bank (question_label, answer, source, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(question_label) DO UPDATE SET answer = ?, source = ?, updated_at = ?
+    """, (question_label, answer, source, now, now, answer, source, now))
+    conn.commit()
+
+
+def save_answers_batch(conn: sqlite3.Connection, questions: list[str], source: str = "auto"):
+    """Save multiple N/A questions to the answer bank (skips existing)."""
+    now = datetime.now().isoformat()
+    for q in questions:
+        conn.execute("""
+            INSERT OR IGNORE INTO answer_bank (question_label, answer, source, created_at, updated_at)
+            VALUES (?, 'N/A', ?, ?, ?)
+        """, (q, source, now, now))
     conn.commit()

@@ -2,6 +2,28 @@
 
 ## High Priority
 
+- [ ] remove all debug, retry shouldn't need this in production much later on
+
+Run 5 debug cycles of `venv/bin/python -m src apply` (max_applications_per_round is already 1 in settings.yaml). For each cycle:
+
+1. Run apply, wait for it to finish (timeout 5min)
+2. Read LEARNINGS.md before diagnosing (required by CLAUDE.md)
+3. Check debug screenshots in data/logs/ if the run fails
+4. Diagnose the root cause from output + screenshots
+5. Fix the code
+6. If a job was marked failed/failed_captcha/skipped, reset it to 'new' so the next run has a job to try
+7. Update LEARNINGS.md with any new platform quirks discovered after a run. Update after every run
+
+
+
+
+Key lessons from past cycles:
+- LinkedIn "Share your profile?" modal: the Apply `<a>` tag's href navigates to the same page, destroying the modal. Must preventDefault before clicking so the JS handler can show the modal. Also the modal doesn't always use `[role="dialog"]` — use broad selectors.
+- LinkedIn redirect URLs (`linkedin.com/redir/redirect/?url=...`): treat as external, not internal LinkedIn URLs.
+- Ashby/Greenhouse invisible reCAPTCHA: detect_captcha false positives when form is already loaded. Skip passive CAPTCHA indicators (badge, scripts) when 2+ visible form inputs exist.
+- Greenhouse form below fold: scroll to first form input before vision agent handoff, otherwise vision agent sees job description and clicks "Apply" repeatedly.
+- Vision agent "done" but not submitted: try DOM-based click_submit_button() before falling back to vision coordinate clicks for the final submit.
+
 - [ ] Fill in work_experience and skills in config/profile.yaml
 - [ ] ability to apply to big and small companies
 - [ ] confirm resume and cover letter are being tailored per company and role
@@ -11,8 +33,10 @@
 - [ ] move folder stuff to a database?
 - [ ] refactor and make everything clean once were done prototyping
 - [ ] once this works separate scraping and apply parallelization. apply can be parallelized i think
-- [ ] how to fix issue with otp - just skip? Right now just giving up if get otp
+- [x] how to fix issue with otp - added manual_otp setting, prompts in terminal for verification codes
+- [ ] Replace terminal OTP/verification prompts with browser popup or find a way to automate (e.g. OpenClaw integration)
 - [ ] takes too long for a single application
+- [ ] captcha enterprise greenhouse canceled for now not working 
 ## Features
 
 - [ ] Add email-based application support (some jobs accept resume via email) (Much later do not do right now)
@@ -22,6 +46,8 @@
 - [ ] think about DB and how that would look like for multiple people (much later do this later)
 - [ ] have option to auto make profile based on input docx (Much later do this later)
 - [ ] DO MUCH LATER if i make this paid determine where costs are coming from and price baesd on that 
+- [ ] have imap to be able to paste in otp
+    email timestamp filtering, HTML body parsing fallback, multiple OTP patterns, timeout handling, and retry logic. That’s what makes it stable enough to run unattended. Polling
 
 ## Improvements
 

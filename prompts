@@ -1,0 +1,3 @@
+Run apply-job for job <JOB_ID>. If it fails, diagnose from output + screenshots, 
+fix the code, reset the job to 'new', update LEARNINGS.md, and run again. 
+Keep iterating until success.

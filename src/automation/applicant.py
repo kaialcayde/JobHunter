@@ -22,7 +22,7 @@ from ..core.tailoring import infer_form_answers
 from ..utils import get_application_dir, move_application_dir, LINKEDIN_AUTH_STATE, SITE_AUTH_DIR, TEMPLATES_DIR, USER_AGENT
 
 from .detection import detect_captcha, try_solve_captcha, detect_login_page, dismiss_modals, click_apply_button, click_next_button, click_submit_button
-from .forms import extract_form_fields, fill_form_fields, handle_file_uploads
+from .forms import extract_form_fields, extract_form_fields_playwright, fill_form_fields, fill_form_fields_playwright, handle_file_uploads
 from .vision_agent import run_vision_agent, verify_submission
 
 console = Console(force_terminal=True)
@@ -62,13 +62,38 @@ def _is_listing_page(page) -> bool:
 
     Returns True if the page looks like a listing with no form fields.
     """
-    # If there are form inputs (text fields, selects, file uploads), it's likely a form
-    form_inputs = page.query_selector_all(
-        'input[type="text"], input[type="email"], input[type="tel"], '
-        'textarea, select, input[type="file"]'
-    )
-    visible_inputs = [el for el in form_inputs if el.is_visible()]
-    if len(visible_inputs) >= 2:
+    url = page.url.lower()
+
+    # Greenhouse and similar ATS put job description AND form on the same page.
+    # The form is below the fold but it's there — not a listing-only page.
+    if any(pattern in url for pattern in [
+        "boards.greenhouse.io", "job-boards.greenhouse.io", "grnh.se",
+        "/application", "/apply",
+    ]):
+        return False
+
+    # Check for APPLICATION form inputs (not search/filter fields common on listing pages)
+    form_count = page.evaluate("""() => {
+        const inputs = document.querySelectorAll(
+            'input[type="text"], input[type="email"], input[type="tel"], ' +
+            'textarea, select, input[type="file"]'
+        );
+        let count = 0;
+        for (const el of inputs) {
+            // Check DOM presence with non-zero dimensions (not viewport visibility)
+            if (el.offsetWidth === 0 && el.offsetHeight === 0 && el.getClientRects().length === 0) continue;
+            // Exclude search/filter inputs (common on listing pages)
+            const name = (el.name || '').toLowerCase();
+            const id = (el.id || '').toLowerCase();
+            const placeholder = (el.placeholder || '').toLowerCase();
+            const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+            const allAttrs = name + ' ' + id + ' ' + placeholder + ' ' + ariaLabel;
+            if (allAttrs.match(/search|filter|keyword|location|sort|query/)) continue;
+            count++;
+        }
+        return count;
+    }""")
+    if form_count >= 2:
         return False  # Probably a form page
 
     # Check for common listing page indicators
@@ -103,7 +128,8 @@ def _force_apply_click(page) -> bool:
             if (text.includes('apply') && href.startsWith('http')) {
                 const ats = ['myworkdayjobs.com', 'workday.com', 'greenhouse.io',
                              'lever.co', 'icims.com', 'smartrecruiters.com',
-                             'ashbyhq.com', 'taleo.net', 'jobvite.com'];
+                             'ashbyhq.com', 'taleo.net', 'jobvite.com',
+                             'adp.com', 'ultipro.com'];
                 for (const domain of ats) {
                     if (href.includes(domain)) return href;
                 }
@@ -201,9 +227,9 @@ def _force_apply_click(page) -> bool:
     return False
 
 
-def _get_round_robin_jobs(conn, remaining: int, max_per_role: int, max_per_location: int) -> list[dict]:
+def _get_round_robin_jobs(conn, remaining: int, max_per_role: int, max_per_location: int, status: str = "tailored") -> list[dict]:
     """Get jobs distributed evenly across roles and locations via round-robin."""
-    all_jobs = get_jobs_by_status(conn, "tailored", limit=500)
+    all_jobs = get_jobs_by_status(conn, status, limit=500)
     if not all_jobs:
         return []
 
@@ -290,14 +316,18 @@ def apply_to_jobs():
         console.print(f"[dim]Per-round cap: {max_per_round} (daily remaining was {remaining})[/]")
         remaining = max_per_round
 
+    # When tailoring is disabled, apply directly to "new" jobs using base templates
+    tailoring_enabled = settings.get("tailoring", {}).get("enabled", True)
+    job_status = "tailored" if tailoring_enabled else "new"
+
     # Get jobs based on distribution strategy
     if distribution == "round_robin":
-        jobs = _get_round_robin_jobs(conn, remaining, max_per_role, max_per_location)
+        jobs = _get_round_robin_jobs(conn, remaining, max_per_role, max_per_location, status=job_status)
     else:
-        jobs = get_jobs_by_status(conn, "tailored", limit=remaining)
+        jobs = get_jobs_by_status(conn, job_status, limit=remaining)
 
     if not jobs:
-        console.print("[yellow]No tailored jobs ready for application.[/]")
+        console.print(f"[yellow]No {job_status} jobs ready for application.[/]")
         conn.close()
         return
 
@@ -355,6 +385,42 @@ def apply_to_jobs():
     console.print("\n[bold green]Application round complete![/]")
 
 
+def apply_to_single_job_by_id(job_id: int):
+    """Apply to a specific job by database ID. Used for testing/debugging."""
+    settings = load_settings()
+    take_screenshot = settings.get("automation", {}).get("screenshot_before_submit", True)
+
+    conn = get_connection()
+    from ..db import get_job_by_id
+    job = get_job_by_id(conn, job_id)
+    if not job:
+        console.print(f"[red]Job ID {job_id} not found in database.[/]")
+        conn.close()
+        return
+
+    console.print(f"\n[bold blue]Applying to job #{job_id}:[/]")
+    console.print(f"  Title: {job.get('title', '?')}")
+    console.print(f"  Company: {job.get('company', '?')}")
+    console.print(f"  URL: {job.get('url', '?')[:80]}")
+    console.print(f"  Status: {job.get('status', '?')}")
+
+    # Force status to 'tailored' so the application logic proceeds
+    current_status = job.get("status", "")
+    if current_status not in ("tailored", "new"):
+        console.print(f"  [yellow]Resetting status from '{current_status}' to 'tailored'[/]")
+        update_job_status(conn, job_id, "tailored")
+        job["status"] = "tailored"
+
+    conn.close()
+
+    try:
+        _run_application_batch([job], settings, take_screenshot, label=f"[test-{job_id}]")
+    except ImportError:
+        console.print("[red]Playwright not installed. Run: pip install playwright && playwright install chromium[/]")
+
+    console.print(f"\n[bold]Done. Check job #{job_id} status with: python -m src list[/]")
+
+
 def _run_application_batch(jobs: list[dict], settings: dict,
                            take_screenshot: bool, label: str = ""):
     """Process a batch of applications in a single browser instance.
@@ -364,7 +430,12 @@ def _run_application_batch(jobs: list[dict], settings: dict,
     """
     from playwright.sync_api import sync_playwright
 
-    headless = settings.get("automation", {}).get("headless", True)
+    auto = settings.get("automation", {})
+    headless = auto.get("headless", True)
+    # Force visible browser only for manual_login (needs browser interaction)
+    # OTP and verification prompts are terminal-only, no need for visible browser
+    if auto.get("manual_login"):
+        headless = False
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
@@ -381,7 +452,7 @@ def _run_application_batch(jobs: list[dict], settings: dict,
 
         conn = get_connection()
         for i, job in enumerate(jobs):
-            console.print(f"\n[bold]{label}({i+1}/{len(jobs)}) {job['title']} at {job['company']}[/]")
+            console.print(f"\n[bold]{label}({i+1}/{len(jobs)}) [Job #{job['id']}] {job['title']} at {job['company']}[/]")
             try:
                 _apply_to_single_job(context, job, settings, take_screenshot)
             except Exception as e:
@@ -420,7 +491,7 @@ def _get_site_auth_path(url: str) -> Path:
     return SITE_AUTH_DIR / f"{safe}.json"
 
 
-def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, job_id) -> bool:
+def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, job_id, settings=None) -> bool:
     """Try to recover from a login page. Returns True if recovered.
 
     Strategy:
@@ -435,7 +506,7 @@ def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, 
         console.print("  [yellow]Login redirect -- warming up LinkedIn session...[/]")
         page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=30000)
         try:
-            page.wait_for_load_state("networkidle", timeout=3000)
+            page.wait_for_load_state("networkidle", timeout=2000)
         except Exception:
             pass
 
@@ -450,7 +521,7 @@ def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, 
             log_action(conn, "login_fallback", f"Retrying after session warmup: {job_url}", app_id, job_id)
             page.goto(job_url, wait_until="domcontentloaded", timeout=30000)
             try:
-                page.wait_for_load_state("networkidle", timeout=3000)
+                page.wait_for_load_state("networkidle", timeout=2000)
             except Exception:
                 pass
             if not detect_login_page(page):
@@ -463,7 +534,7 @@ def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, 
         page.context.add_cookies(json.loads(site_auth.read_text()))
         page.goto(original_url, wait_until="domcontentloaded", timeout=30000)
         try:
-            page.wait_for_load_state("networkidle", timeout=3000)
+            page.wait_for_load_state("networkidle", timeout=2000)
         except Exception:
             pass
         if not detect_login_page(page):
@@ -476,25 +547,99 @@ def _try_recover_login(page, original_url: str, listing_url: str, conn, app_id, 
         log_action(conn, "login_fallback", f"Trying {listing_url}", app_id, job_id)
         page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
         try:
-            page.wait_for_load_state("networkidle", timeout=3000)
+            page.wait_for_load_state("networkidle", timeout=2000)
         except Exception:
             pass
         if not detect_login_page(page):
             return True
 
-    # --- Auto-skip: never block the pipeline on manual input ---
+    # --- Manual login: pause for user if enabled ---
     domain = _get_site_domain(current_url)
+    manual_login = settings.get("automation", {}).get("manual_login", False) if settings else False
+    if manual_login:
+        console.print(f"  [bold yellow]Login required for {domain}! Browser is open for manual login.[/]")
+        try:
+            input(f"  Log in to {domain} in the browser, then press Enter to continue: ")
+        except EOFError:
+            pass
+        page.wait_for_timeout(1000)
+        if not detect_login_page(page):
+            console.print(f"  [green]Login successful for {domain}![/]")
+            # Save cookies for future use
+            import json
+            site_auth = _get_site_auth_path(current_url)
+            site_auth.parent.mkdir(parents=True, exist_ok=True)
+            cookies = page.context.cookies()
+            site_auth.write_text(json.dumps(cookies, indent=2))
+            console.print(f"  [dim]Cookies saved for {domain}[/]")
+            return True
+        console.print(f"  [yellow]Still on login page after manual login attempt[/]")
+
     console.print(f"  [yellow]Login required for {domain} -- auto-skipping[/]")
     return "needs_login"
 
 
+def _is_access_denied(page) -> bool:
+    """Detect 'Access Denied' or similar bot-block pages that aren't CAPTCHA/login."""
+    try:
+        return page.evaluate("""() => {
+            const text = (document.body?.innerText || '').slice(0, 3000).toLowerCase();
+            const title = (document.title || '').toLowerCase();
+            const denied = ['access denied', 'access to this page has been denied',
+                            '403 forbidden', 'you don\\'t have permission',
+                            'request blocked', 'this page is not available',
+                            'there has been a critical error', '500 internal server error',
+                            'this site is experiencing technical difficulties'];
+            for (const d of denied) {
+                if (text.includes(d) || title.includes(d)) return true;
+            }
+            return false;
+        }""")
+    except Exception:
+        return False
+
+
 def _check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, verbose) -> bool:
-    """Check for CAPTCHA or login walls. Returns True if blocked (caller should return)."""
+    """Check for CAPTCHA, login walls, or access-denied pages. Returns True if blocked."""
+    # Wait briefly for client-side redirects (e.g. Amazon Jobs -> signin)
+    try:
+        page.wait_for_load_state("networkidle", timeout=2000)
+    except Exception:
+        pass
+
+    # Fast check: access denied / 403 pages (no point trying CAPTCHA or vision)
+    if _is_access_denied(page):
+        console.print("  [yellow]Access denied / blocked by site -- skipping[/]")
+        update_job_status(conn, job_id, "failed")
+        log_action(conn, "access_denied", f"Blocked: {page.url[:80]}", app_id, job_id)
+        return True
+
     if detect_captcha(page):
         if verbose:
             console.print("  [dim]CAPTCHA detected, attempting solve...[/]")
-        if not try_solve_captcha(page, settings):
+        # SPA pages (Ashby, Gem) may trigger passive CAPTCHA before form hydrates.
+        # Wait briefly and re-check -- if form content appears, the trigger clears.
+        page.wait_for_timeout(2000)
+        if not detect_captcha(page):
+            if verbose:
+                console.print("  [dim]CAPTCHA cleared after SPA hydration[/]")
+        elif not try_solve_captcha(page, settings):
+            manual_verification = settings.get("automation", {}).get("manual_verification", False)
+            if manual_verification:
+                console.print("  [bold yellow]Verification challenge detected! Browser is open for manual solving.[/]")
+                try:
+                    input("  Solve the CAPTCHA/challenge in the browser, then press Enter to continue: ")
+                except EOFError:
+                    pass
+                page.wait_for_timeout(1000)
+                if not detect_captcha(page):
+                    console.print("  [green]Challenge solved manually![/]")
+                    return False  # continue processing
             console.print("  [yellow]CAPTCHA / bot verification detected -- skipping[/]")
+            try:
+                page.screenshot(path="data/logs/debug_captcha_blocked.png")
+            except Exception:
+                pass
             update_job_status(conn, job_id, "failed_captcha")
             log_action(conn, "captcha_detected", url, app_id, job_id)
             return True
@@ -502,7 +647,7 @@ def _check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id,
     if detect_login_page(page):
         if verbose:
             console.print("  [dim]Login page detected[/]")
-        result = _try_recover_login(page, url, listing_url, conn, app_id, job_id)
+        result = _try_recover_login(page, url, listing_url, conn, app_id, job_id, settings)
         if result == "needs_login":
             update_job_status(conn, job_id, "needs_login")
             log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
@@ -512,6 +657,20 @@ def _check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id,
             update_job_status(conn, job_id, "skipped")
             log_action(conn, "login_page_detected", url, app_id, job_id)
             return True
+        # Recovery succeeded — re-check for blockers on the new page (e.g. CAPTCHA on Indeed)
+        if _is_access_denied(page):
+            console.print("  [yellow]Access denied on recovered page -- skipping[/]")
+            update_job_status(conn, job_id, "failed")
+            log_action(conn, "access_denied", f"Blocked after login recovery: {page.url[:80]}", app_id, job_id)
+            return True
+        if detect_captcha(page):
+            if verbose:
+                console.print("  [dim]CAPTCHA on recovered page, attempting solve...[/]")
+            if not try_solve_captcha(page, settings):
+                console.print("  [yellow]CAPTCHA on recovered page -- skipping[/]")
+                update_job_status(conn, job_id, "failed_captcha")
+                log_action(conn, "captcha_detected", f"After login recovery: {page.url[:80]}", app_id, job_id)
+                return True
 
     return False
 
@@ -583,7 +742,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
         # Wait for JS to finish rendering (up to 3s, but returns early if idle)
         try:
-            page.wait_for_load_state("networkidle", timeout=3000)
+            page.wait_for_load_state("networkidle", timeout=2000)
         except Exception:
             pass  # Timed out waiting for idle -- page is usable enough
         if verbose:
@@ -627,7 +786,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
             page = page.context.pages[-1]
             page.wait_for_load_state("domcontentloaded")
             try:
-                page.wait_for_load_state("networkidle", timeout=3000)
+                page.wait_for_load_state("networkidle", timeout=2000)
             except Exception:
                 pass
             old_page.close()
@@ -645,7 +804,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 console.print(f"  [dim]LinkedIn dead page -- trying direct URL: {listing_url[:60]}[/]")
                 page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
                 try:
-                    page.wait_for_load_state("networkidle", timeout=3000)
+                    page.wait_for_load_state("networkidle", timeout=2000)
                 except Exception:
                     pass
             else:
@@ -656,25 +815,79 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 return
 
         # If still stuck on LinkedIn after clicking Apply (no Easy Apply modal opened),
-        # try to navigate to the company's ATS directly
+        # try to navigate to the company's ATS directly.
+        # EXCEPTION: if apply_result == "easy_apply", we KNOW an Easy Apply modal was
+        # triggered -- wait for it to render instead of giving up.
         still_on_linkedin = "linkedin.com" in page.url.lower()
-        if still_on_linkedin:
+        is_easy_apply_flow = (apply_result == "easy_apply")
+
+        if still_on_linkedin and is_easy_apply_flow:
+            # Easy Apply was clicked -- wait for the modal to render (up to 3s)
             from .platforms.linkedin import detect_easy_apply_modal
-            if not detect_easy_apply_modal(page):
+            for _wait in range(6):
+                if detect_easy_apply_modal(page):
+                    console.print("  [dim]Easy Apply modal is open[/]")
+                    break
+                page.wait_for_timeout(500)
+            else:
+                # Modal didn't appear -- save debug screenshot
+                try:
+                    debug_dir = Path("data/logs")
+                    debug_dir.mkdir(parents=True, exist_ok=True)
+                    debug_path = debug_dir / "debug_easy_apply_no_modal.png"
+                    page.screenshot(path=str(debug_path), full_page=True)
+                    console.print(f"  [dim]  Debug screenshot: {debug_path}[/]")
+                except Exception:
+                    pass
+                console.print("  [yellow]Easy Apply clicked but modal didn't open -- retrying click[/]")
+                # Retry: dismiss modals and click Easy Apply again
+                dismiss_modals(page)
+                retry_result = click_apply_button(page)
+                if retry_result == "easy_apply":
+                    page.wait_for_timeout(1500)
+                    if not detect_easy_apply_modal(page):
+                        console.print("  [yellow]Easy Apply modal still not open after retry -- failing[/]")
+                        update_job_status(conn, job_id, "failed")
+                        log_action(conn, "apply_failed", "Easy Apply modal never opened", app_id, job_id)
+                        final_dir = move_application_dir(company, position, "failed")
+                        return
+
+        elif still_on_linkedin:
+            from .platforms.linkedin import detect_easy_apply_modal
+            has_modal = detect_easy_apply_modal(page)
+            logger.info(f"Still on LinkedIn: url={page.url[:80]}, easy_apply_modal={has_modal}, "
+                        f"listing_url={listing_url}, apply_result={apply_result}")
+            if not has_modal:
                 # We're on LinkedIn but NOT in an Easy Apply flow -- try alternate URL
                 if listing_url and "linkedin.com" not in listing_url.lower():
                     console.print(f"  [dim]Stuck on LinkedIn -- navigating to company page: {listing_url[:60]}[/]")
                     page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
                     try:
-                        page.wait_for_load_state("networkidle", timeout=3000)
+                        page.wait_for_load_state("networkidle", timeout=2000)
                     except Exception:
                         pass
                     still_on_linkedin = "linkedin.com" in page.url.lower()
+                else:
+                    console.print(f"  [dim]No alternate URL available (listing_url={listing_url})[/]")
 
                 if still_on_linkedin and not detect_easy_apply_modal(page):
-                    console.print("  [yellow]Could not leave LinkedIn -- skipping[/]")
+                    # Save debug screenshot before giving up
+                    try:
+                        debug_dir = Path("data/logs")
+                        debug_dir.mkdir(parents=True, exist_ok=True)
+                        debug_path = debug_dir / "debug_stuck_linkedin.png"
+                        page.screenshot(path=str(debug_path), full_page=True)
+                        console.print(f"  [dim]  Debug screenshot: {debug_path}[/]")
+                    except Exception:
+                        pass
+                    page_tabs = len(page.context.pages)
+                    console.print(f"  [yellow]Could not leave LinkedIn -- skipping "
+                                  f"(tabs={page_tabs}, url={page.url[:60]})[/]")
                     update_job_status(conn, job_id, "failed")
-                    log_action(conn, "apply_failed", "Stuck on LinkedIn, no Easy Apply modal", app_id, job_id)
+                    log_action(conn, "apply_failed",
+                               f"Stuck on LinkedIn, no Easy Apply modal. "
+                               f"apply_result={apply_result}, listing_url={listing_url}, tabs={page_tabs}",
+                               app_id, job_id)
                     final_dir = move_application_dir(company, position, "failed")
                     return
 
@@ -686,9 +899,9 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
         if use_vision and not on_linkedin:
             # -- VISION PATH: we're on an external ATS (Greenhouse, Lever, Workday, etc.)
 
-            # Check if we're still on the listing page (Apply button didn't navigate)
+            # Check if we're on a listing page (Apply button led here but form isn't loaded)
             still_on_listing = _is_listing_page(page)
-            if still_on_listing and page.url == url_before_apply:
+            if still_on_listing:
                 console.print("  [yellow]Still on listing page -- extracting apply URL[/]")
                 navigated = _force_apply_click(page)
 
@@ -707,7 +920,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                         console.print(f"  [dim]Now on: {page.url[:80]}[/]")
 
                 # If still stuck on the listing page, skip -- vision agent can't help here
-                if _is_listing_page(page) and page.url == url_before_apply:
+                if _is_listing_page(page):
                     console.print("  [yellow]Could not reach application form -- skipping[/]")
                     update_job_status(conn, job_id, "failed")
                     log_action(conn, "apply_failed", "Stuck on listing page, Apply button unresponsive", app_id, job_id)
@@ -717,20 +930,79 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
             console.print("  [magenta]External ATS detected -- using vision agent[/]")
             log_action(conn, "vision_handoff", f"External site: {page.url[:80]}", app_id, job_id)
 
+            # Check for login/signup pages before wasting vision agent rounds
+            if detect_login_page(page):
+                console.print("  [yellow]Login/signup page detected on ATS -- marking for later[/]")
+                update_job_status(conn, job_id, "needs_login")
+                log_action(conn, "needs_login", f"ATS requires login: {page.url[:80]}", app_id, job_id)
+                final_dir = move_application_dir(company, position, "failed")
+                return
+
+            # Ashby: form is behind an "Application" tab — click it via Playwright
+            if "ashbyhq.com" in page.url.lower():
+                try:
+                    app_tab = page.locator('a:has-text("Application"), button:has-text("Application")').first
+                    if app_tab.is_visible():
+                        app_tab.click()
+                        page.wait_for_timeout(1500)
+                        console.print("  [dim]Clicked Ashby 'Application' tab[/]")
+                except Exception:
+                    pass
+
+            # Scroll to the first form field so the vision agent's initial
+            # screenshot shows the form (not just the job description header).
+            # Greenhouse and similar ATS put description + form on one page.
+            page.evaluate("""() => {
+                const input = document.querySelector(
+                    'input[type="text"], input[type="email"], input[type="tel"], textarea, input[type="file"]'
+                );
+                if (input) input.scrollIntoView({ block: 'center', behavior: 'instant' });
+            }""")
+            page.wait_for_timeout(300)
+
+            # Pre-fill via DOM selectors before vision agent takes over.
+            # Playwright's fill() dispatches proper input/change events that work
+            # with React controlled inputs (vision agent's coordinate typing often fails).
+            try:
+                dom_fields = extract_form_fields(page)
+                if dom_fields:
+                    console.print(f"  [dim]DOM pre-fill: found {len(dom_fields)} fields[/]")
+                    dom_answers = infer_form_answers(dom_fields, job, settings)
+                    fill_form_fields(page, dom_fields, dom_answers)
+                    handle_file_uploads(page, resume_file, cl_file)
+                    page.wait_for_timeout(500)
+            except Exception as e:
+                console.print(f"  [dim]DOM pre-fill failed: {str(e)[:60]} -- vision agent will handle[/]")
+
             # Screenshot before vision takes over
             if take_screenshot:
                 screenshot_path = app_dir / "pre_submit_screenshot.png"
                 page.screenshot(path=str(screenshot_path), full_page=True)
                 update_application(conn, app_id, screenshot_path=str(screenshot_path))
 
-            submitted = run_vision_agent(page, job, settings, resume_file, cl_file)
+            vision_result = run_vision_agent(page, job, settings, resume_file, cl_file)
+            if vision_result == "needs_login":
+                console.print(f"  [yellow]Login required -- marking for later[/]")
+                update_job_status(conn, job_id, "needs_login")
+                log_action(conn, "needs_login", f"Vision agent detected login wall: {page.url}", app_id, job_id)
+                return
+            if vision_result == "already_applied":
+                console.print(f"  [green]Already applied to this position -- marking as applied[/]")
+                update_job_status(conn, job_id, "applied")
+                update_application(conn, app_id, submitted_at=datetime.now().isoformat())
+                log_action(conn, "already_applied", f"Previously applied: {page.url}", app_id, job_id)
+                final_dir = move_application_dir(company, position, "success")
+                return
+            submitted = bool(vision_result)
         else:
             # -- SELECTOR PATH: LinkedIn Easy Apply or vision disabled
             max_pages = 10  # safety limit
+            if is_easy_apply_flow:
+                console.print("  [cyan]Easy Apply multi-step flow -- filling forms...[/]")
 
             for page_num in range(max_pages):
-                console.print(f"  Processing form page {page_num + 1}...")
-                logger.info(f"Form page {page_num + 1} for job {job_id} ({company} - {position})")
+                console.print(f"  [dim]Step {page_num + 1}/{max_pages}...[/]")
+                logger.info(f"Form page {page_num + 1} for job #{job_id} ({company} - {position})")
 
                 # Guard: check if page context is alive before doing anything
                 try:
@@ -744,8 +1016,18 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                         console.print("  [yellow]Page destroyed -- cannot continue form filling[/]")
                         break
 
-                # Extract form fields
-                fields = extract_form_fields(page)
+                # Extract form fields -- use Playwright locators for Easy Apply
+                # (shadow DOM) and JS-based extraction for everything else
+                use_pw = is_easy_apply_flow
+                if use_pw:
+                    fields = extract_form_fields_playwright(page)
+                    if not fields:
+                        # Fallback to JS extraction
+                        fields = extract_form_fields(page)
+                        use_pw = False
+                else:
+                    fields = extract_form_fields(page)
+
                 if not fields:
                     console.print("  [yellow]No form fields found on this page.[/]")
                     logger.info(f"No form fields found on page {page_num + 1}")
@@ -766,7 +1048,10 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
                 logger.debug(f"Page {page_num + 1} answers: {json.dumps(answers, indent=2)}")
 
                 # Fill in the form
-                fill_form_fields(page, fields, answers)
+                if use_pw:
+                    fill_form_fields_playwright(page, fields, answers)
+                else:
+                    fill_form_fields(page, fields, answers)
 
                 # Handle file uploads
                 handle_file_uploads(page, resume_file, cl_file)
@@ -784,9 +1069,12 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
 
                 # Check for next/continue button
                 if not click_next_button(page):
+                    console.print("  [dim]No Next button -- at submit page[/]")
                     break  # No more pages -- we're at the submit page
 
-                # Wait for next page to render
+                console.print("  [dim]Clicked Next -- loading next step...[/]")
+                # Wait for next page/modal content to render
+                page.wait_for_timeout(1000)
                 try:
                     page.wait_for_load_state("domcontentloaded", timeout=3000)
                 except Exception:
@@ -804,7 +1092,7 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
         if submitted:
             # Wait for submission to process (page may redirect/update)
             try:
-                page.wait_for_load_state("networkidle", timeout=3000)
+                page.wait_for_load_state("networkidle", timeout=2000)
             except Exception:
                 pass
             confirm_path = app_dir / "confirmation_screenshot.png"
@@ -824,10 +1112,14 @@ def _apply_to_single_job(context, job: dict, settings: dict, take_screenshot: bo
 
         if submitted:
             update_job_status(conn, job_id, "applied")
+            answers_json = json.dumps(form_answers_all) if form_answers_all else None
             update_application(conn, app_id,
                                submitted_at=datetime.now().isoformat(),
-                               form_answers_json=json.dumps(form_answers_all))
+                               form_answers_json=answers_json)
             log_action(conn, "applied", f"Submitted to {company}", app_id, job_id)
+            if form_answers_all:
+                log_action(conn, "form_answers", answers_json, app_id, job_id)
+                console.print(f"  [dim]Stored {len(form_answers_all)} form answers in DB[/]")
             save_application_metadata(company, position, job,
                                       form_answers_all)
             # Move to success folder

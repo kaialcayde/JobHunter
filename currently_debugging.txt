@@ -1,0 +1,8 @@
+Also for applications/success/ABAKA_AI/Machine_Learning_Engineer/pre_submit_screenshot.png for example i know i said don't fabricate but if itsquestions like what excites you about akaba ai fabriacte based on my cover letter. Make this a flag i can turn on and off. also for here first name was set as N/A when my first name is Kai but Kai was properlly filled for preffered first name. So for now fabircate answers based on resume and cover letter if questions like is there other deadlines to be aware of put no. make sure i can turn this on and off. Then store these responses and list of responses in the database with the job id we applied to
+
+
+
+
+
+
+data/logs/debug_stuck_linkedin.png easy apply have to keep going next. Easy apply specifically needs a different set up since we have to fill out then next then fill out then like apply / done pre_submit_screenshot, when it reads easy apply have that situation maybe

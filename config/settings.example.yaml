@@ -56,6 +56,10 @@ automation:
   vision_model: "gpt-4o-mini"      # cheapest vision model
   vision_logging: true             # log each vision agent step to console
   vision_detail: "high"            # "low" = 85 tokens/image, "high" = 12-17K tokens/image
+  fabricate_answers: false          # generate answers for subjective questions (e.g. "why this company?") from resume/cover letter. Does NOT fabricate skills/experience
+  manual_login: false              # pause and open browser for manual login when login is required
+  manual_otp: false                # prompt in terminal for OTP/verification codes
+  manual_verification: false       # prompt in terminal for general verification challenges
 
 scheduler:
   enabled: true

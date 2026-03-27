@@ -19,10 +19,15 @@
       "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/applicant.py'', doraise=True\\); py_compile.compile\\(''src/main.py'', doraise=True\\); print\\(''OK''\\)\")",
       "Bash(venv/Scripts/python -c \"import jobspy; help\\(jobspy.scrape_jobs\\)\")",
       "Bash(venv/Scripts/python -c \"from src.main import main; from src.applicant import apply_to_jobs; from src.scraper import scrape_jobs; from src.database import get_connection; print\\(''All imports OK''\\)\")",
-      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/main.py'', doraise=True\\); print\\(''OK''\\)\")"
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''src/main.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(venv/bin/python -c \"from src.cli import main; print\\(''OK''\\)\")",
+      "Bash(venv/bin/python -c \"from src.cli import main; from src.automation.detection import click_apply_button; from src.automation.vision_agent import run_vision_agent; print\\(''OK''\\)\")",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\kaina\\OneDrive\\Documents\\JobHunter"
+      "c:\\Users\\kaina\\OneDrive\\Documents\\JobHunter",
+      "/Users/kana/.claude"
     ]
   }
 }

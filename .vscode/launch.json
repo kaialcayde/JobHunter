@@ -178,6 +178,22 @@
             }
         },
         {
+            "name": "JobHunter: Answer Questions",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src",
+            "args": ["answers"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "console": "integratedTerminal",
+            "osx": {
+                "python": "${workspaceFolder}/venv/bin/python"
+            },
+            "windows": {
+                "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            }
+        },
+        {
             "name": "JobHunter: Reset (Full Wipe)",
             "type": "debugpy",
             "request": "launch",
@@ -192,6 +208,29 @@
             "windows": {
                 "python": "${workspaceFolder}/venv/Scripts/python.exe"
             }
+        },
+        {
+            "name": "JobHunter: Apply Job (by ID)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src",
+            "args": ["apply-job", "${input:jobId}"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "console": "integratedTerminal",
+            "osx": {
+                "python": "${workspaceFolder}/venv/bin/python"
+            },
+            "windows": {
+                "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "jobId",
+            "type": "promptString",
+            "description": "Enter the job ID to apply to"
         }
     ]
 }

@@ -1,21 +1,218 @@
 """Form field extraction, filling, and file upload handling."""
 
+import logging
 from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
 
 console = Console(force_terminal=True)
+logger = logging.getLogger(__name__)
+
+
+def extract_form_fields_playwright(page) -> list[dict]:
+    """Extract form fields using Playwright locators (pierces shadow DOM).
+
+    Used for LinkedIn Easy Apply modals that render inside shadow DOM hosts.
+    Falls back to the JS-based extract_form_fields if this finds nothing.
+    """
+    fields = []
+    seen_ids = set()
+
+    # Find all visible input fields
+    input_types = ['text', 'email', 'tel', 'number', 'url', 'date']
+    for input_type in input_types:
+        try:
+            locators = page.locator(f'input[type="{input_type}"]').all()
+            for loc in locators:
+                try:
+                    if not loc.is_visible(timeout=300):
+                        continue
+                    attrs = loc.evaluate("""el => ({
+                        id: el.id || el.name || el.getAttribute('aria-label') || '',
+                        name: el.name || '',
+                        label: (() => {
+                            if (el.id) {
+                                const lbl = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
+                                if (lbl) return lbl.textContent.trim();
+                            }
+                            // Walk up to find label in shadow DOM context
+                            let parent = el.parentElement;
+                            for (let i = 0; i < 5 && parent; i++) {
+                                const lbl = parent.querySelector('label');
+                                if (lbl) return lbl.textContent.trim();
+                                parent = parent.parentElement;
+                            }
+                            return el.getAttribute('aria-label') || el.placeholder || el.name || el.id || '';
+                        })(),
+                        type: el.type || 'text',
+                        required: el.required || el.getAttribute('aria-required') === 'true',
+                        value: el.value || '',
+                        selector: el.id ? '#' + CSS.escape(el.id) : (el.name ? 'input[name="' + el.name + '"]' : '')
+                    })""")
+                    fid = attrs.get('id') or attrs.get('name') or f'input_{len(fields)}'
+                    if fid in seen_ids:
+                        continue
+                    seen_ids.add(fid)
+                    field_dict = {
+                        'id': fid,
+                        'selector': attrs.get('selector', ''),
+                        'label': attrs.get('label', ''),
+                        'type': attrs.get('type', 'text'),
+                        'required': attrs.get('required', False),
+                        'value': attrs.get('value', ''),
+                        'visible': True,
+                    }
+                    field_dict['_locator'] = loc  # keep reference for filling (not serializable)
+                    fields.append(field_dict)
+                except Exception:
+                    continue
+        except Exception:
+            continue
+
+    # Textareas
+    try:
+        for loc in page.locator('textarea').all():
+            try:
+                if not loc.is_visible(timeout=300):
+                    continue
+                attrs = loc.evaluate("""el => ({
+                    id: el.id || el.name || '',
+                    label: el.getAttribute('aria-label') || el.placeholder || el.name || '',
+                    required: el.required,
+                    selector: el.id ? '#' + CSS.escape(el.id) : (el.name ? 'textarea[name="' + el.name + '"]' : 'textarea')
+                })""")
+                fid = attrs.get('id') or f'textarea_{len(fields)}'
+                if fid in seen_ids:
+                    continue
+                seen_ids.add(fid)
+                fields.append({
+                    'id': fid,
+                    'selector': attrs.get('selector', ''),
+                    'label': attrs.get('label', ''),
+                    'type': 'textarea',
+                    'required': attrs.get('required', False),
+                    'visible': True,
+                    '_locator': loc,
+                })
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # Select dropdowns
+    try:
+        for loc in page.locator('select').all():
+            try:
+                if not loc.is_visible(timeout=300):
+                    continue
+                attrs = loc.evaluate("""el => ({
+                    id: el.id || el.name || '',
+                    label: el.getAttribute('aria-label') || el.name || '',
+                    required: el.required,
+                    options: Array.from(el.options).map(o => o.text.trim()).filter(t => t),
+                    selector: el.id ? '#' + CSS.escape(el.id) : (el.name ? 'select[name="' + el.name + '"]' : 'select')
+                })""")
+                fid = attrs.get('id') or f'select_{len(fields)}'
+                if fid in seen_ids:
+                    continue
+                seen_ids.add(fid)
+                fields.append({
+                    'id': fid,
+                    'selector': attrs.get('selector', ''),
+                    'label': attrs.get('label', ''),
+                    'type': 'select',
+                    'required': attrs.get('required', False),
+                    'options': attrs.get('options', []),
+                    'visible': True,
+                    '_locator': loc,
+                })
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # File uploads
+    try:
+        for loc in page.locator('input[type="file"]').all():
+            try:
+                attrs = loc.evaluate("""el => ({
+                    id: el.id || el.name || '',
+                    label: el.getAttribute('aria-label') || el.name || '',
+                    accept: el.accept || '',
+                    selector: el.id ? '#' + CSS.escape(el.id) : 'input[type="file"]'
+                })""")
+                fid = attrs.get('id') or f'file_{len(fields)}'
+                fields.append({
+                    'id': fid,
+                    'selector': attrs.get('selector', ''),
+                    'label': attrs.get('label', ''),
+                    'type': 'file',
+                    'accept': attrs.get('accept', ''),
+                    '_locator': loc,
+                })
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    if fields:
+        logger.info(f"Playwright extraction found {len(fields)} fields (shadow DOM aware)")
+    return fields
+
+
+def fill_form_fields_playwright(page, fields: list[dict], answers: dict):
+    """Fill form fields using Playwright locators (pierces shadow DOM).
+
+    Used for LinkedIn Easy Apply modals inside shadow DOM.
+    """
+    for field in fields:
+        fid = field["id"]
+        if fid not in answers or field["type"] == "file":
+            continue
+
+        value = str(answers[fid])
+        if not value or value == "N/A":
+            continue
+
+        loc = field.get("_locator")
+        if not loc:
+            continue
+
+        try:
+            if field["type"] == "select":
+                loc.select_option(label=value, timeout=3000)
+                console.print(f"  [dim]  Filled '{field.get('label', fid)}' = '{value[:30]}'[/]")
+            elif field["type"] in ("text", "email", "tel", "number", "url", "date", "textarea"):
+                loc.fill(value, timeout=3000)
+                console.print(f"  [dim]  Filled '{field.get('label', fid)}' = '{value[:30]}'[/]")
+            elif field["type"] == "checkbox":
+                should_check = value.lower() in ("true", "yes", "1", "checked", "agree")
+                is_checked = loc.is_checked()
+                if should_check != is_checked:
+                    loc.click(timeout=3000)
+        except Exception as e:
+            logger.warning(f"Failed to fill '{field.get('label', fid)}': {e}")
+            console.print(f"  [dim]  Failed to fill '{field.get('label', fid)}': {str(e)[:40]}[/]")
 
 
 def extract_form_fields(page) -> list[dict]:
     """Extract all form fields from the current page using DOM inspection."""
-    # Scroll down to trigger lazy-loaded content
+    # Scroll down to trigger lazy-loaded content (but NOT if inside a modal — scrolling
+    # the main page behind a LinkedIn Easy Apply modal can dismiss it)
     try:
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        page.wait_for_timeout(400)
-        page.evaluate("window.scrollTo(0, 0)")
-        page.wait_for_timeout(200)
+        in_modal = page.evaluate("""() => {
+            const modal = document.querySelector(
+                '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
+                '[role="dialog"], .artdeco-modal'
+            );
+            return !!(modal && modal.offsetWidth > 0);
+        }""")
+        if not in_modal:
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            page.wait_for_timeout(400)
+            page.evaluate("window.scrollTo(0, 0)")
+            page.wait_for_timeout(200)
     except Exception:
         return []  # Page was destroyed (navigation during upload, etc.)
 
@@ -23,6 +220,13 @@ def extract_form_fields(page) -> list[dict]:
         const fields = [];
         const seen = new Set();
         let autoIdx = 0;
+
+        // Scope search to modal if one is open (LinkedIn Easy Apply)
+        const modal = document.querySelector(
+            '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
+            '[role="dialog"], .artdeco-modal'
+        );
+        const scope = (modal && modal.offsetWidth > 0) ? modal : document;
 
         function getSelector(el) {
             // Build a reliable selector - prefer id, then name, then aria-label, then generate a CSS path
@@ -57,7 +261,7 @@ def extract_form_fields(page) -> list[dict]:
         }
 
         // Text inputs, emails, numbers, tel, etc.
-        document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"])').forEach(el => {
+        scope.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"])').forEach(el => {
             const type = el.type || 'text';
             if (type === 'radio') return;
 
@@ -91,7 +295,7 @@ def extract_form_fields(page) -> list[dict]:
         });
 
         // Textareas
-        document.querySelectorAll('textarea').forEach(el => {
+        scope.querySelectorAll('textarea').forEach(el => {
             const selector = getSelector(el);
             fields.push({
                 id: el.id || el.name || 'textarea_' + autoIdx++,
@@ -105,7 +309,7 @@ def extract_form_fields(page) -> list[dict]:
         });
 
         // Select dropdowns (native)
-        document.querySelectorAll('select').forEach(el => {
+        scope.querySelectorAll('select').forEach(el => {
             const selector = getSelector(el);
             const options = Array.from(el.options).map(o => o.text.trim()).filter(t => t);
             fields.push({
@@ -120,7 +324,7 @@ def extract_form_fields(page) -> list[dict]:
         });
 
         // Custom dropdowns/listboxes (React/aria components like Greenhouse, Lever, etc.)
-        document.querySelectorAll('[role="listbox"], [role="combobox"], [data-testid*="select"], [class*="select__control"]').forEach(el => {
+        scope.querySelectorAll('[role="listbox"], [role="combobox"], [data-testid*="select"], [class*="select__control"]').forEach(el => {
             const selector = getSelector(el);
             const uniqueKey = 'custom_' + selector;
             if (seen.has(uniqueKey)) return;
@@ -161,7 +365,7 @@ def extract_form_fields(page) -> list[dict]:
 
         // Radio button groups
         const radioGroups = {};
-        document.querySelectorAll('input[type="radio"]').forEach(el => {
+        scope.querySelectorAll('input[type="radio"]').forEach(el => {
             const name = el.name;
             if (!name) return;
             if (!radioGroups[name]) {
@@ -181,7 +385,7 @@ def extract_form_fields(page) -> list[dict]:
         Object.values(radioGroups).forEach(g => fields.push(g));
 
         // File uploads
-        document.querySelectorAll('input[type="file"]').forEach(el => {
+        scope.querySelectorAll('input[type="file"]').forEach(el => {
             const id = el.id || el.name || 'file_' + autoIdx++;
             fields.push({
                 id: id,
@@ -255,7 +459,7 @@ def fill_form_fields(page, fields: list[dict], answers: dict):
                 continue
 
             # Scroll into view and wait for visibility
-            el.scroll_into_view_if_needed()
+            el.scroll_into_view_if_needed(timeout=3000)
             page.wait_for_timeout(100)
 
             if field["type"] == "select":
@@ -272,22 +476,120 @@ def fill_form_fields(page, fields: list[dict], answers: dict):
                 for opt in options:
                     label = page.evaluate("(el) => { const l = el.closest('label'); return l ? l.textContent.trim() : el.value; }", opt)
                     if value.lower() in label.lower():
-                        opt.scroll_into_view_if_needed()
+                        opt.scroll_into_view_if_needed(timeout=3000)
                         opt.click()
                         break
             elif field["type"] == "textarea":
                 page.fill(selector, value, timeout=5000)
             else:
-                # Try fill first, fall back to click+type for stubborn inputs
-                try:
-                    page.fill(selector, value, timeout=5000)
-                except Exception:
-                    el.click()
-                    page.wait_for_timeout(100)
-                    page.keyboard.type(value)
+                # Check if this is a React-Select combobox disguised as text input
+                is_combobox = page.evaluate("""(selector) => {
+                    const el = document.querySelector(selector);
+                    return el && (el.getAttribute('role') === 'combobox' ||
+                                  el.classList.contains('select__input') ||
+                                  !!el.closest('.select__control, .select__container'));
+                }""", selector) or False
+
+                if is_combobox:
+                    _fill_react_select(page, el, value)
+                else:
+                    # Try fill first, fall back to click+type for stubborn inputs
+                    try:
+                        page.fill(selector, value, timeout=5000)
+                    except Exception:
+                        el.click()
+                        page.wait_for_timeout(100)
+                        page.keyboard.type(value)
         except Exception as e:
             err_msg = str(e).split("\n")[0][:80]
             console.print(f"  [yellow]Could not fill '{field.get('label', field_id)}': {err_msg}[/]")
+
+
+def _fill_react_select(page, el, value: str):
+    """Handle React-Select combobox inputs (Greenhouse, Lever, etc.).
+
+    These are <input role="combobox"> inside .select__control containers.
+    Type to filter options, then click the matching visible option.
+    Falls back to alternate values if no match found.
+    """
+    def _try_type_and_select(text: str) -> bool:
+        """Type text to filter, click first visible option. Returns True if selected."""
+        try:
+            # Close any open dropdown first
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(200)
+            # Clear via JS and re-focus
+            el.evaluate('e => e.value = ""')
+            page.wait_for_timeout(100)
+            el.click()
+            page.wait_for_timeout(400)
+            page.keyboard.type(text, delay=50)
+            page.wait_for_timeout(800)
+
+            options = page.query_selector_all('[role="option"]')
+            for opt in options:
+                try:
+                    if opt.is_visible():
+                        selected_text = opt.text_content().strip()
+                        opt.click()
+                        page.wait_for_timeout(300)
+                        console.print(f"  [dim]React-Select: selected '{selected_text}'[/]")
+                        return True
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return False
+
+    # Try the exact value first
+    if _try_type_and_select(value):
+        return
+
+    # Try common fallback values for "how did you hear" type fields
+    fallbacks = []
+    value_lower = value.lower()
+    if any(kw in value_lower for kw in ["job board", "job site", "online"]):
+        fallbacks = ["LinkedIn", "Online", "Other"]
+    elif any(kw in value_lower for kw in ["prefer not", "decline", "n/a"]):
+        fallbacks = ["Prefer not to answer", "Decline", "Other"]
+    else:
+        # Try first word, then "Other"
+        first_word = value.split()[0] if value.split() else value
+        if first_word != value:
+            fallbacks = [first_word, "Other"]
+        else:
+            fallbacks = ["Other"]
+
+    for fb in fallbacks:
+        if _try_type_and_select(fb):
+            return
+
+    # Last resort: open dropdown and pick first available option
+    try:
+        el.click()
+        page.wait_for_timeout(500)
+        page.keyboard.press("Backspace")
+        page.wait_for_timeout(300)
+        # Press down arrow then Enter to select first option
+        page.keyboard.press("ArrowDown")
+        page.wait_for_timeout(300)
+        options = page.query_selector_all('[role="option"]')
+        for opt in options:
+            if opt.is_visible():
+                opt.click()
+                page.wait_for_timeout(300)
+                console.print(f"  [dim]React-Select: selected first available option[/]")
+                return
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(300)
+    except Exception:
+        pass
+
+    # Close dropdown if still open
+    try:
+        page.keyboard.press("Escape")
+    except Exception:
+        pass
 
 
 def _fill_custom_select(page, el, value: str):
