@@ -7,6 +7,7 @@ Easy Apply modal detection, Apply button clicking, and post-apply flow.
 import logging
 from pathlib import Path
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from rich.console import Console
 
 from ..selectors import (
@@ -169,8 +170,8 @@ def dismiss_all_linkedin_modals(page) -> bool:
         if not _has_blocking_modal(page):
             console.print("  [dim]Dismissed LinkedIn modal (focus+Escape)[/]")
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Focus+Escape modal dismiss failed: {e}")
 
     console.print("  [yellow]Could not dismiss LinkedIn modal[/]")
     return False
@@ -375,7 +376,7 @@ def handle_share_profile_modal(page):
                     if new_page.url != "about:blank":
                         console.print(f"  [dim]External apply opened: {new_page.url[:80]}[/]")
                         return "new_tab"
-                except Exception:
+                except PlaywrightTimeoutError:
                     # Continue was clicked but no popup -- check for new tab or navigation
                     page.wait_for_timeout(1000)
                     if len(page.context.pages) > tab_count:
@@ -415,7 +416,7 @@ def click_linkedin_apply(page):
     try:
         page.wait_for_selector(LINKEDIN_APPLY_WAIT_SELECTORS,
                                state="visible", timeout=5000)
-    except Exception:
+    except PlaywrightTimeoutError:
         pass  # Button may still exist under a different selector
 
     for selector in LINKEDIN_APPLY_SELECTORS:
@@ -476,8 +477,8 @@ def click_linkedin_apply(page):
             debug_path = debug_dir / "debug_no_apply_button.png"
             page.screenshot(path=str(debug_path), full_page=True)
             console.print(f"  [dim]  Debug screenshot: {debug_path}[/]")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Debug screenshot failed: {e}")
 
         return False
 
@@ -520,7 +521,7 @@ def click_linkedin_apply(page):
         page.goto(nav_url, wait_until="domcontentloaded", timeout=30000)
         try:
             page.wait_for_load_state("networkidle", timeout=2000)
-        except Exception:
+        except PlaywrightTimeoutError:
             pass
         if page.url != url_before:
             return True
@@ -542,7 +543,7 @@ def click_linkedin_apply(page):
         if new_page.url != "about:blank":
             console.print(f"  [dim]External apply opened: {new_page.url[:80]}[/]")
             return "new_tab"
-    except Exception:
+    except PlaywrightTimeoutError:
         pass  # No popup -- check for modal or navigation below
 
     # LinkedIn often shows "Share your profile?" modal after clicking Apply.
@@ -598,7 +599,7 @@ def click_linkedin_apply(page):
         page.goto(ext_url, wait_until="domcontentloaded", timeout=30000)
         try:
             page.wait_for_load_state("networkidle", timeout=2000)
-        except Exception:
+        except PlaywrightTimeoutError:
             pass
         return True
 
@@ -611,8 +612,8 @@ def click_linkedin_apply(page):
         debug_path = debug_dir / "debug_apply_no_effect.png"
         page.screenshot(path=str(debug_path), full_page=True)
         console.print(f"  [dim]  Debug screenshot: {debug_path}[/]")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Debug screenshot failed: {e}")
     return False  # Let caller try force_apply_click fallback
 
 
@@ -649,8 +650,8 @@ def handle_linkedin_post_apply(page, apply_result, listing_url):
             debug_path = debug_dir / "debug_easy_apply_no_modal.png"
             page.screenshot(path=str(debug_path), full_page=True)
             console.print(f"  [dim]  Debug screenshot: {debug_path}[/]")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Debug screenshot failed: {e}")
         console.print("  [yellow]Easy Apply clicked but modal didn't open -- retrying click[/]")
 
         # Retry: dismiss modals and click Easy Apply again
@@ -677,7 +678,7 @@ def handle_linkedin_post_apply(page, apply_result, listing_url):
         page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
         try:
             page.wait_for_load_state("networkidle", timeout=2000)
-        except Exception:
+        except PlaywrightTimeoutError:
             pass
         if "linkedin.com" not in page.url.lower():
             return "navigated"
@@ -693,8 +694,8 @@ def handle_linkedin_post_apply(page, apply_result, listing_url):
         debug_path = debug_dir / "debug_stuck_linkedin.png"
         page.screenshot(path=str(debug_path), full_page=True)
         console.print(f"  [dim]  Debug screenshot: {debug_path}[/]")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Debug screenshot failed: {e}")
 
     page_tabs = len(page.context.pages)
     console.print(f"  [yellow]Could not leave LinkedIn -- skipping "

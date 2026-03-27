@@ -237,7 +237,8 @@ def force_apply_click(page) -> bool:
 
                 # Check if URL changed from click
                 return True
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Force apply selector failed: {e}")
             continue
 
     return False
@@ -259,7 +260,7 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
         page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=30000)
         try:
             page.wait_for_load_state("networkidle", timeout=2000)
-        except Exception:
+        except PlaywrightTimeoutError:
             pass
 
         if not detect_login_page(page):
@@ -274,7 +275,7 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
             page.goto(job_url, wait_until="domcontentloaded", timeout=30000)
             try:
                 page.wait_for_load_state("networkidle", timeout=2000)
-            except Exception:
+            except PlaywrightTimeoutError:
                 pass
             if not detect_login_page(page):
                 return True
@@ -287,7 +288,7 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
         page.goto(original_url, wait_until="domcontentloaded", timeout=30000)
         try:
             page.wait_for_load_state("networkidle", timeout=2000)
-        except Exception:
+        except PlaywrightTimeoutError:
             pass
         if not detect_login_page(page):
             return True
@@ -300,7 +301,7 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
         page.goto(listing_url, wait_until="domcontentloaded", timeout=30000)
         try:
             page.wait_for_load_state("networkidle", timeout=2000)
-        except Exception:
+        except PlaywrightTimeoutError:
             pass
         if not detect_login_page(page):
             return True
@@ -335,7 +336,7 @@ def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, 
     # Wait briefly for client-side redirects (e.g. Amazon Jobs -> signin)
     try:
         page.wait_for_load_state("networkidle", timeout=2000)
-    except Exception:
+    except PlaywrightTimeoutError:
         pass
 
     # Fast check: access denied / 403 pages (no point trying CAPTCHA or vision)
@@ -369,8 +370,8 @@ def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, 
             console.print("  [yellow]CAPTCHA / bot verification detected -- skipping[/]")
             try:
                 page.screenshot(path="data/logs/debug_captcha_blocked.png")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"CAPTCHA debug screenshot failed: {e}")
             update_job_status(conn, job_id, "failed_captcha")
             log_action(conn, "captcha_detected", url, app_id, job_id)
             return True

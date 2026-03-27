@@ -255,6 +255,7 @@ def _run_application_batch(jobs: list[dict], settings: dict,
             try:
                 apply_single_job(context, job, settings, take_screenshot)
             except Exception as e:
+                logger.exception(f"Unhandled error applying to job #{job['id']}")
                 console.print(f"  [red]{label}Failed: {e}[/]")
                 increment_retry_count(conn, job["id"])
                 update_job_status(conn, job["id"], "failed")
@@ -263,8 +264,8 @@ def _run_application_batch(jobs: list[dict], settings: dict,
         # Re-save auth state to capture refreshed cookies
         try:
             context.storage_state(path=str(LINKEDIN_AUTH_STATE))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to save LinkedIn auth state: {e}")
 
         conn.close()
         browser.close()
