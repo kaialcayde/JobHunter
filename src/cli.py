@@ -681,7 +681,8 @@ def cmd_login_sites():
     """Open a visible browser to log in to sites that blocked applications one at a time, save cookies, then retry."""
     from playwright.sync_api import sync_playwright
     from .db import get_jobs_by_status, update_job_status
-    from .automation.applicant import _get_site_domain, _get_site_auth_path, _run_application_batch
+    from .automation.page_checks import get_site_domain as _get_site_domain, get_site_auth_path as _get_site_auth_path
+    from .automation.applicant import _run_application_batch
 
     conn = get_connection()
     needs_login = get_jobs_by_status(conn, "needs_login")

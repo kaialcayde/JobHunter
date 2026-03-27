@@ -1,4 +1,12 @@
-"""Form field extraction, filling, and file upload handling."""
+"""Form field extraction, filling, and file upload handling.
+
+Unified API:
+    extract_fields(page, use_playwright=False) — single entry point for extraction
+    fill_fields(page, fields, answers, use_playwright=False) — single entry point for filling
+    find_input_at_coords(page, x, y) — DOM-based element lookup by coordinates
+    dom_fill_fallback(page, x, y, text) — React-compatible fill at coordinates
+    dom_select_fallback(page, x, y, text) — Select/combobox fill at coordinates
+"""
 
 import logging
 from pathlib import Path
@@ -9,6 +17,293 @@ from rich.console import Console
 console = Console(force_terminal=True)
 logger = logging.getLogger(__name__)
 
+
+# ── Unified Entry Points ────────────────────────────────────────────
+
+def extract_fields(page, *, use_playwright: bool = False) -> list[dict]:
+    """Unified form field extraction.
+
+    Use use_playwright=True for shadow DOM (LinkedIn Easy Apply).
+    Falls back to JS-based extraction if Playwright finds nothing.
+    """
+    if use_playwright:
+        fields = extract_form_fields_playwright(page)
+        if fields:
+            return fields
+        # Fallback to JS extraction
+    return extract_form_fields(page)
+
+
+def fill_fields(page, fields: list[dict], answers: dict, *, use_playwright: bool = False):
+    """Unified form filling.
+
+    Routes to Playwright-based or JS-based filling depending on the extraction method.
+    """
+    if use_playwright and any(f.get("_locator") for f in fields):
+        fill_form_fields_playwright(page, fields, answers)
+    else:
+        fill_form_fields(page, fields, answers)
+
+
+# ── Coordinate-Based DOM Helpers (used by vision_agent) ─────────────
+
+def find_input_at_coords(page, x: int, y: int):
+    """Find the nearest input/select/textarea element at given coordinates using DOM.
+
+    Uses document.elementFromPoint(), then walks up the DOM to find the nearest
+    form element. Returns a dict with element info or None.
+    """
+    return page.evaluate("""({x, y}) => {
+        let el = document.elementFromPoint(x, y);
+        if (!el) return null;
+
+        // Walk up to find the nearest input, select, textarea, or contenteditable
+        const formTags = ['INPUT', 'SELECT', 'TEXTAREA'];
+        let candidate = el;
+        for (let i = 0; i < 5; i++) {
+            if (!candidate) break;
+            if (formTags.includes(candidate.tagName)) break;
+            if (candidate.getAttribute('contenteditable') === 'true') break;
+            // Check siblings too (label click targets adjacent input)
+            const next = candidate.nextElementSibling;
+            if (next && formTags.includes(next.tagName)) { candidate = next; break; }
+            const prev = candidate.previousElementSibling;
+            if (prev && formTags.includes(prev.tagName)) { candidate = prev; break; }
+            candidate = candidate.parentElement;
+        }
+
+        if (!candidate) return null;
+
+        // If we didn't find a form element, search within the clicked element's parent
+        if (!formTags.includes(candidate.tagName) && candidate.getAttribute('contenteditable') !== 'true') {
+            // Search nearby: find closest input within the parent container
+            const container = el.closest('div, fieldset, li, section, form') || el.parentElement;
+            if (container) {
+                const nearby = container.querySelector('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea');
+                if (nearby) candidate = nearby;
+                else return null;
+            } else {
+                return null;
+            }
+        }
+
+        // Build a selector for this element
+        let selector = '';
+        if (candidate.id) selector = '#' + CSS.escape(candidate.id);
+        else if (candidate.name) selector = candidate.tagName.toLowerCase() + '[name="' + candidate.name + '"]';
+        else if (candidate.getAttribute('aria-label')) selector = candidate.tagName.toLowerCase() + '[aria-label="' + candidate.getAttribute('aria-label') + '"]';
+        else if (candidate.placeholder) selector = candidate.tagName.toLowerCase() + '[placeholder="' + candidate.placeholder + '"]';
+        else selector = null;
+
+        return {
+            tagName: candidate.tagName,
+            type: candidate.type || '',
+            selector: selector,
+            value: candidate.value || '',
+            id: candidate.id || '',
+            name: candidate.name || ''
+        };
+    }""", {"x": x, "y": y})
+
+
+def dom_fill_fallback(page, x: int, y: int, text: str) -> bool:
+    """Try to fill a field at coordinates using DOM methods (page.fill / JS dispatch).
+
+    Returns True if the value was successfully set.
+    """
+    el_info = find_input_at_coords(page, x, y)
+    if not el_info or not el_info.get("selector"):
+        return False
+
+    selector = el_info["selector"]
+    tag = el_info.get("tagName", "")
+
+    try:
+        el = page.query_selector(selector)
+        if not el:
+            return False
+
+        # For native inputs/textareas, use page.fill() which handles React
+        if tag in ("INPUT", "TEXTAREA"):
+            try:
+                page.fill(selector, text, timeout=3000)
+                return True
+            except Exception:
+                pass
+
+            # Fallback: JS value dispatch with React-compatible events
+            page.evaluate("""({selector, value}) => {
+                const el = document.querySelector(selector);
+                if (!el) return;
+                // Use native setter to bypass React's synthetic event system
+                const nativeSetter = Object.getOwnPropertyDescriptor(
+                    window.HTMLInputElement.prototype, 'value'
+                )?.set || Object.getOwnPropertyDescriptor(
+                    window.HTMLTextAreaElement.prototype, 'value'
+                )?.set;
+                if (nativeSetter) nativeSetter.call(el, value);
+                else el.value = value;
+                el.dispatchEvent(new Event('input', {bubbles: true}));
+                el.dispatchEvent(new Event('change', {bubbles: true}));
+                el.dispatchEvent(new Event('blur', {bubbles: true}));
+            }""", {"selector": selector, "value": text})
+            return True
+
+        return False
+    except Exception:
+        return False
+
+
+def dom_select_fallback(page, x: int, y: int, text: str) -> bool:
+    """Try to select an option using DOM methods for native <select> or React-Select.
+
+    Handles:
+    - Native <select> elements (page.select_option)
+    - React-Select combobox inputs (type to filter + Enter)
+    - Custom dropdown containers (click to open + click option)
+
+    Returns True if selection was successful.
+    """
+    el_info = find_input_at_coords(page, x, y)
+    if not el_info:
+        # Try to find a React-Select combobox near the click coordinates
+        el_info = page.evaluate("""({x, y}) => {
+            let el = document.elementFromPoint(x, y);
+            if (!el) return null;
+            // Walk up to find a select container
+            let container = el.closest('.select, .select__container, .select__control, [class*="select"]');
+            if (!container) container = el.closest('div');
+            if (!container) return null;
+            // Find the combobox input inside
+            const input = container.querySelector('input[role="combobox"], input.select__input');
+            if (input) return {
+                tagName: 'INPUT', type: 'text', selector: input.id ? '#' + CSS.escape(input.id) : null,
+                value: input.value || '', id: input.id || '', name: input.name || '',
+                isCombobox: true
+            };
+            return null;
+        }""", {"x": x, "y": y})
+        if not el_info:
+            return False
+
+    tag = el_info.get("tagName", "")
+    selector = el_info.get("selector")
+
+    # Native <select> elements
+    if tag == "SELECT" and selector:
+        try:
+            page.select_option(selector, label=text, timeout=3000)
+            return True
+        except Exception:
+            pass
+        try:
+            options = page.evaluate("""(selector) => {
+                const sel = document.querySelector(selector);
+                if (!sel) return [];
+                return Array.from(sel.options).map((o, i) => ({index: i, text: o.text.trim(), value: o.value}));
+            }""", selector)
+            text_lower = text.lower()
+            for opt in options:
+                if text_lower in opt["text"].lower():
+                    page.select_option(selector, value=opt["value"], timeout=3000)
+                    return True
+        except Exception:
+            pass
+
+    # React-Select combobox inputs (Greenhouse, Lever, etc.)
+    is_combobox = el_info.get("isCombobox", False)
+    combobox_selector = selector if is_combobox else None
+
+    if not is_combobox:
+        combobox_selector = page.evaluate("""({x, y}) => {
+            let el = document.elementFromPoint(x, y);
+            if (!el) return null;
+            const container = el.closest('.select, .select__container, .select__control, [class*="select"]')
+                            || el.closest('div.field, div.form-group, div');
+            if (!container) return null;
+            const input = container.querySelector('input[role="combobox"], input.select__input');
+            if (input && input.id) return '#' + CSS.escape(input.id);
+            if (input && input.name) return 'input[name="' + input.name + '"]';
+            return null;
+        }""", {"x": x, "y": y})
+        if combobox_selector:
+            is_combobox = True
+
+    if is_combobox and combobox_selector:
+        try:
+            el = page.query_selector(combobox_selector)
+            if el:
+                # Clear via JS (Control+a/Backspace breaks React-Select dropdown state)
+                el.evaluate('e => e.value = ""')
+                page.wait_for_timeout(100)
+                el.click()
+                page.wait_for_timeout(300)
+
+                # Type to filter options
+                page.keyboard.type(text, delay=50)
+                page.wait_for_timeout(800)
+
+                # Look for VISIBLE matching options (ignore hidden ones from other dropdowns)
+                try:
+                    options = page.query_selector_all('[role="option"]')
+                    for opt in options:
+                        if opt.is_visible():
+                            opt.click()
+                            page.wait_for_timeout(500)
+                            return True
+                except Exception:
+                    pass
+
+                # Fallback: press Enter to select first filtered result
+                page.keyboard.press("Enter")
+                page.wait_for_timeout(500)
+
+                # Verify selection took effect
+                selected = page.evaluate("""(selector) => {
+                    const input = document.querySelector(selector);
+                    if (!input) return false;
+                    const container = input.closest('.select__control, .select, .select__container, [class*="select"]');
+                    if (!container) return false;
+                    const singleValue = container.querySelector('[class*="single-value"], [class*="singleValue"]');
+                    if (singleValue && singleValue.textContent.trim()) return true;
+                    const placeholder = container.querySelector('[class*="placeholder"]');
+                    return placeholder && placeholder.textContent.trim() !== 'Select...';
+                }""", combobox_selector)
+                if selected:
+                    return True
+
+                # If typing didn't work, try clicking the dropdown arrow and finding option
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(300)
+                toggle = page.evaluate("""(selector) => {
+                    const input = document.querySelector(selector);
+                    if (!input) return null;
+                    const container = input.closest('.select, .select__container');
+                    if (!container) return null;
+                    const btn = container.querySelector('[aria-label="Toggle flyout"], .select__dropdown-indicator, .select__indicators button');
+                    if (btn) { btn.click(); return true; }
+                    return null;
+                }""", combobox_selector)
+                if toggle:
+                    page.wait_for_timeout(800)
+                    options = page.query_selector_all('[role="option"]')
+                    text_lower = text.lower()
+                    for opt in options:
+                        if opt.is_visible():
+                            opt_text = opt.text_content().strip().lower()
+                            if text_lower in opt_text or opt_text in text_lower:
+                                opt.click()
+                                page.wait_for_timeout(500)
+                                return True
+
+                return False
+        except Exception as e:
+            logger.debug(f"React-Select fallback failed: {e}")
+
+    return False
+
+
+# ── Original Form Functions ─────────────────────────────────────────
 
 def extract_form_fields_playwright(page) -> list[dict]:
     """Extract form fields using Playwright locators (pierces shadow DOM).

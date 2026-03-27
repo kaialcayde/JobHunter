@@ -15,24 +15,27 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 
 ## Key Modules
 - `src/cli.py` - CLI orchestrator, pipeline flow
-- `src/db.py` - SQLite schema (jobs, applications, application_log, scrape_cache tables)
+- `src/db.py` - SQLite schema (jobs, applications, application_log, scrape_cache, answer_bank tables)
 - `src/utils.py` - Path constants, directory helpers, filename sanitization
 - `src/config/` - Configuration loading and validation
   - `models.py` - Pydantic models validating profile.yaml and settings.yaml
   - `loader.py` - YAML loading through Pydantic validation, profile summary generation
 - `src/core/` - Core business logic
   - `scraper.py` - JobSpy wrapper, multi-board search, dedup, filtering
-  - `tailoring.py` - OpenAI integration, hardcoded anti-fabrication safeguard in SYSTEM_PROMPT
+  - `tailoring.py` - OpenAI integration, answer bank seeding, form answer inference, anti-fabrication safeguard
   - `document.py` - DOCX/PDF generation, one-page resume enforcement
 - `src/automation/` - Browser automation
-  - `applicant.py` - Application orchestration, round-robin distribution, batch processing
+  - `selectors.py` - Centralized selector constants (button texts, modal selectors, CAPTCHA indicators, ATS domains)
+  - `applicant.py` - Orchestration only: batch processing, round-robin distribution, browser lifecycle
+  - `flow.py` - Single-job application state machine (navigate → route → fill → verify → cleanup)
+  - `page_checks.py` - Page inspection (dead page, listing, access denied, CAPTCHA, login), login recovery, URL utilities
   - `detection.py` - CAPTCHA/login detection, modal dismissal, Apply/Next/Submit button clicking
-  - `forms.py` - Form field extraction via DOM inspection, LLM-inferred filling, file uploads
-  - `vision_agent.py` - GPT-4o vision-based form filling for external ATS (batch actions per screenshot)
+  - `forms.py` - Unified form field extraction (JS + Playwright backends), filling, React-Select handling, file uploads, coord-based DOM fill
+  - `vision_agent.py` - GPT-4o vision-based form filling for external ATS (batch actions per screenshot, loop detection)
   - `captcha_solver.py` - 2Captcha integration, reCAPTCHA v2/Enterprise, hCaptcha, Turnstile, Cloudflare auto-challenge
   - `platforms/` - Platform-specific automation (one module per job board with custom quirks)
-    - `linkedin.py` - LinkedIn modal handling, Easy Apply detection, SDUI flow
-    - `greenhouse.py` - (create when needed) reCAPTCHA Enterprise gate, `job-boards.greenhouse.io` / `boards.greenhouse.io`
+    - `linkedin.py` - All LinkedIn logic: Easy Apply modal, share profile modal, SDUI flow, button clicking
+    - `greenhouse.py` - (create when needed) reCAPTCHA Enterprise gate
 
 ## Important Conventions
 - **Never fabricate resume content** - the SYSTEM_PROMPT in tailoring.py is hardcoded and must not be weakened
@@ -56,6 +59,64 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 - Looking for: data engineer, data science, software engineer roles (entry to senior, fulltime)
 - Target locations: San Francisco, Seattle, New York, Chicago (+ remote)
 - Has OpenAI API key configured in .env
+
+## Execution Flow
+
+### Pipeline: `python -m src pipeline`
+1. **Scrape** — Pull jobs from Indeed/LinkedIn/ZipRecruiter/Google via JobSpy. Insert with status `new`.
+2. **Seed Answers** — Populate answer bank from profile.yaml (name, email, work auth, salary, etc.). Source=`profile` entries auto-refresh; source=`user` entries are never overwritten.
+3. **Tailor** — For each `new` job: generate tailored resume + cover letter via OpenAI. Status: `new` → `tailored`. Skips jobs on `domain_blocklist`.
+4. **Apply** — For each `tailored` job: open browser, navigate to ATS, fill form, submit. Status: `tailored` → `applied` / `failed` / `needs_login`.
+5. **Login recovery** (manual) — `python -m src login-sites` opens browser for manual login on sites that blocked. Saves cookies, resets jobs for retry.
+
+### Job Status Flow
+```
+new → tailoring → tailored → applying → applied (success)
+                                      → failed (generic failure)
+                                      → failed_captcha (CAPTCHA unsolvable)
+                                      → failed_listing (stuck on listing page)
+                                      → failed_error (server error / access denied)
+                                      → needs_login (login wall)
+                                      → skipped (no URL / other)
+```
+
+### Two Apply Strategies
+- **LinkedIn Easy Apply** — Selector-based: extract form fields from modal DOM (shadow DOM via Playwright locators), LLM infers answers, fill via Playwright, click Next/Submit in multi-step loop.
+- **External ATS** (Greenhouse, Workday, Ashby, etc.) — Vision agent: DOM pre-fill first (Playwright `fill()` for React compatibility), then screenshot → GPT-4o returns batch actions → execute all → repeat 3-5 rounds.
+
+## File Interaction Map
+
+### Config → Core → Automation
+```
+config/profile.yaml ──→ src/config/loader.py ──→ src/core/tailoring.py (profile summary for LLM)
+config/settings.yaml ─→ src/config/loader.py ──→ all modules (settings dict)
+.env ─────────────────→ src/core/tailoring.py (OPENAI_API_KEY)
+                       → src/automation/vision_agent.py (OPENAI_API_KEY)
+                       → src/automation/captcha_solver.py (CAPTCHA_API_KEY)
+```
+
+### CLI → Core → Automation
+```
+src/cli.py
+ ├─ cmd_scrape() ──→ src/core/scraper.py ──→ src/db.py (insert jobs)
+ ├─ cmd_tailor() ──→ src/core/tailoring.py ──→ src/core/document.py (DOCX/PDF)
+ └─ cmd_apply() ───→ src/automation/applicant.py (orchestration + batch)
+                      → src/automation/flow.py (single-job state machine)
+                        ├─ page_checks.py (CAPTCHA/login/dead page detection, login recovery)
+                        ├─ detection.py (button clicking, modal dismiss)
+                        ├─ forms.py (field extraction + filling, unified API)
+                        ├─ vision_agent.py (external ATS via GPT-4o screenshots)
+                        ├─ captcha_solver.py (2Captcha API)
+                        └─ platforms/linkedin.py (Easy Apply modal, share profile, SDUI)
+```
+
+### Data Flow
+```
+Scraper → jobs table (status=new)
+Tailoring → applications/attempts/ dirs + jobs table (status=tailored)
+Automation → applications/success/ or failed/ dirs + applications table + answer_bank table
+Cookies → data/linkedin_auth.json + data/site_auth/{domain}.json
+```
 
 ## Running
 - VS Code launch configs in `.vscode/launch.json` (F5 to run)
