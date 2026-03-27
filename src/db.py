@@ -339,3 +339,85 @@ def save_answers_batch(conn: sqlite3.Connection, questions: list[str], source: s
             VALUES (?, 'N/A', ?, ?, ?)
         """, (q, source, now, now))
     conn.commit()
+
+
+def seed_answer_bank_from_profile(conn: sqlite3.Connection, profile: dict) -> int:
+    """Seed the answer bank with known answers from profile.yaml.
+
+    Inserts entries with source='profile'. Never overwrites source='user' entries.
+    Returns count of entries seeded/updated.
+    """
+    personal = profile.get("personal", {})
+    address = personal.get("address", {})
+    work_auth = profile.get("work_authorization", {})
+    links = profile.get("links", {})
+    education_list = profile.get("education", [])
+    edu = education_list[0] if education_list else {}
+    preferences = profile.get("preferences", {})
+    diversity = profile.get("diversity", {})
+
+    full_name = f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip()
+
+    # (list_of_question_labels, value)
+    # Each label becomes its own answer_bank row — enables keyword matching at lookup time.
+    # More specific labels first within each group.
+    seed_map = [
+        # Name
+        (["first name", "given name", "fname", "first_name"], personal.get("first_name", "")),
+        (["last name", "family name", "surname", "lname", "last_name"], personal.get("last_name", "")),
+        (["full name", "full_name", "name"], full_name),
+        (["preferred name", "preferred first", "nickname"], personal.get("first_name", "")),
+        # Contact
+        (["email", "e-mail"], personal.get("email", "")),
+        (["phone", "telephone", "mobile", "cell"], personal.get("phone", "")),
+        # Address
+        (["street", "address line 1", "address_line1"], address.get("street", "")),
+        (["city"], address.get("city", "")),
+        (["state", "province"], address.get("state", "")),
+        (["zip", "postal code", "zip_code"], address.get("zip_code", "")),
+        (["country"], address.get("country", "")),
+        # Links
+        (["linkedin"], links.get("linkedin", "")),
+        (["github"], links.get("github", "")),
+        (["portfolio", "website", "personal site"], links.get("portfolio", "")),
+        # Work authorization
+        (["authorized to work", "legally authorized", "work authorization"],
+         "Yes" if work_auth.get("authorized_us") else "No"),
+        (["require sponsorship", "need sponsorship", "sponsorship"],
+         "No" if not work_auth.get("requires_sponsorship") else "Yes"),
+        # Preferences
+        (["desired salary", "salary expectation", "expected salary", "compensation"],
+         str(preferences.get("desired_salary_min", 0)) if preferences.get("desired_salary_min") else ""),
+        (["willing to relocate", "open to relocation", "relocate"],
+         "Yes" if preferences.get("willing_to_relocate") else "No"),
+        (["remote preference"], preferences.get("remote_preference", "")),
+        (["start date", "earliest start", "available to start", "earliest available"],
+         preferences.get("start_date", "")),
+        # Education
+        (["school", "university", "college", "institution"], edu.get("school", "")),
+        (["degree"], edu.get("degree", "")),
+        (["major", "field of study"], edu.get("field", "")),
+        (["gpa", "grade point"], edu.get("gpa", "")),
+        (["graduation year", "grad year"], edu.get("graduation_year", "")),
+        # Diversity / EEO
+        (["gender"], diversity.get("gender", "") or "Prefer not to answer"),
+        (["ethnicity", "race"], diversity.get("ethnicity", "") or "Decline to self-identify"),
+        (["veteran"], diversity.get("veteran_status", "") or "I am not a veteran"),
+        (["disability"], diversity.get("disability_status", "") or "Prefer not to answer"),
+    ]
+
+    now = datetime.now().isoformat()
+    count = 0
+    for labels, value in seed_map:
+        if not value:
+            continue
+        for label in labels:
+            conn.execute("""
+                INSERT INTO answer_bank (question_label, answer, source, created_at, updated_at)
+                VALUES (?, ?, 'profile', ?, ?)
+                ON CONFLICT(question_label) DO UPDATE SET answer = ?, source = 'profile', updated_at = ?
+                WHERE answer_bank.source != 'user'
+            """, (label, str(value), now, now, str(value), now))
+            count += 1
+    conn.commit()
+    return count

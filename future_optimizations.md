@@ -58,9 +58,9 @@ Delete `_direct_map_profile_fields` — the answer bank is now the single source
 
 Salary, relocation, remote preference, start date describe the candidate, not the system. Keep them in `profile.yaml` under `preferences`. The seed step reads them into the answer bank. When the user changes their salary expectations, they edit `profile.yaml` and the next pipeline run re-seeds.
 
-### Add a `--reseed` flag
+### Add a `--refresh_profile` flag
 
-`python -m src pipeline --reseed` forces a fresh seed from profile, overwriting `source='profile'` entries. Useful after editing profile.yaml.
+`python -m src pipeline --refresh_profile` forces a fresh seed from profile, overwriting `source='profile'` entries. Useful after editing profile.yaml. Make sure there is a pipeline we can use in launch.json
 
 ---
 

@@ -191,69 +191,39 @@ def tailor_cover_letter(job: dict, settings: dict) -> str:
     return _call_with_retry(client, settings, prompt)
 
 
-def _direct_map_profile_fields(fields: list[dict], profile: dict) -> dict:
-    """Directly map known profile fields to form field IDs without LLM.
+def _match_answer_bank(label: str, saved: dict[str, str]) -> str | None:
+    """Match a form field label against answer bank entries using keyword matching.
 
-    This catches common fields like first_name, email, phone that the LLM
-    sometimes returns N/A for despite the data being in the profile.
+    Tries exact match first, then substring match (longer bank labels first
+    so more specific patterns win, e.g. "first name" before "name").
+
+    Returns the matched answer or None.
     """
-    personal = profile.get("personal", {})
-    address = personal.get("address", {})
-    work_auth = profile.get("work_authorization", {})
-    links = profile.get("links", {})
-    education_list = profile.get("education", [])
-    edu = education_list[0] if education_list else {}
+    if not label:
+        return None
 
-    # Map of lowercased label keywords -> profile value
-    # Order matters: more specific patterns first
-    label_map = [
-        # Name fields
-        (["first name", "first_name", "given name", "fname"], personal.get("first_name", "")),
-        (["last name", "last_name", "family name", "surname", "lname"], personal.get("last_name", "")),
-        (["full name", "full_name", "name"], f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip()),
-        (["preferred name", "preferred first", "nickname"], personal.get("first_name", "")),
-        # Contact
-        (["email", "e-mail"], personal.get("email", "")),
-        (["phone", "telephone", "mobile", "cell"], personal.get("phone", "")),
-        # Address
-        (["street", "address line 1", "address_line1"], address.get("street", "")),
-        (["city"], address.get("city", "")),
-        (["state", "province"], address.get("state", "")),
-        (["zip", "postal", "zip_code"], address.get("zip_code", "")),
-        (["country"], address.get("country", "")),
-        # Links
-        (["linkedin"], links.get("linkedin", "")),
-        (["github"], links.get("github", "")),
-        (["portfolio", "website", "personal site"], links.get("portfolio", "")),
-        # Education
-        (["school", "university", "college", "institution"], edu.get("school", "")),
-        (["degree"], edu.get("degree", "")),
-        (["major", "field of study"], edu.get("field", "")),
-        (["gpa", "grade"], edu.get("gpa", "")),
-        (["graduation year", "grad year"], edu.get("graduation_year", "")),
-    ]
+    # Exact match
+    if label in saved and saved[label] != "N/A":
+        return saved[label]
 
-    mapped = {}
-    for field in fields:
-        label = field.get("label", "").strip().lower()
-        if not label:
+    # Keyword/substring match (case-insensitive)
+    label_lower = label.lower()
+    for q_label in sorted(saved.keys(), key=len, reverse=True):
+        if saved[q_label] == "N/A":
             continue
-        for keywords, value in label_map:
-            if not value:
-                continue
-            if any(kw in label for kw in keywords):
-                mapped[field["id"]] = str(value)
-                break
+        if q_label.lower() in label_lower:
+            return saved[q_label]
 
-    return mapped
+    return None
 
 
 def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
     """Use LLM to infer answers for application form fields.
 
-    Checks the answer bank first for previously saved answers. For fields the LLM
-    can't answer from the profile, returns "N/A" and saves the question to the
-    answer bank for the user to fill in later via `python -m src answers`.
+    Checks the answer bank first for previously saved answers (including
+    profile-seeded entries). For fields the LLM can't answer from the profile,
+    returns "N/A" and saves the question to the answer bank for the user to
+    fill in later via `python -m src answers`.
 
     When fabricate_answers is enabled in settings, the LLM will generate answers
     for subjective questions (e.g. "What excites you about X?") based on the
@@ -274,24 +244,19 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
     profile_summary = get_profile_summary(profile)
     fabricate = settings.get("automation", {}).get("fabricate_answers", False)
 
-    # Check answer bank for previously answered questions
+    # Check answer bank for previously answered questions (includes profile-seeded entries)
     conn = get_connection()
     saved = get_saved_answers(conn)
 
-    # Direct-map known profile fields (first_name, email, phone, etc.)
-    # This prevents the LLM from returning N/A for data that's in the profile
-    profile_mapped = _direct_map_profile_fields(fields, profile)
-
-    # Pre-fill from answer bank, then profile direct-map
+    # Pre-fill from answer bank using keyword matching
     prefilled = {}
     remaining_fields = []
     for field in fields:
         fid = field["id"]
         label = field.get("label", "").strip()
-        if label in saved and saved[label] != "N/A":
-            prefilled[fid] = saved[label]
-        elif fid in profile_mapped:
-            prefilled[fid] = profile_mapped[fid]
+        match = _match_answer_bank(label, saved)
+        if match:
+            prefilled[fid] = match
         else:
             remaining_fields.append(field)
 

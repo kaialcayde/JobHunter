@@ -224,6 +224,38 @@
             "windows": {
                 "python": "${workspaceFolder}/venv/Scripts/python.exe"
             }
+        },
+        {
+            "name": "JobHunter: Seed Answer Bank",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src",
+            "args": ["seed-answers"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "console": "integratedTerminal",
+            "osx": {
+                "python": "${workspaceFolder}/venv/bin/python"
+            },
+            "windows": {
+                "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            }
+        },
+        {
+            "name": "JobHunter: Pipeline (Refresh Profile)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src",
+            "args": ["pipeline", "--refresh_profile"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "console": "integratedTerminal",
+            "osx": {
+                "python": "${workspaceFolder}/venv/bin/python"
+            },
+            "windows": {
+                "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            }
         }
     ],
     "inputs": [

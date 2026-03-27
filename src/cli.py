@@ -238,10 +238,28 @@ def cmd_apply_job():
     apply_to_single_job_by_id(job_id)
 
 
+def cmd_seed_answers():
+    """Seed the answer bank from profile.yaml."""
+    from .config import load_profile
+    from .db import seed_answer_bank_from_profile
+
+    console.print("[bold blue]== Seed Answer Bank ==[/]\n")
+
+    profile = load_profile()
+    conn = get_connection()
+    count = seed_answer_bank_from_profile(conn, profile)
+    conn.close()
+
+    console.print(f"[green]Seeded {count} answer bank entries from profile.yaml.[/]")
+    console.print("[dim]Run 'python -m src answers' to review or override any entry.[/]")
+
+
 def cmd_pipeline():
-    """Run the full pipeline: scrape -> tailor -> apply."""
+    """Run the full pipeline: seed answers -> scrape -> tailor -> apply."""
     logger = setup_logging()
     logger.info("Starting JobHunter pipeline")
+
+    refresh_profile = "--refresh_profile" in sys.argv or "--refresh-profile" in sys.argv
 
     settings = load_settings()
     max_per_day = settings.get("automation", {}).get("max_applications_per_day", 25)
@@ -258,24 +276,34 @@ def cmd_pipeline():
 
     console.print(f"[bold]Daily progress: {applied_today}/{max_per_day} applications[/]\n")
 
-    # Step 1: Scrape
-    console.print("\n[bold magenta]=== Step 1/3: Scraping Jobs ===[/]")
+    # Step 1: Seed answer bank from profile
+    console.print("\n[bold magenta]=== Step 1/4: Seeding Answer Bank ===[/]")
+    try:
+        if refresh_profile:
+            console.print("[yellow]--refresh_profile: forcing re-seed from profile.yaml[/]")
+        cmd_seed_answers()
+    except Exception as e:
+        console.print(f"[red]Answer bank seeding failed: {e}[/]")
+        logger.error(f"Answer bank seeding failed: {e}")
+
+    # Step 2: Scrape
+    console.print("\n[bold magenta]=== Step 2/4: Scraping Jobs ===[/]")
     try:
         cmd_scrape()
     except Exception as e:
         console.print(f"[red]Scraping failed: {e}[/]")
         logger.error(f"Scraping failed: {e}")
 
-    # Step 2: Tailor
+    # Step 3: Tailor
     if settings.get("tailoring", {}).get("enabled", True):
-        console.print("\n[bold magenta]=== Step 2/3: Tailoring Documents ===[/]")
+        console.print("\n[bold magenta]=== Step 3/4: Tailoring Documents ===[/]")
         try:
             cmd_tailor()
         except Exception as e:
             console.print(f"[red]Tailoring failed: {e}[/]")
             logger.error(f"Tailoring failed: {e}")
     else:
-        console.print("\n[bold magenta]=== Step 2/3: Tailoring (skipped -- disabled in settings) ===[/]")
+        console.print("\n[bold magenta]=== Step 3/4: Tailoring (skipped -- disabled in settings) ===[/]")
         # Promote "new" jobs straight to "tailored" so apply step picks them up
         conn = get_connection()
         new_jobs = get_jobs_by_status(conn, "new", limit=500)
@@ -287,8 +315,8 @@ def cmd_pipeline():
         if promoted:
             console.print(f"  Promoted {promoted} jobs to ready-to-apply (no tailoring)")
 
-    # Step 3: Apply
-    console.print("\n[bold magenta]=== Step 3/3: Submitting Applications ===[/]")
+    # Step 4: Apply
+    console.print("\n[bold magenta]=== Step 4/4: Submitting Applications ===[/]")
     _check_linkedin_auth()
     try:
         from .automation import apply_to_jobs
@@ -794,7 +822,10 @@ def main():
         console.print("  [bold]remove-failed[/] Move failed apps to _failed/ folder and clean DB")
         console.print("  [bold]login-sites[/]  Log in to sites that blocked apps, then retry those jobs")
         console.print("  [bold]answers[/]     Review and fill in unanswered form questions")
+        console.print("  [bold]seed-answers[/] Seed answer bank from profile.yaml")
         console.print("  [bold]apply-job[/]   Apply to a specific job by ID (testing/debugging)")
+        console.print("\nFlags:")
+        console.print("  [bold]--refresh_profile[/]  Force re-seed answer bank from profile (use with pipeline)")
         return
 
     command = sys.argv[1].lower()
@@ -830,6 +861,8 @@ def main():
         cmd_login_sites()
     elif command == "answers":
         cmd_answers()
+    elif command in ("seed-answers", "seed_answers"):
+        cmd_seed_answers()
     elif command in ("apply-job", "apply_job"):
         cmd_apply_job()
     else:
