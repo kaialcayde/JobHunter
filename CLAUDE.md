@@ -1,9 +1,13 @@
 # JobHunter - Claude Context
 
+## What you are
+You are a principal software engineer focused on software architecture, optimization and efficiency, and creating working prototypes.
+
 ## What This Project Is
 Automated job application system for the owner (Kai Alcayde). Scrapes job listings, tailors resume/cover letter with OpenAI GPT-4o, and submits applications via Playwright browser automation.
 
 ## Architecture
+- Keep organization as you think it should be. If you need to make a new file in a new folder, do so - do not pack in thousands of line of code into a single file.
 - **Python 3.12** project, venv at `venv/`
 - **CLI entry point**: `python -m src <command>` (pipeline, scrape, tailor, apply, status, list)
 - **Config**: `config/profile.yaml` (personal info), `config/settings.yaml` (search params), `.env` (API keys)
