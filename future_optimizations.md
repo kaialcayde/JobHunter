@@ -113,11 +113,11 @@ Call it at the top of `run_vision_agent()`. Bail immediately for non-form pages.
 
 If `manual_login` is disabled, just print a reminder: "X jobs need login. Run `python -m src login-sites` to proceed."
 
-### C5: Failed folder cleanup
+<!-- ### C5: Failed folder cleanup
 
 **Problem:** `delete_failed_jobs` cleans DB but leaves orphan `applications/failed/` folders.
 
-**Fix:** In `cmd_remove_failed()`, after deleting DB records, also remove the corresponding `applications/failed/{company}/{position}/` directories.
+**Fix:** In `cmd_remove_failed()`, after deleting DB records, also remove the corresponding `applications/failed/{company}/{position}/` directories. -->
 
 ### C6: Smarter failure statuses for retries
 

@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "JobHunter: Full Pipeline",
+            "name": "JobHunter: Full Pipeline (scrape → tailor → apply)",
             "type": "debugpy",
             "request": "launch",
             "module": "src",
@@ -242,11 +242,43 @@
             }
         },
         {
-            "name": "JobHunter: Pipeline (Refresh Profile)",
+            "name": "JobHunter: Pipeline (Refresh Profile from profile.yaml)",
             "type": "debugpy",
             "request": "launch",
             "module": "src",
             "args": ["pipeline", "--refresh_profile"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "console": "integratedTerminal",
+            "osx": {
+                "python": "${workspaceFolder}/venv/bin/python"
+            },
+            "windows": {
+                "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            }
+        },
+        {
+            "name": "JobHunter: Retry Failed Jobs (reset failed -> tailored)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src",
+            "args": ["retry"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "console": "integratedTerminal",
+            "osx": {
+                "python": "${workspaceFolder}/venv/bin/python"
+            },
+            "windows": {
+                "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            }
+        },
+        {
+            "name": "JobHunter: Apply Job (next available, no ID prompt)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src",
+            "args": ["apply-job"],
             "cwd": "${workspaceFolder}",
             "python": "${workspaceFolder}/venv/bin/python",
             "console": "integratedTerminal",

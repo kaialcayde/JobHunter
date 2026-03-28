@@ -10,6 +10,9 @@ applications/
 data/
 screenshots/
 
+# Account registry (Phase 6) — encrypted but still gitignored
+data/account_registry.db
+
 # Python
 __pycache__/
 *.pyc

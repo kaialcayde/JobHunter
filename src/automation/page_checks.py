@@ -17,6 +17,7 @@ from ..utils import LINKEDIN_AUTH_STATE, SITE_AUTH_DIR
 
 from .detection import detect_captcha, try_solve_captcha, detect_login_page
 from .selectors import ATS_DOMAINS, LISTING_SIGNALS, LISTING_EXCEPTION_PATTERNS, FORCE_APPLY_SELECTORS
+from .results import HandlerResult, StepResult
 
 logger = logging.getLogger(__name__)
 
@@ -244,8 +245,11 @@ def force_apply_click(page) -> bool:
     return False
 
 
-def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, job_id, settings=None) -> bool:
-    """Try to recover from a login page. Returns True if recovered.
+def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, job_id, settings=None) -> "StepResult | None":
+    """Try to recover from a login page.
+
+    Returns None if recovered (page is now usable).
+    Returns StepResult on failure (needs_login or skipped).
 
     Strategy:
     1. LinkedIn with stored cookies: warm up session via /feed/, then retry
@@ -278,7 +282,7 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
             except PlaywrightTimeoutError:
                 pass
             if not detect_login_page(page):
-                return True
+                return None  # recovered
 
     # --- Generic site recovery: check for stored cookies ---
     site_auth = get_site_auth_path(current_url)
@@ -291,7 +295,7 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
         except PlaywrightTimeoutError:
             pass
         if not detect_login_page(page):
-            return True
+            return None  # recovered
         console.print(f"  [yellow]Stored cookies expired for {get_site_domain(current_url)}[/]")
 
     # --- Alternate URL fallback ---
@@ -304,7 +308,7 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
         except PlaywrightTimeoutError:
             pass
         if not detect_login_page(page):
-            return True
+            return None  # recovered
 
     # --- Manual login: pause for user if enabled ---
     domain = get_site_domain(current_url)
@@ -324,15 +328,49 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
             cookies = page.context.cookies()
             site_auth.write_text(json.dumps(cookies, indent=2))
             console.print(f"  [dim]Cookies saved for {domain}[/]")
-            return True
+            return None  # recovered
         console.print(f"  [yellow]Still on login page after manual login attempt[/]")
 
     console.print(f"  [yellow]Login required for {domain} -- auto-skipping[/]")
-    return "needs_login"
+    return StepResult(
+        result=HandlerResult.REQUIRES_LOGIN,
+        message=f"Login required for {domain}"
+    )
 
 
-def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, verbose) -> bool:
-    """Check for CAPTCHA, login walls, or access-denied pages. Returns True if blocked."""
+def detect_registration_wall(page) -> bool:
+    """Check if the current page is a registration/signup wall (not merely a login wall).
+
+    Signals:
+    - Two or more password fields (password + confirm password)
+    - "Create Account", "Sign Up", "Register", "New User" text visible
+    - No "Sign In" / "Welcome Back" text that would indicate a pure login wall
+    """
+    try:
+        return page.evaluate("""() => {
+            const text = document.body.innerText.toLowerCase();
+            const pwFields = document.querySelectorAll('input[type="password"]');
+            const hasConfirmPw = pwFields.length >= 2;
+
+            const registerSignals = [
+                'create account', 'create your account', 'sign up',
+                'register', 'new user', 'join now', 'get started',
+            ];
+            const hasRegisterText = registerSignals.some(s => text.includes(s));
+
+            // Registration: confirm-password field OR explicit register text
+            return hasConfirmPw || hasRegisterText;
+        }""")
+    except Exception:
+        return False
+
+
+def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, verbose) -> "StepResult | None":
+    """Check for CAPTCHA, login walls, or access-denied pages.
+
+    Returns None when the page is clear (not blocked).
+    Returns a StepResult when blocked -- caller should stop processing this job.
+    """
     # Wait briefly for client-side redirects (e.g. Amazon Jobs -> signin)
     try:
         page.wait_for_load_state("networkidle", timeout=2000)
@@ -344,7 +382,10 @@ def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, 
         console.print("  [yellow]Access denied / blocked by site -- skipping[/]")
         update_job_status(conn, job_id, "failed")
         log_action(conn, "access_denied", f"Blocked: {page.url[:80]}", app_id, job_id)
-        return True
+        return StepResult(
+            result=HandlerResult.FAILED_ERROR,
+            message="Access denied / blocked by site"
+        )
 
     if detect_captcha(page):
         if verbose:
@@ -366,7 +407,7 @@ def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, 
                 page.wait_for_timeout(1000)
                 if not detect_captcha(page):
                     console.print("  [green]Challenge solved manually![/]")
-                    return False  # continue processing
+                    return None  # continue processing
             console.print("  [yellow]CAPTCHA / bot verification detected -- skipping[/]")
             try:
                 page.screenshot(path="data/logs/debug_captcha_blocked.png")
@@ -374,27 +415,34 @@ def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, 
                 logger.debug(f"CAPTCHA debug screenshot failed: {e}")
             update_job_status(conn, job_id, "failed_captcha")
             log_action(conn, "captcha_detected", url, app_id, job_id)
-            return True
+            return StepResult(
+                result=HandlerResult.CAPTCHA_DETECTED,
+                message="CAPTCHA / bot verification detected"
+            )
 
     if detect_login_page(page):
         if verbose:
             console.print("  [dim]Login page detected[/]")
-        result = try_recover_login(page, url, listing_url, conn, app_id, job_id, settings)
-        if result == "needs_login":
-            update_job_status(conn, job_id, "needs_login")
-            log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
-            return True
-        elif not result:
-            console.print(f"  [yellow]Could not bypass login -- skipping: {page.url[:80]}[/]")
-            update_job_status(conn, job_id, "skipped")
-            log_action(conn, "login_page_detected", url, app_id, job_id)
-            return True
+        recover_result = try_recover_login(page, url, listing_url, conn, app_id, job_id, settings)
+        if recover_result is not None:
+            # Recovery failed -- recover_result is a StepResult indicating why
+            if recover_result.result == HandlerResult.REQUIRES_LOGIN:
+                update_job_status(conn, job_id, "needs_login")
+                log_action(conn, "needs_login", f"Login required: {page.url}", app_id, job_id)
+            else:
+                console.print(f"  [yellow]Could not bypass login -- skipping: {page.url[:80]}[/]")
+                update_job_status(conn, job_id, "skipped")
+                log_action(conn, "login_page_detected", url, app_id, job_id)
+            return recover_result
         # Recovery succeeded -- re-check for blockers on the new page (e.g. CAPTCHA on Indeed)
         if is_access_denied(page):
             console.print("  [yellow]Access denied on recovered page -- skipping[/]")
             update_job_status(conn, job_id, "failed")
             log_action(conn, "access_denied", f"Blocked after login recovery: {page.url[:80]}", app_id, job_id)
-            return True
+            return StepResult(
+                result=HandlerResult.FAILED_ERROR,
+                message="Access denied on recovered page"
+            )
         if detect_captcha(page):
             if verbose:
                 console.print("  [dim]CAPTCHA on recovered page, attempting solve...[/]")
@@ -402,6 +450,9 @@ def check_page_blockers(page, url, listing_url, settings, conn, app_id, job_id, 
                 console.print("  [yellow]CAPTCHA on recovered page -- skipping[/]")
                 update_job_status(conn, job_id, "failed_captcha")
                 log_action(conn, "captcha_detected", f"After login recovery: {page.url[:80]}", app_id, job_id)
-                return True
+                return StepResult(
+                    result=HandlerResult.CAPTCHA_DETECTED,
+                    message="CAPTCHA on recovered page"
+                )
 
-    return False
+    return None  # not blocked

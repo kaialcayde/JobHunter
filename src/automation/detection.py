@@ -310,10 +310,39 @@ def dismiss_modals(page):
     }""")
 
 
-def click_apply_button(page):
+def _click_with_popup_detection(page, element):
+    """Click an element and detect if it opens a new tab/popup.
+
+    Returns True if clicked (same tab), "new_tab" if a popup opened, False on error.
+    """
+    url_before = page.url
+    try:
+        with page.context.expect_page(timeout=2000) as popup_info:
+            element.click()
+        new_page = popup_info.value
+        new_page.wait_for_load_state("domcontentloaded")
+        console.print(f"  [dim]Popup opened: {new_page.url[:80]}[/]")
+        return "new_tab"
+    except PlaywrightTimeoutError:
+        page.wait_for_timeout(300)
+        if page.url != url_before:
+            return True
+        if len(page.context.pages) > 1:
+            latest = page.context.pages[-1]
+            if latest != page and latest.url != "about:blank":
+                console.print(f"  [dim]New tab detected: {latest.url[:80]}[/]")
+                return "new_tab"
+        return True
+    except Exception as e:
+        logger.debug(f"Click with popup detection failed: {e}")
+        return False
+
+
+def click_apply_button(page, finder=None):
     """Try to find and click an 'Apply' button on a job listing page.
 
     Handles LinkedIn external apply links (opens new tab) and standard apply buttons.
+    When an ElementFinder is provided, it replaces the PW selector loop for button finding.
     Returns True if clicked, "new_tab" if a new tab opened, False if not found.
     """
     dismiss_modals(page)
@@ -325,10 +354,8 @@ def click_apply_button(page):
         from .platforms.linkedin import click_linkedin_apply
         return click_linkedin_apply(page)
 
-
     # --- Non-LinkedIn: single JS call to find apply element ---
     result = page.evaluate("""() => {
-        // Common apply button texts across ATS platforms
         const applyTexts = [
             'apply now', 'apply', 'apply for this job', 'apply for this position',
             "i'm interested", 'im interested', 'submit application', 'start application'
@@ -362,10 +389,7 @@ def click_apply_button(page):
         return null;
     }""")
 
-    if not result:
-        return False
-
-    if result["type"] == "link":
+    if result and result["type"] == "link":
         console.print(f"  [dim]Following apply link...[/]")
         page.goto(result["href"], wait_until="domcontentloaded", timeout=30000)
         try:
@@ -374,109 +398,118 @@ def click_apply_button(page):
             pass
         return True
 
-    # Button click with popup detection
+    # --- Find and click the apply button ---
+
+    # Try ElementFinder first (escalation pipeline with caching)
+    if finder:
+        from .page_checks import get_site_domain
+        domain = get_site_domain(page.url)
+        el_result = finder.find_element(page, "apply_button", domain)
+        if el_result and el_result.element:
+            click_result = _click_with_popup_detection(page, el_result.element)
+            if click_result:
+                return click_result
+
+    # Fallback: original PW selector loop (when no finder or finder failed)
     for selector in APPLY_BUTTON_PW_SELECTORS:
         try:
             btn = page.query_selector(selector)
             if not btn or not btn.is_visible():
                 continue
-
-            url_before = page.url
-            try:
-                with page.context.expect_page(timeout=2000) as popup_info:
-                    btn.click()
-                new_page = popup_info.value
-                new_page.wait_for_load_state("domcontentloaded")
-                console.print(f"  [dim]Popup opened: {new_page.url[:80]}[/]")
-                return "new_tab"
-            except PlaywrightTimeoutError:
-                page.wait_for_timeout(300)
-                if page.url != url_before:
-                    return True
-                if len(page.context.pages) > 1:
-                    latest = page.context.pages[-1]
-                    if latest != page and latest.url != "about:blank":
-                        console.print(f"  [dim]New tab detected: {latest.url[:80]}[/]")
-                        return "new_tab"
-                return True
+            click_result = _click_with_popup_detection(page, btn)
+            if click_result:
+                return click_result
         except Exception as e:
             logger.debug(f"Apply button selector failed: {e}")
             continue
+
     return False
 
 
-def click_next_button(page) -> bool:
+def click_next_button(page, finder=None) -> bool:
     """Try to find and click a Next/Continue button.
 
-    Uses Playwright locators first (pierces shadow DOM for LinkedIn Easy Apply),
-    then falls back to JS evaluation for non-shadow DOM cases.
+    When an ElementFinder is provided, uses the escalation pipeline (cache -> heuristic
+    -> role -> text). Otherwise falls back to PW locators + JS evaluation.
     Returns True if found and clicked.
     """
-    # -- Playwright locator approach (pierces shadow DOM) --
-    # LinkedIn Easy Apply buttons have specific aria-labels
-    for sel in NEXT_BUTTON_PW_SELECTORS:
-        try:
-            loc = page.locator(sel).first
-            if loc.is_visible(timeout=500):
-                loc.click(timeout=3000)
+    # --- ElementFinder path (levels 1-4 cover PW + JS logic) ---
+    if finder:
+        from .page_checks import get_site_domain
+        domain = get_site_domain(page.url)
+        result = finder.find_element(page, "next_button", domain)
+        if result and result.element:
+            try:
+                result.element.scroll_into_view_if_needed(timeout=1000)
+                result.element.click(timeout=3000)
                 return True
-        except Exception:
-            continue
+            except Exception as e:
+                logger.debug(f"ElementFinder next_button click failed: {e}")
+    else:
+        # -- Playwright locator approach (pierces shadow DOM) --
+        for sel in NEXT_BUTTON_PW_SELECTORS:
+            try:
+                loc = page.locator(sel).first
+                if loc.is_visible(timeout=500):
+                    loc.click(timeout=3000)
+                    return True
+            except Exception:
+                continue
 
-    # Text-based Playwright locators (also pierce shadow DOM)
-    for text in NEXT_BUTTON_TEXTS:
-        try:
-            loc = page.get_by_role("button", name=text, exact=False).first
-            if loc.is_visible(timeout=500):
-                loc.click(timeout=3000)
-                return True
-        except Exception:
-            continue
+        # Text-based Playwright locators (also pierce shadow DOM)
+        for text in NEXT_BUTTON_TEXTS:
+            try:
+                loc = page.get_by_role("button", name=text, exact=False).first
+                if loc.is_visible(timeout=500):
+                    loc.click(timeout=3000)
+                    return True
+            except Exception:
+                continue
 
-    # -- JS fallback for non-shadow-DOM cases --
-    clicked = page.evaluate("""() => {
-        const modal = document.querySelector(
-            '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
-            '[role="dialog"], .artdeco-modal'
-        );
-        const scope = (modal && modal.offsetWidth > 0) ? modal : document;
-        if (scope === document) {
-            window.scrollTo(0, document.body.scrollHeight);
-        }
-
-        const selectors = [
-            'button[aria-label="Continue to next step"]',
-            'button[aria-label="Next"]',
-            'button[aria-label="Review your application"]',
-            'button[aria-label="Review"]',
-            'button[data-automation-id="bottom-navigation-next-button"]',
-            '[data-testid*="next"]',
-        ];
-        for (const sel of selectors) {
-            const btn = scope.querySelector(sel);
-            if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
-                btn.scrollIntoView({ block: 'center' });
-                btn.click();
-                return true;
+        # -- JS fallback for non-shadow-DOM cases --
+        clicked = page.evaluate("""() => {
+            const modal = document.querySelector(
+                '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
+                '[role="dialog"], .artdeco-modal'
+            );
+            const scope = (modal && modal.offsetWidth > 0) ? modal : document;
+            if (scope === document) {
+                window.scrollTo(0, document.body.scrollHeight);
             }
-        }
 
-        const textMatches = ['next', 'continue', 'review'];
-        const buttons = scope.querySelectorAll('button, input[type="submit"], a');
-        for (const btn of buttons) {
-            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-            const text = (btn.textContent || btn.value || '').trim().toLowerCase();
-            if (textMatches.some(m => text === m || text.startsWith(m + ' '))) {
-                btn.scrollIntoView({ block: 'center' });
-                btn.click();
-                return true;
+            const selectors = [
+                'button[aria-label="Continue to next step"]',
+                'button[aria-label="Next"]',
+                'button[aria-label="Review your application"]',
+                'button[aria-label="Review"]',
+                'button[data-automation-id="bottom-navigation-next-button"]',
+                '[data-testid*="next"]',
+            ];
+            for (const sel of selectors) {
+                const btn = scope.querySelector(sel);
+                if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                    btn.scrollIntoView({ block: 'center' });
+                    btn.click();
+                    return true;
+                }
             }
-        }
-        return false;
-    }""")
 
-    if clicked:
-        return True
+            const textMatches = ['next', 'continue', 'review'];
+            const buttons = scope.querySelectorAll('button, input[type="submit"], a');
+            for (const btn of buttons) {
+                if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+                const text = (btn.textContent || btn.value || '').trim().toLowerCase();
+                if (textMatches.some(m => text === m || text.startsWith(m + ' '))) {
+                    btn.scrollIntoView({ block: 'center' });
+                    btn.click();
+                    return true;
+                }
+            }
+            return false;
+        }""")
+
+        if clicked:
+            return True
 
     # Fallback: check iframes (some ATS embed forms)
     for frame in page.frames[1:]:
@@ -502,107 +535,120 @@ def click_next_button(page) -> bool:
     return False
 
 
-def click_submit_button(page) -> bool:
+def click_submit_button(page, finder=None) -> bool:
     """Try to find and click the Submit/Apply button.
 
-    Uses Playwright locators first (pierces shadow DOM for LinkedIn Easy Apply),
-    then falls back to JS evaluation.
+    When an ElementFinder is provided, uses the escalation pipeline (cache -> heuristic
+    -> role -> text). Otherwise falls back to PW locators + JS evaluation.
     Returns True if found and clicked.
     """
-    # -- Playwright locator approach (pierces shadow DOM) --
-    for sel in SUBMIT_BUTTON_PW_SELECTORS:
-        try:
-            loc = page.locator(sel).first
-            if loc.is_visible(timeout=500):
-                loc.click(timeout=3000)
+    # --- ElementFinder path ---
+    if finder:
+        from .page_checks import get_site_domain
+        domain = get_site_domain(page.url)
+        result = finder.find_element(page, "submit_button", domain)
+        if result and result.element:
+            try:
+                result.element.scroll_into_view_if_needed(timeout=1000)
+                result.element.click(timeout=3000)
                 return True
-        except Exception:
-            continue
+            except Exception as e:
+                logger.debug(f"ElementFinder submit_button click failed: {e}")
+    else:
+        # -- Playwright locator approach (pierces shadow DOM) --
+        for sel in SUBMIT_BUTTON_PW_SELECTORS:
+            try:
+                loc = page.locator(sel).first
+                if loc.is_visible(timeout=500):
+                    loc.click(timeout=3000)
+                    return True
+            except Exception:
+                continue
 
-    # Text-based Playwright locators
-    for text in SUBMIT_BUTTON_TEXTS:
-        try:
-            loc = page.get_by_role("button", name=text, exact=False).first
-            if loc.is_visible(timeout=500):
-                loc.click(timeout=3000)
-                return True
-        except Exception:
-            continue
+        # Text-based Playwright locators
+        for text in SUBMIT_BUTTON_TEXTS:
+            try:
+                loc = page.get_by_role("button", name=text, exact=False).first
+                if loc.is_visible(timeout=500):
+                    loc.click(timeout=3000)
+                    return True
+            except Exception:
+                continue
 
-    # -- JS fallback for non-shadow-DOM cases --
-    clicked = page.evaluate("""() => {
-        const modal = document.querySelector(
-            '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
-            '[role="dialog"], .artdeco-modal'
-        );
-        const scope = (modal && modal.offsetWidth > 0) ? modal : document;
-        if (scope === document) {
-            window.scrollTo(0, document.body.scrollHeight);
-        }
-
-        const selectors = [
-            'button[aria-label="Submit application"]', 'button[aria-label="Submit"]',
-            '#submit_app', '#submit-application',
-            'button[data-automation-id="submit"]',
-            '.posting-btn-submit', 'button.postings-btn',
-            '.iCIMS_Button', 'button.btn-submit',
-            '[data-testid*="submit"]', '[data-testid*="apply"]',
-            'input[type="submit"]', 'button[type="submit"]',
-        ];
-        for (const sel of selectors) {
-            const btn = scope.querySelector(sel);
-            if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
-                btn.scrollIntoView({ block: 'center' });
-                btn.click();
-                return true;
-            }
-        }
-
-        const textMatches = [
-            'submit application', 'submit', 'send application',
-            'apply', 'complete', 'finish', 'done'
-        ];
-        const buttons = scope.querySelectorAll('button, input[type="submit"], a, [role="button"]');
-        for (const match of textMatches) {
-            for (const btn of buttons) {
-                if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-                const text = (btn.textContent || btn.value || '').trim().toLowerCase();
-                if (text === match || text.startsWith(match)) {
-                    btn.scrollIntoView({ block: 'center' });
-                    btn.click();
-                    return true;
-                }
-            }
-        }
-
-        if (scope === document) window.scrollTo(0, 0);
-        return false;
-    }""")
-
-    if clicked:
-        return True
-
-    # Second pass from top of page
-    try:
+        # -- JS fallback for non-shadow-DOM cases --
         clicked = page.evaluate("""() => {
+            const modal = document.querySelector(
+                '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
+                '[role="dialog"], .artdeco-modal'
+            );
+            const scope = (modal && modal.offsetWidth > 0) ? modal : document;
+            if (scope === document) {
+                window.scrollTo(0, document.body.scrollHeight);
+            }
+
             const selectors = [
+                'button[aria-label="Submit application"]', 'button[aria-label="Submit"]',
+                '#submit_app', '#submit-application',
+                'button[data-automation-id="submit"]',
+                '.posting-btn-submit', 'button.postings-btn',
+                '.iCIMS_Button', 'button.btn-submit',
+                '[data-testid*="submit"]', '[data-testid*="apply"]',
                 'input[type="submit"]', 'button[type="submit"]',
-                '[data-testid*="submit"]', '[class*="submit"]',
             ];
             for (const sel of selectors) {
-                const btn = document.querySelector(sel);
+                const btn = scope.querySelector(sel);
                 if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
                     btn.scrollIntoView({ block: 'center' });
                     btn.click();
                     return true;
                 }
             }
+
+            const textMatches = [
+                'submit application', 'submit', 'send application',
+                'apply', 'complete', 'finish', 'done'
+            ];
+            const buttons = scope.querySelectorAll('button, input[type="submit"], a, [role="button"]');
+            for (const match of textMatches) {
+                for (const btn of buttons) {
+                    if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+                    const text = (btn.textContent || btn.value || '').trim().toLowerCase();
+                    if (text === match || text.startsWith(match)) {
+                        btn.scrollIntoView({ block: 'center' });
+                        btn.click();
+                        return true;
+                    }
+                }
+            }
+
+            if (scope === document) window.scrollTo(0, 0);
             return false;
         }""")
+
         if clicked:
             return True
-    except Exception as e:
-        logger.debug(f"Submit second-pass JS evaluation failed: {e}")
+
+        # Second pass from top of page
+        try:
+            clicked = page.evaluate("""() => {
+                const selectors = [
+                    'input[type="submit"]', 'button[type="submit"]',
+                    '[data-testid*="submit"]', '[class*="submit"]',
+                ];
+                for (const sel of selectors) {
+                    const btn = document.querySelector(sel);
+                    if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                        btn.scrollIntoView({ block: 'center' });
+                        btn.click();
+                        return true;
+                    }
+                }
+                return false;
+            }""")
+            if clicked:
+                return True
+        except Exception as e:
+            logger.debug(f"Submit second-pass JS evaluation failed: {e}")
 
     # Fallback: check iframes
     for frame in page.frames[1:]:

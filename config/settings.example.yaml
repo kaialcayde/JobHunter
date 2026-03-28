@@ -53,13 +53,33 @@ automation:
   parallel_browsers_per_site: 1      # 1 = sequential, >1 = parallel browsers (one per job site, same-site jobs stay sequential to avoid bans), max 3
   verbose_logging: true              # show step-by-step progress (page loads, captcha, apply button, etc.)
   vision_agent: true               # use LLM vision fallback when selectors fail
-  vision_model: "gpt-4o-mini"      # cheapest vision model
+  # vision_model: "gpt-4o-mini"      # cheapest vision model
+  vision_model: "gpt-4o"
   vision_logging: true             # log each vision agent step to console
   vision_detail: "high"            # "low" = 85 tokens/image, "high" = 12-17K tokens/image
   fabricate_answers: false          # generate answers for subjective questions (e.g. "why this company?") from resume/cover letter. Does NOT fabricate skills/experience
   manual_login: false              # pause and open browser for manual login when login is required
   manual_otp: false                # prompt in terminal for OTP/verification codes
   manual_verification: false       # prompt in terminal for general verification challenges
+
+  # Element finder (smart element discovery with caching)
+  element_finder_llm: true        # allow LLM fallback in element finder (escalation levels 5-6)
+
+  # Email polling for automated OTP/verification handling
+  email_polling: true             # enable IMAP-based email polling (requires EMAIL_USER + EMAIL_APP_PASSWORD in .env)
+  imap_server: imap.gmail.com     # IMAP server (Gmail default)
+  imap_port: 993                  # IMAP port (SSL default)
+  email_poll_timeout: 120         # seconds to wait for verification email
+
+  # ATS Account Creation (Phase 6)
+  auto_register: true            # auto-create accounts on ATS tenant platforms that require registration
+  auto_register_domains:          # domain patterns allowed for auto-registration (requires REGISTRY_KEY in .env)
+    - "*.myworkdayjobs.com"
+    - "*.wd*.myworkday.com"
+    - "*.icims.com"
+    - "*.greenhouse.io"
+    - "*.smartrecruiters.com"
+    - "*.taleo.net"
 
 scheduler:
   enabled: true

@@ -269,3 +269,21 @@ SHARE_PROFILE_CONTINUE_SELECTORS = [
     '[role="dialog"] a:has-text("Continue")',
     'a:has-text("Continue")',
 ]
+
+
+# ── Intent Mappings (for SelectorCache bootstrap) ──────────────────
+
+SELECTOR_INTENTS = {
+    "apply_button": {
+        "pw_selectors": APPLY_BUTTON_PW_SELECTORS,
+        "texts": APPLY_BUTTON_TEXTS,
+    },
+    "next_button": {
+        "pw_selectors": NEXT_BUTTON_PW_SELECTORS,
+        "texts": NEXT_BUTTON_TEXTS,
+    },
+    "submit_button": {
+        "pw_selectors": SUBMIT_BUTTON_PW_SELECTORS,
+        "texts": SUBMIT_BUTTON_TEXTS,
+    },
+}

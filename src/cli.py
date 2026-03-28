@@ -646,7 +646,22 @@ def cmd_remove_failed():
     count = delete_failed_jobs(conn)
     conn.close()
 
-    console.print(f"\n[green]Removed {count} failed jobs from DB, moved {moved} folders to _failed/[/]")
+    # Clean up any FAILED_DIR entries for the jobs we just processed.
+    # Jobs moved from attempts/ above now sit in FAILED_DIR -- remove them
+    # so we don't leave orphaned folders after the DB records are gone.
+    cleaned = 0
+    for job in failed_jobs:
+        company = sanitize_filename(job.get("company", "Unknown"))
+        title = sanitize_filename(job.get("title", "Unknown"))
+        failed_path = FAILED_DIR / company / title
+        if failed_path.exists():
+            shutil.rmtree(failed_path)
+            cleaned += 1
+            company_dir = failed_path.parent
+            if company_dir.exists() and not any(company_dir.iterdir()):
+                company_dir.rmdir()
+
+    console.print(f"\n[green]Removed {count} failed jobs from DB, cleaned {moved + cleaned} folder(s)[/]")
 
 
 def cmd_answers():

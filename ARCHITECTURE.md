@@ -25,9 +25,21 @@ src/
 │
 └── automation/                  # Browser automation (requires Playwright)
     ├── __init__.py              # Re-exports: apply_to_jobs
-    ├── applicant.py             # Orchestrates the full apply flow: batching, parallelism, retries
-    ├── detection.py             # Page analysis: CAPTCHA, login walls, modal dismissal, button finding
-    └── forms.py                 # DOM field extraction, form filling, file upload handling
+    ├── applicant.py             # Batch orchestration: caps, round-robin, parallel browsers
+    ├── kernel.py                # Application state machine (single-job lifecycle controller)
+    ├── handlers.py              # Stateless handler functions (one per kernel state)
+    ├── results.py               # StepResult + HandlerResult types (canonical return values)
+    ├── element_finder.py        # 6-level element discovery escalation pipeline
+    ├── selector_cache.py        # SQLite-backed adaptive selector memory
+    ├── selectors.py             # Centralized selector constants, button texts, CAPTCHA indicators
+    ├── page_checks.py           # Page inspection: dead page, listing, access denied, CAPTCHA, login
+    ├── detection.py             # Button finding, modal dismissal, CAPTCHA/login detection
+    ├── forms.py                 # DOM field extraction, form filling, file uploads, React-Select
+    ├── vision_agent.py          # GPT-4o vision-based form filling for external ATS
+    ├── captcha_solver.py        # 2Captcha integration: reCAPTCHA v2/Enterprise, hCaptcha, Turnstile
+    ├── email_poller.py          # IMAP-based OTP/verification email polling
+    └── platforms/               # Platform-specific automation (one module per job board)
+        └── linkedin.py          # Easy Apply modal, share profile modal, SDUI flow
 ```
 
 ## Data Flow
@@ -53,12 +65,68 @@ settings.yaml ─┤                    │
                             └──────────────┘     resume.docx, .pdf
                                     │            cover_letter.docx, .pdf
                                     v
-                            ┌──────────────┐
-                            │ applicant.py  │──> Browser (Playwright)
-                            │ detection.py  │    screenshots, form submission
-                            │ forms.py      │──> SQLite (applications table)
-                            └──────────────┘
+                            ┌──────────────────────────┐
+                            │ applicant.py (batch)      │
+                            │   └─ kernel.py (per-job)  │──> Browser (Playwright)
+                            │       ├─ handlers.py      │    screenshots, form submission
+                            │       ├─ element_finder   │──> SQLite (applications table,
+                            │       ├─ email_poller     │    selector_cache table)
+                            │       └─ vision_agent     │
+                            └──────────────────────────┘
 ```
+
+## Application Kernel (State Machine)
+
+The `ApplicationKernel` in `kernel.py` controls the lifecycle of a single job application. It owns all state transitions; handlers are stateless workers that return `StepResult` values.
+
+### State Diagram
+
+```
+SETUP ──> NAVIGATE ──> ROUTE ──> DETECT_STRATEGY
+                                       │
+                          ┌────────────┴────────────┐
+                          v                         v
+                   FILL_SELECTOR              FILL_VISION
+                          │                         │
+                          └────────────┬────────────┘
+                                       v
+                                    VERIFY ──> VERIFY_EMAIL
+                                       │             │
+                                       v             v
+                                    CLEANUP ──> COMPLETE
+                                    ▲     ▲
+        SOLVE_CAPTCHA ──────────────┘     │
+        RECOVER_LOGIN ────────────────────┘
+```
+
+### Key Design Rules
+
+- **Handlers never advance state.** They return `StepResult(result=HandlerResult.XXX, metadata={...})` and the kernel's transition table decides the next state.
+- **KernelContext** is a mutable dataclass threaded through the lifecycle. Handlers read/write it via explicit parameters, not global state.
+- **Cleanup is centralized.** All terminal outcomes (success, failure, blocker) route through `_run_cleanup()` which handles DB writes, app directory moves, and debug screenshots.
+- **CAPTCHA resume.** When a CAPTCHA is detected mid-flow, the kernel saves `pre_captcha_state` and transitions to `SOLVE_CAPTCHA`. On success, it resumes from the saved state.
+
+### Element Finder Escalation
+
+The `ElementFinder` tries up to 6 levels to locate an element on the page:
+
+1. **Selector cache** — SQLite lookup by domain + intent (1ms)
+2. **Heuristic selectors** — Hardcoded CSS/attribute patterns (5ms)
+3. **Accessibility roles** — Playwright `get_by_role()` API (10ms)
+4. **Visible text scan** — JS `document.evaluate()` XPath (20ms)
+5. **Text LLM** — DOM snippet → selector (future)
+6. **Vision LLM** — Screenshot → coordinates (future)
+
+On success at any level, the result is cached in `selector_cache` for future use. Confidence decays over time and after failures; selectors below 0.3 are skipped.
+
+### Email Poller
+
+The `EmailPoller` connects via IMAP to watch for OTP codes and magic links during application flows:
+
+- Polls inbox for emails from the ATS domain within a configurable timeout
+- Extracts 6-8 digit codes or verification URLs via regex
+- Fallback chain: email poller → manual terminal prompt → fail with `needs_login`
+- Requires `EMAIL_USER` + `EMAIL_APP_PASSWORD` in `.env` and `email_polling: true` in settings
 
 ## Package Design Principles
 
@@ -78,12 +146,23 @@ settings.yaml ─┤                    │
 
 ### `automation/` -- Browser Automation
 
-- Split into three files by responsibility:
-  - **`detection.py`** -- Reads the page: is there a CAPTCHA? A login wall? Where's the Apply button?
-  - **`forms.py`** -- Interacts with forms: extract fields from DOM, fill them, upload files
-  - **`applicant.py`** -- Orchestrates: which jobs to apply to, in what order, how many browsers
-- `applicant.py` is the only file that imports from both `detection.py` and `forms.py`
-- Each function takes a Playwright `page` object -- no global browser state
+Split by responsibility:
+
+- **`applicant.py`** -- Batch orchestration: which jobs, in what order, how many browsers
+- **`kernel.py`** -- Single-job state machine: owns all workflow transitions
+- **`handlers.py`** -- Stateless workers: one function per kernel state, returns `StepResult`
+- **`results.py`** -- Canonical types: `HandlerResult` enum + `StepResult` dataclass
+- **`element_finder.py`** -- Smart element discovery with 6-level escalation
+- **`selector_cache.py`** -- SQLite-backed adaptive memory for selectors (confidence decay, bootstrap from `SELECTOR_INTENTS`)
+- **`selectors.py`** -- Centralized constants: button texts, CAPTCHA indicators, ATS domains
+- **`detection.py`** -- Reads the page: CAPTCHA? Login wall? Where's the Apply button?
+- **`forms.py`** -- Interacts with forms: extract fields, fill them, upload files
+- **`vision_agent.py`** -- GPT-4o fallback for external ATS that resist selector-based filling
+- **`email_poller.py`** -- IMAP polling for OTP codes and verification links
+- **`captcha_solver.py`** -- 2Captcha API integration for solving CAPTCHAs
+- **`platforms/`** -- Platform-specific modules (LinkedIn, etc.) for custom quirks
+
+Each function takes a Playwright `page` object -- no global browser state.
 
 ### `db.py` -- Database
 
@@ -91,6 +170,7 @@ settings.yaml ─┤                    │
 - WAL journal mode for concurrent read/write safety
 - Safe column migration via ALTER TABLE with error suppression
 - All queries return `dict` (via `sqlite3.Row`) for easy access
+- Tables: `jobs`, `applications`, `application_log`, `scrape_cache`, `answer_bank`, `selector_cache`
 
 ### `cli.py` -- CLI
 
@@ -108,6 +188,8 @@ settings.yaml ─┤                    │
 | PDF uses built-in Helvetica | No font files needed, works everywhere |
 | Config via Pydantic then `.model_dump()` | Modules work with plain dicts for simplicity |
 | Daily + per-round application caps | Prevent account flagging on job sites |
+| Handlers return StepResult | Kernel controls transitions, handlers stay stateless |
+| Element finder escalation | Fast cache hits first, expensive LLM only when needed |
 
 ## Import Graph
 
@@ -125,10 +207,34 @@ automation.applicant
 ├── db
 ├── config
 ├── utils
+└── automation.kernel
+
+automation.kernel
+├── automation.handlers
+├── automation.results
+├── automation.element_finder
+├── automation.selector_cache
+├── automation.page_checks
+└── automation.detection
+
+automation.handlers
+├── automation.results
+├── automation.detection
+├── automation.forms
+├── automation.vision_agent
+├── automation.page_checks
+├── automation.email_poller
 ├── core.tailoring (infer_form_answers)
 ├── core.document  (save_application_metadata)
-├── automation.detection
-└── automation.forms
+└── db
+
+automation.element_finder
+├── automation.selector_cache
+└── automation.selectors (HEURISTIC_MAP, ROLE_MAP, TEXT_PATTERNS)
+
+automation.selector_cache
+├── automation.selectors (SELECTOR_INTENTS)
+└── db
 
 core.scraper
 ├── db

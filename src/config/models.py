@@ -221,6 +221,21 @@ class Automation(BaseModel):
     manual_login: bool = False      # pause and open browser for manual login when login is required
     manual_otp: bool = False        # prompt in terminal for OTP/verification codes
     manual_verification: bool = False  # prompt in terminal for general verification challenges
+    email_polling: bool = False          # enable IMAP-based OTP/verification email polling
+    imap_server: str = "imap.gmail.com"  # IMAP server address
+    imap_port: int = 993                 # IMAP server port
+    email_poll_timeout: int = 120        # max seconds to wait for verification email
+
+    # ATS Account Creation (Phase 6)
+    auto_register: bool = False          # auto-create accounts on ATS tenant platforms
+    auto_register_domains: list[str] = [
+        "*.myworkdayjobs.com",
+        "*.wd*.myworkday.com",
+        "*.icims.com",
+        "*.greenhouse.io",
+        "*.smartrecruiters.com",
+        "*.taleo.net",
+    ]
 
     @field_validator("distribution")
     @classmethod

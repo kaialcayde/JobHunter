@@ -384,3 +384,101 @@ Tracking click/navigation failures where clicking a button (Apply, Submit, Next)
   2. Clear React-Select inputs via JS (`el.evaluate('e => e.value = ""')`) instead of keyboard shortcuts
   3. Filter `[role="option"]` results with `opt.is_visible()` to only click options from the active dropdown
   4. Added "already selected" check: if `.select__single-value` in container already shows the desired text, skip the action
+
+---
+
+## Kernel States
+
+Module: `src/automation/kernel.py`
+
+### Common State Transition Patterns
+
+- **Happy path:** SETUP → NAVIGATE → ROUTE → DETECT_STRATEGY → FILL_SELECTOR/FILL_VISION → VERIFY → CLEANUP(applied) → COMPLETE
+- **CAPTCHA mid-flow:** Any state → SOLVE_CAPTCHA (saves `pre_captcha_state`) → resume from saved state on success, CLEANUP(failed_captcha) on failure
+- **Login wall:** NAVIGATE or ROUTE → RECOVER_LOGIN → retry from NAVIGATE on success, CLEANUP(needs_login) on failure
+- **Dead page / access denied:** NAVIGATE → CLEANUP(failed_error) — no retry, page is broken
+
+### When CAPTCHA Resume Works vs Doesn't
+
+CAPTCHA resume works when:
+- The CAPTCHA appeared as a gate before the form (e.g., Greenhouse reCAPTCHA Enterprise). After solving, the form loads and filling can proceed from the saved state.
+- The CAPTCHA appeared on a Cloudflare interstitial. After solving, the page redirects to the actual content.
+
+CAPTCHA resume does NOT work when:
+- The CAPTCHA solve causes a page reload that wipes form state (e.g., Ashby invisible reCAPTCHA). The kernel must re-run DOM pre-fill after resuming.
+- The site uses CAPTCHA as a one-time gate but the token expires before the form is submitted. The kernel sees a second CAPTCHA and may exhaust retries.
+
+### Handler Design Rules
+
+- Handlers accept explicit parameters (page, job, settings, etc.), never read global state
+- Return `StepResult(result=HandlerResult.XXX, metadata={...})` — never call other handlers
+- Only the kernel's transition table decides the next state
+- Metadata dict carries forward state updates (new page references, form answers, strategy choice)
+
+---
+
+## Selector Cache
+
+Module: `src/automation/selector_cache.py`
+
+### Confidence Tuning
+
+- **Initial confidence:** 0.8 (seeded from generic patterns via `SELECTOR_INTENTS`, not yet verified on any domain)
+- **On success:** Reset to 1.0
+- **On failure:** Multiplied by decay factor 0.7 (0.8 → 0.56 → 0.39 → 0.27)
+- **Age decay:** Exponential decay after 30 days of non-use
+- **Skip threshold:** 0.3 — selectors below this are treated as expired
+
+### Which ATS Platforms Change Selectors Frequently
+
+- **LinkedIn** — Frequent selector changes (shadow DOM migration, class name rotation). Cache hits are valuable but short-lived. The `interop-outlet` shadow DOM wrapper appeared in March 2026 and broke all JS-based selectors.
+- **Greenhouse** — Stable selectors. React-Select class names (`.select__control`, `.select__input`) have been consistent. Cache entries have long useful lifetimes.
+- **Ashby** — Moderate changes. React component class names are hashed but role attributes (`role="combobox"`, `role="option"`) remain stable.
+- **Workday** — Unstable. Heavy JS framework with dynamically generated IDs. Accessibility roles are the most reliable selector strategy.
+
+### Bootstrap Process
+
+On first run, `bootstrap_from_selectors()` seeds the cache with wildcard (`'*'`) entries from `SELECTOR_INTENTS` in `selectors.py`. Domain-specific entries are learned through actual usage via `ElementFinder` — when a selector succeeds on a specific domain, it's cached with confidence 1.0.
+
+---
+
+## Email Polling
+
+Module: `src/automation/email_poller.py`
+
+### OTP Patterns Per ATS
+
+| ATS | Email From | Code Format | Subject Pattern |
+|-----|-----------|-------------|-----------------|
+| Greenhouse | `no-reply@greenhouse.io` | 6-digit numeric | "Verification code" or "Confirm your email" |
+| Workday | varies by company | 6-digit numeric | "Verify your identity" or company-branded |
+| iCIMS | `noreply@icims.com` | 6-8 digit numeric | "Verification code" or "Your application" |
+
+### Configuration
+
+Requires in `.env`:
+```
+EMAIL_USER=your.email@gmail.com
+EMAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx  # Gmail app password, NOT account password
+```
+
+And in `settings.yaml`:
+```yaml
+automation:
+  email_polling: true
+  imap_server: imap.gmail.com
+  imap_port: 993
+  email_poll_timeout: 120
+```
+
+### Fallback Chain
+
+1. Email poller attempts IMAP connection and polls for matching emails within timeout
+2. If poller fails (no email found, connection error, or disabled), falls back to manual terminal prompt (if `manual_otp: true`)
+3. If manual prompt is skipped or times out, job is marked `needs_login`
+
+### Known Limitations
+
+- Gmail requires an App Password (not regular password) with "Less secure app access" or 2FA enabled
+- Some ATS platforms send OTP from company-branded domains that don't match the ATS domain — the poller may miss these if domain filtering is too strict
+- Magic link emails may use tracking redirects that obscure the actual verification URL

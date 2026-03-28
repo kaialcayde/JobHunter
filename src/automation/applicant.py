@@ -5,7 +5,7 @@ This module is the entry point for the apply command. It handles:
 - Browser launch and context management
 - Batch job processing (sequential or parallel by site)
 
-The actual single-job application logic lives in flow.py.
+The actual single-job application logic lives in kernel.py (ApplicationKernel).
 """
 
 import logging
@@ -20,7 +20,7 @@ from ..db import (
 from ..config import load_settings
 from ..utils import LINKEDIN_AUTH_STATE, USER_AGENT
 
-from .flow import apply_single_job
+from .kernel import ApplicationKernel
 
 logger = logging.getLogger(__name__)
 
@@ -253,7 +253,7 @@ def _run_application_batch(jobs: list[dict], settings: dict,
         for i, job in enumerate(jobs):
             console.print(f"\n[bold]{label}({i+1}/{len(jobs)}) [Job #{job['id']}] {job['title']} at {job['company']}[/]")
             try:
-                apply_single_job(context, job, settings, take_screenshot)
+                ApplicationKernel().run(context, job, settings, take_screenshot)
             except Exception as e:
                 logger.exception(f"Unhandled error applying to job #{job['id']}")
                 console.print(f"  [red]{label}Failed: {e}[/]")

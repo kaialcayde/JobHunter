@@ -19,7 +19,7 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 
 ## Key Modules
 - `src/cli.py` - CLI orchestrator, pipeline flow
-- `src/db.py` - SQLite schema (jobs, applications, application_log, scrape_cache, answer_bank tables)
+- `src/db.py` - SQLite schema (jobs, applications, application_log, scrape_cache, answer_bank, selector_cache tables)
 - `src/utils.py` - Path constants, directory helpers, filename sanitization
 - `src/config/` - Configuration loading and validation
   - `models.py` - Pydantic models validating profile.yaml and settings.yaml
@@ -29,14 +29,19 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
   - `tailoring.py` - OpenAI integration, answer bank seeding, form answer inference, anti-fabrication safeguard
   - `document.py` - DOCX/PDF generation, one-page resume enforcement
 - `src/automation/` - Browser automation
+  - `applicant.py` - Batch orchestration: caps, round-robin distribution, parallel browsers
+  - `kernel.py` - Application state machine (single-job lifecycle: SETUP → NAVIGATE → ROUTE → FILL → VERIFY → CLEANUP)
+  - `handlers.py` - Stateless handler functions (one per kernel state, returns StepResult)
+  - `results.py` - Canonical types: HandlerResult enum + StepResult dataclass
+  - `element_finder.py` - 6-level element discovery escalation (cache → heuristic → a11y → text → LLM)
+  - `selector_cache.py` - SQLite-backed adaptive selector memory (confidence decay, bootstrap from SELECTOR_INTENTS)
   - `selectors.py` - Centralized selector constants (button texts, modal selectors, CAPTCHA indicators, ATS domains)
-  - `applicant.py` - Orchestration only: batch processing, round-robin distribution, browser lifecycle
-  - `flow.py` - Single-job application state machine (navigate → route → fill → verify → cleanup)
   - `page_checks.py` - Page inspection (dead page, listing, access denied, CAPTCHA, login), login recovery, URL utilities
   - `detection.py` - CAPTCHA/login detection, modal dismissal, Apply/Next/Submit button clicking
   - `forms.py` - Unified form field extraction (JS + Playwright backends), filling, React-Select handling, file uploads, coord-based DOM fill
   - `vision_agent.py` - GPT-4o vision-based form filling for external ATS (batch actions per screenshot, loop detection)
   - `captcha_solver.py` - 2Captcha integration, reCAPTCHA v2/Enterprise, hCaptcha, Turnstile, Cloudflare auto-challenge
+  - `email_poller.py` - IMAP-based OTP/verification email polling (code extraction, magic link detection)
   - `platforms/` - Platform-specific automation (one module per job board with custom quirks)
     - `linkedin.py` - All LinkedIn logic: Easy Apply modal, share profile modal, SDUI flow, button clicking
     - `greenhouse.py` - (create when needed) reCAPTCHA Enterprise gate
@@ -56,6 +61,8 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 - **New ATS button texts go in the `applyTexts` array** - centralized in `click_apply_button()` in `detection.py`. When a new platform uses non-standard apply button text, add it there and document it in LEARNINGS.md
 - **Always add debug screenshots on automation failures** - when adding or modifying automation code that can fail (CAPTCHA unsolved, button not found, form not submitted, etc.), save a debug screenshot to `data/logs/` with a descriptive name (e.g., `debug_captcha_unsolved.png`, `debug_no_apply_button.png`). Screenshots are essential for diagnosing headless browser issues
 - **Read the "Clicks" section of LEARNINGS.md before changing automation code** - this section logs click/navigation failures where a button is clicked but the page doesn't transition (Apply doesn't open form, Submit doesn't submit, invisible CAPTCHA gates, etc.). Use it as context for any automation change. When a new click failure is discovered, add it with platform, URL pattern, symptom, and root cause
+- **Handler functions return StepResult, never advance workflow state** - only the kernel's transition table decides the next state. Handlers are stateless workers
+- **New element intents go in selector_cache bootstrap, not hardcoded in handlers** - add new intents to `SELECTOR_INTENTS` in `selectors.py` so the cache can learn them
 
 ## User Context
 - Kai is a Data Engineer at Intuitive Surgical (current employer - excluded from job search)
@@ -84,9 +91,16 @@ new → tailoring → tailored → applying → applied (success)
                                       → skipped (no URL / other)
 ```
 
+### Kernel State Machine
+Each job application runs through the `ApplicationKernel` state machine:
+```
+SETUP → NAVIGATE → ROUTE → DETECT_STRATEGY → FILL_SELECTOR or FILL_VISION → VERIFY → CLEANUP → COMPLETE
+```
+Side states: `SOLVE_CAPTCHA` (with pre-CAPTCHA state resume), `RECOVER_LOGIN`, `VERIFY_EMAIL`.
+
 ### Two Apply Strategies
-- **LinkedIn Easy Apply** — Selector-based: extract form fields from modal DOM (shadow DOM via Playwright locators), LLM infers answers, fill via Playwright, click Next/Submit in multi-step loop.
-- **External ATS** (Greenhouse, Workday, Ashby, etc.) — Vision agent: DOM pre-fill first (Playwright `fill()` for React compatibility), then screenshot → GPT-4o returns batch actions → execute all → repeat 3-5 rounds.
+- **LinkedIn Easy Apply** (FILL_SELECTOR) — Selector-based: extract form fields from modal DOM (shadow DOM via Playwright locators), LLM infers answers, fill via Playwright, click Next/Submit in multi-step loop.
+- **External ATS** (FILL_VISION) (Greenhouse, Workday, Ashby, etc.) — Vision agent: DOM pre-fill first (Playwright `fill()` for React compatibility), then screenshot → GPT-4o returns batch actions → execute all → repeat 3-5 rounds.
 
 ## File Interaction Map
 
@@ -97,6 +111,7 @@ config/settings.yaml ─→ src/config/loader.py ──→ all modules (settings
 .env ─────────────────→ src/core/tailoring.py (OPENAI_API_KEY)
                        → src/automation/vision_agent.py (OPENAI_API_KEY)
                        → src/automation/captcha_solver.py (CAPTCHA_API_KEY)
+                       → src/automation/email_poller.py (EMAIL_USER, EMAIL_APP_PASSWORD)
 ```
 
 ### CLI → Core → Automation
@@ -104,13 +119,17 @@ config/settings.yaml ─→ src/config/loader.py ──→ all modules (settings
 src/cli.py
  ├─ cmd_scrape() ──→ src/core/scraper.py ──→ src/db.py (insert jobs)
  ├─ cmd_tailor() ──→ src/core/tailoring.py ──→ src/core/document.py (DOCX/PDF)
- └─ cmd_apply() ───→ src/automation/applicant.py (orchestration + batch)
-                      → src/automation/flow.py (single-job state machine)
+ └─ cmd_apply() ───→ src/automation/applicant.py (batch orchestration)
+                      → src/automation/kernel.py (single-job state machine)
+                        ├─ handlers.py (stateless workers per state)
+                        ├─ element_finder.py (6-level element discovery)
+                        ├─ selector_cache.py (adaptive selector memory)
                         ├─ page_checks.py (CAPTCHA/login/dead page detection, login recovery)
                         ├─ detection.py (button clicking, modal dismiss)
                         ├─ forms.py (field extraction + filling, unified API)
                         ├─ vision_agent.py (external ATS via GPT-4o screenshots)
                         ├─ captcha_solver.py (2Captcha API)
+                        ├─ email_poller.py (IMAP OTP/verification polling)
                         └─ platforms/linkedin.py (Easy Apply modal, share profile, SDUI)
 ```
 
@@ -119,6 +138,7 @@ src/cli.py
 Scraper → jobs table (status=new)
 Tailoring → applications/attempts/ dirs + jobs table (status=tailored)
 Automation → applications/success/ or failed/ dirs + applications table + answer_bank table
+Element Finder → selector_cache table (domain + intent → selector, confidence)
 Cookies → data/linkedin_auth.json + data/site_auth/{domain}.json
 ```
 

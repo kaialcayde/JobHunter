@@ -85,11 +85,25 @@ def _create_tables(conn: sqlite3.Connection):
             updated_at TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS selector_cache (
+            domain TEXT NOT NULL,
+            intent TEXT NOT NULL,
+            selector_value TEXT NOT NULL,
+            selector_type TEXT NOT NULL,
+            last_success TEXT,
+            confidence REAL DEFAULT 0.8,
+            failure_count INTEGER DEFAULT 0,
+            created_at TEXT,
+            updated_at TEXT,
+            PRIMARY KEY (domain, intent)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
         CREATE INDEX IF NOT EXISTS idx_jobs_url_hash ON jobs(url_hash);
         CREATE INDEX IF NOT EXISTS idx_answer_bank_label ON answer_bank(question_label);
         CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications(job_id);
         CREATE INDEX IF NOT EXISTS idx_jobs_search ON jobs(search_role, search_location);
+        CREATE INDEX IF NOT EXISTS idx_selector_cache_domain ON selector_cache(domain);
     """)
     conn.commit()
 

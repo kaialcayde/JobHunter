@@ -622,6 +622,73 @@ def _handle_stuck_status(page, settings, history, overall_reasoning, round_num,
     return False, page
 
 
+# ── OTP Resolution ─────────────────────────────────────────────────
+
+def _try_resolve_otp(page, settings: dict) -> str | None:
+    """Try to resolve an OTP code via email poller, then manual prompt.
+
+    Returns:
+        The OTP code string if successfully entered on the page.
+        None if all methods exhausted (caller should bail).
+    """
+    from .email_poller import EmailPoller, find_otp_field
+    from .page_checks import get_site_domain
+
+    auto_settings = settings.get("automation", {})
+    domain = get_site_domain(page.url)
+
+    # Try email poller first
+    if auto_settings.get("email_polling"):
+        console.print(f"  [cyan]Polling email for verification code from {domain}...[/]")
+        poller = EmailPoller(
+            imap_server=auto_settings.get("imap_server", "imap.gmail.com"),
+            imap_port=auto_settings.get("imap_port", 993),
+        )
+        try:
+            poller.connect()
+            code = poller.request_verification(
+                domain=domain,
+                type="otp",
+                timeout=auto_settings.get("email_poll_timeout", 120),
+            )
+            if code:
+                otp_field = find_otp_field(page)
+                if otp_field:
+                    otp_field.fill(code)
+                    console.print(f"  [green]OTP filled from email: {code[:2]}***[/]")
+                    return code
+                else:
+                    console.print("  [yellow]Got OTP from email but no field found on page[/]")
+            else:
+                console.print("  [yellow]Email poller timed out[/]")
+        except Exception as e:
+            logger.warning(f"Email poller failed: {e}")
+            console.print(f"  [yellow]Email poller error: {e}[/]")
+        finally:
+            poller.disconnect()
+
+    # Fallback: manual terminal prompt
+    if auto_settings.get("manual_otp"):
+        console.print("  [bold yellow]OTP/verification code required![/]")
+        try:
+            user_code = input("  Enter the verification code (or press Enter to skip): ").strip()
+        except EOFError:
+            user_code = ""
+        if user_code:
+            otp_field = find_otp_field(page)
+            if otp_field:
+                otp_field.fill(user_code)
+                console.print(f"  [green]Entered verification code[/]")
+                return user_code
+        else:
+            console.print(f"  [yellow]No code entered -- skipping[/]")
+            return None
+
+    # Neither method available
+    console.print(f"  [yellow]OTP required but no method available (enable email_polling or manual_otp)[/]")
+    return None
+
+
 # ── Main Vision Agent Loop ─────────────────────────────────────────
 
 def run_vision_agent(page, job: dict, settings: dict,
@@ -727,40 +794,14 @@ def run_vision_agent(page, job: dict, settings: dict,
             action_texts = " ".join(a.get("reasoning", "") for a in actions).lower()
             if any(kw in action_texts for kw in otp_keywords):
                 otp_round_count += 1
-                manual_otp = settings.get("automation", {}).get("manual_otp", False)
-                if manual_otp and otp_round_count == 1:
-                    console.print("  [bold yellow]OTP/verification code required![/]")
-                    try:
-                        user_code = input("  Enter the verification code (or press Enter to skip): ").strip()
-                    except EOFError:
-                        user_code = ""
-                    if user_code:
-                        page.evaluate("""(code) => {
-                            const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"]');
-                            for (const inp of inputs) {
-                                const label = (inp.getAttribute('aria-label') || inp.getAttribute('placeholder') || '').toLowerCase();
-                                const parentText = (inp.closest('label, div, fieldset')?.textContent || '').toLowerCase();
-                                if (['verification', 'code', 'otp', 'confirm'].some(k => label.includes(k) || parentText.includes(k))) {
-                                    inp.focus();
-                                    inp.value = code;
-                                    inp.dispatchEvent(new Event('input', {bubbles: true}));
-                                    inp.dispatchEvent(new Event('change', {bubbles: true}));
-                                    return;
-                                }
-                            }
-                            const active = document.activeElement;
-                            if (active && active.tagName === 'INPUT') {
-                                active.value = code;
-                                active.dispatchEvent(new Event('input', {bubbles: true}));
-                                active.dispatchEvent(new Event('change', {bubbles: true}));
-                            }
-                        }""", user_code)
-                        console.print(f"  [green]Entered verification code[/]")
+                if otp_round_count == 1:
+                    otp_code = _try_resolve_otp(page, settings)
+                    if otp_code:
                         otp_round_count = 0
-                        history.append("The user manually entered the verification code. Now click Submit/Continue to proceed.")
+                        history.append("Verification code was entered automatically. Now click Submit/Continue to proceed.")
                         continue
-                    else:
-                        console.print(f"  [yellow]No code entered -- skipping[/]")
+                    elif otp_code is None:
+                        # All methods exhausted or skipped
                         return "needs_login"
                 elif otp_round_count >= 2:
                     console.print(f"  [yellow]Vision agent: OTP/verification code required -- cannot proceed[/]")
