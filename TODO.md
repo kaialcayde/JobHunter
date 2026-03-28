@@ -18,15 +18,6 @@ Run 5 debug cycles of `venv/bin/python -m src apply` (max_applications_per_round
 6. If a job was marked failed/failed_captcha/skipped, reset it to 'new' so the next run has a job to try
 7. Update LEARNINGS.md with any new platform quirks discovered after a run. Update after every run
 
-- [ ] also Total saved: 21 (0 answered, 21 need your input)
-
-21 questions need your answer.
-Type your answer, or press Enter to skip. Type 'q' to quit.
-
-  Start typing...
-  > ^[Kauis-MacBook-Pro:JobHunter kana$ lear
-bash: lear: command not found should display the questions
-
 Key lessons from past cycles:
 - LinkedIn "Share your profile?" modal: the Apply `<a>` tag's href navigates to the same page, destroying the modal. Must preventDefault before clicking so the JS handler can show the modal. Also the modal doesn't always use `[role="dialog"]` — use broad selectors.
 - LinkedIn redirect URLs (`linkedin.com/redir/redirect/?url=...`): treat as external, not internal LinkedIn URLs.

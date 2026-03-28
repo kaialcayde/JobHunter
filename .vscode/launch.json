@@ -1,4 +1,35 @@
 {
+    // ============================================================
+    // JobHunter Launch Configurations
+    // ============================================================
+    // PIPELINE
+    //   Full Pipeline              scrape -> tailor -> apply (daily cap enforced)
+    //   Pipeline (Refresh Profile) same, but forces re-seed of answer bank from profile.yaml
+    //
+    // INDIVIDUAL STEPS
+    //   Scrape Only                pull jobs from job boards into DB (status=new)
+    //   Tailor Only                GPT-4o resume + cover letter for new jobs (status->tailored)
+    //   Apply Only                 submit applications for all tailored jobs
+    //   Seed Answer Bank           populate answer bank from profile.yaml (run before apply)
+    //
+    // SINGLE-JOB TESTING (debug loop)
+    //   Apply Job (by ID)          apply to one specific job — prompts for ID
+    //   Apply Job (next available) apply to next tailored job — no prompt
+    //   Retry Failed Jobs          reset failed -> tailored so Apply Job can re-run them
+    //
+    // LOGIN / AUTH
+    //   Login (LinkedIn)           manual LinkedIn login, saves session to data/linkedin_auth.json
+    //   Login Sites (Retry)        manual login for ATS sites that blocked apps, then resets those jobs
+    //
+    // REVIEW / MAINTENANCE
+    //   Answer Questions           interactively fill unanswered form questions in answer bank
+    //   Status                     show counts by job status
+    //   List Jobs                  table of recent jobs (all statuses)
+    //   View Applied               list successful applications + open folder
+    //   View Failed                list failed applications + open folder
+    //   Remove Failed              move failed app folders to _failed/ and clean DB
+    //   Reset (Full Wipe)          delete all applications and database — fresh start
+    // ============================================================
     "version": "0.2.0",
     "configurations": [
         {

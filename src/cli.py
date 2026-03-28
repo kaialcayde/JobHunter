@@ -694,12 +694,17 @@ def cmd_answers():
         return
 
     console.print(f"[yellow]{na_count} questions need your answer.[/]")
-    console.print("Type your answer, or press Enter to skip. Type 'q' to quit.\n")
+    console.print("Type your answer, press Enter to skip, 'd' to delete junk, 'q' to quit.\n")
 
     filled = 0
-    for item in unanswered:
+    deleted = 0
+    remaining = list(unanswered)
+    i = 0
+    while i < len(remaining):
+        item = remaining[i]
         label = item["question_label"]
-        console.print(f"  [bold]{label}[/]")
+        source = item.get("source", "auto")
+        console.print(f"  [{i+1}/{len(remaining)}] [bold]{label}[/] [dim](source: {source})[/]")
         try:
             answer = input("  > ").strip()
         except EOFError:
@@ -707,17 +712,26 @@ def cmd_answers():
 
         if answer.lower() == "q":
             break
-        if answer:
+        elif answer.lower() == "d":
+            conn.execute("DELETE FROM answer_bank WHERE id = ?", (item["id"],))
+            conn.commit()
+            deleted += 1
+            remaining.pop(i)
+            console.print(f"  [red]Deleted.[/]\n")
+            continue  # don't advance i — next item slides into position
+        elif answer:
             save_answer(conn, label, answer, source="user")
             filled += 1
             console.print(f"  [green]Saved![/]\n")
         else:
             console.print(f"  [dim]Skipped[/]\n")
+        i += 1
 
     conn.close()
-    console.print(f"\n[bold green]Done! Filled {filled} answers.[/]")
-    if na_count - filled > 0:
-        console.print(f"[dim]{na_count - filled} questions still need answers. Run 'python -m src answers' again.[/]")
+    console.print(f"\n[bold green]Done! Filled {filled}, deleted {deleted}.[/]")
+    remaining_count = na_count - filled - deleted
+    if remaining_count > 0:
+        console.print(f"[dim]{remaining_count} questions still need answers. Run 'python -m src answers' again.[/]")
 
 
 def cmd_login_sites():

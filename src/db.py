@@ -328,7 +328,7 @@ def get_saved_answers(conn: sqlite3.Connection) -> dict[str, str]:
 def get_unanswered_questions(conn: sqlite3.Connection) -> list[dict]:
     """Get questions that still have N/A answers."""
     rows = conn.execute(
-        "SELECT id, question_label, created_at FROM answer_bank WHERE answer = 'N/A' ORDER BY created_at DESC"
+        "SELECT id, question_label, source, created_at FROM answer_bank WHERE answer = 'N/A' ORDER BY created_at DESC"
     ).fetchall()
     return [dict(r) for r in rows]
 
