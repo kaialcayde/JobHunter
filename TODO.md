@@ -2,33 +2,22 @@
 
 ## High Priority
 
+- [ ] averture websites (like bloomberg) not completely working - fix next time but i dumped like a weekend into this lol. Just go next
+
+- [ ] reseed ansewr bank vs refresh profile? combine both? I don't know
+- [ ] need to confirm how skip_captcha_sites: false
+  captcha_solving: true
+  interact (if one is true, other is false, etc)
+
 - [ ] need to remove legacy methods in settings.yaml
 
 - [ ] confirm what secrets are stored and what passwords, etc my agent has access to
 
-- [ ] remove all debug, retry shouldn't need this in production much later on
+- [ ] remove all debug, retry, shouldn't need this in production much later on
 
-Run 5 debug cycles of `venv/bin/python -m src apply` (max_applications_per_round is already 1 in settings.yaml). For each cycle:
 
-1. Run apply, wait for it to finish (timeout 5min)
-2. Read LEARNINGS.md before diagnosing (required by CLAUDE.md)
-3. Check debug screenshots in data/logs/ if the run fails
-4. Diagnose the root cause from output + screenshots
-5. Fix the code
-6. If a job was marked failed/failed_captcha/skipped, reset it to 'new' so the next run has a job to try
-7. Update LEARNINGS.md with any new platform quirks discovered after a run. Update after every run
-
-Key lessons from past cycles:
-- LinkedIn "Share your profile?" modal: the Apply `<a>` tag's href navigates to the same page, destroying the modal. Must preventDefault before clicking so the JS handler can show the modal. Also the modal doesn't always use `[role="dialog"]` — use broad selectors.
-- LinkedIn redirect URLs (`linkedin.com/redir/redirect/?url=...`): treat as external, not internal LinkedIn URLs.
-- Ashby/Greenhouse invisible reCAPTCHA: detect_captcha false positives when form is already loaded. Skip passive CAPTCHA indicators (badge, scripts) when 2+ visible form inputs exist.
-- Greenhouse form below fold: scroll to first form input before vision agent handoff, otherwise vision agent sees job description and clicks "Apply" repeatedly.
-- Vision agent "done" but not submitted: try DOM-based click_submit_button() before falling back to vision coordinate clicks for the final submit.
-
-- [ ] Fill in work_experience and skills in config/profile.yaml
 - [ ] ability to apply to big and small companies
 - [ ] confirm resume and cover letter are being tailored per company and role
-- [ ] need to find a way t0 get around captcha
 - [ ] Option to view jobs we scraped and determine which ones to remove, etc
 - [ ] need to have a remove db and applications pipeline
 - [ ] move folder stuff to a database?

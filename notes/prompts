@@ -1,3 +1,108 @@
-Run apply-job for job <JOB_ID>. If it fails, diagnose from output + screenshots, 
-fix the code, reset the job to 'new', update LEARNINGS.md, and run again. 
-Keep iterating until success.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROMPT: STANDARD DEBUG CYCLE (any job)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Run apply-job for job <JOB_ID>:
+  venv/bin/python -m src apply-job <JOB_ID> --debug
+
+For each iteration:
+1. Read LEARNINGS.md before diagnosing (required by CLAUDE.md)
+2. Check terminal output + screenshots in data/logs/ and applications/failed/
+3. Diagnose root cause — be specific (which selector, which state, which round)
+4. Fix the code — minimal change that addresses the root cause
+5. Reset the job: apply-job auto-resets on each run, or:
+   sqlite3 data/jobhunter.db "UPDATE jobs SET status='tailored' WHERE id=<JOB_ID>"
+6. Re-run and repeat until applied or confirmed unresolvable
+7. look at debug screenshots if necessary
+
+After every run (pass or fail):
+- Update LEARNINGS.md with any new platform quirk, selector finding, or failure pattern
+- Keep fixes minimal — don't refactor surrounding code
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROMPT: AVATURE DOM INSPECTION CYCLE (job 280)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Goal: map Avature's actual DOM structure so avature.py fills education/language
+dropdowns / goes through the application correctly before the vision agent runs.
+
+# current chat progress
+Ensure password fill triggers proper Avature validation events
+
+Run test apply on job #280 to verify fixes
+Fix 3: Ensure password fill dispatches proper events so Avature's client-side validation re-runs. Also add a small delay between filling the two password fields to let validation settle.
+
+Edit vision_agent.py
+Added 8 lines
+Now let me also check if there's a risk of the password containing personal info substrings. The password uses random chars from ABCDEFGHJKLMNPQRSTUVWXYZ (no I/O) and abcdefghjkmnpqrstuvwxyz (no i/l/o). The user's name is "Kai Alcayde" — let me verify if any 3-char substrings could match. Actually, the Avature error says "Not contain any of your..." which likely means it checks if the password contains the user's first name, last name, or email username. With random chars from restricted alphabets this is very unlikely, but let me add an explicit check to regenerate if it does.
+
+Read account_registry.py (lines 63-102)
+The password is stored on first generation via INSERT OR REPLACE. If the account already exists from a prior failed attempt, the password gets regenerated. But the issue might be that the old password was already used to create the account (status='pending'), and now we're regenerating a new one that doesn't match what's in Avature's system.
+
+Wait — looking more carefully, the error is on the Register page, meaning the account hasn't been created yet. So the password is being submitted for the first time. The validation error is client-side.
+
+Let me check if the current stored password for bloomberg.avature.net might have been generated with an older algorithm (before the Xx9Xx9 fix):
+
+Bash Check existing bloomberg/avature accounts in registry
+IN
+python3 -c "
+import sqlite3
+conn = sqlite3.connect('data/account_registry.db')
+rows = conn.execute('SELECT domain, email, status, created_at, last_login, notes FROM accounts WHERE domain LIKE \"%avature%\" OR domain LIKE \"%bloomberg%\"').fetchall()
+for r in rows:
+    print(r)
+conn.close()
+"
+
+OUT
+('bloomberg.avature.net', 'kalcaydecl+avature-bloomberg@gmail.com', 'fill_vision', '2026-03-29 05:26:25', None, None)
+The account exists with status fill_vision. Since INSERT OR REPLACE is used, every time generate_credentials is called, it regenerates the password. This means the password changes every run. But more critically — the password was generated before we fixed the algorithm. Let me verify what password the current entry decrypts to, and whether it meets requirements. Actually, I can't easily check that without the REGISTRY_KEY.
+
+The real issue: the entry status is fill_vision, and has_account() checks for active or pending — fill_vision is neither. So has_account() returns False, meaning credentials aren't being filled at all on the Register page! Let me verify:
+
+# steps
+
+Step 1 — Run in debug mode (pauses after DOM pre-fill, before each vision round):
+  venv/bin/python -m src apply-job 280 --debug
+
+Step 2 — At the first pause ("Inspect browser, then press Enter..."):
+  Open browser DevTools and inspect the education/language dropdown widgets.
+  For each unfilled dropdown, find:
+    - The CSS class on the trigger element (what you click to open it)
+    - The CSS class/tag on the option items (what appears after clicking)
+    - Whether options use [role="option"], <li>, or something custom
+  Report back the raw HTML of one dropdown trigger + its open options list.
+
+Step 3 — Update src/automation/platforms/avature.py:
+  - Replace _find_dropdown_near_label() guesses with real selectors
+  - Add any missing fields (work experience company/title/dates if present)
+  - Re-run without --debug: venv/bin/python -m src apply-job 280
+  - Vision agent should see <=5 unfilled fields and finish in 1-3 rounds
+
+Step 4 — Update LEARNINGS.md Avature section with:
+  - Exact dropdown trigger selector
+  - Exact option item selector
+  - Which fields avature.py now handles vs. what's left for vision
+  - Any step-advance quirks ("Save and continue" timing, multi-step form)
+
+# llm sanity check
+maybe we need like an llm sanity check or something to confirm the answers are right? I want to addd this. Whether it's a vision call checking the pre confirmation submission that it looks right a token minimize approach we can use
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ARCHIVED: multi-run batch cycle
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Run 5 debug cycles of `venv/bin/python -m src apply` (max_applications_per_round is already 1 in settings.yaml). For each cycle:
+
+1. Run apply, wait for it to finish (timeout 5min)
+2. Read LEARNINGS.md before diagnosing (required by CLAUDE.md)
+3. Check debug screenshots in data/logs/ if the run fails
+4. Diagnose the root cause from output + screenshots
+5. Fix the code
+6. If a job was marked failed/failed_captcha/skipped, reset it to 'new' so the next run has a job to try
+7. Update LEARNINGS.md with any new platform quirks discovered after a run. Update after every run
+
+Key lessons from past cycles:
+- LinkedIn "Share your profile?" modal: the Apply <a> tag's href navigates to the same page, destroying the modal. Must preventDefault before clicking so the JS handler can show the modal. Also the modal doesn't always use [role="dialog"] -- use broad selectors.
+- LinkedIn redirect URLs (linkedin.com/redir/redirect/?url=...): treat as external, not internal LinkedIn URLs.
+- Ashby/Greenhouse invisible reCAPTCHA: detect_captcha false positives when form is already loaded. Skip passive CAPTCHA indicators (badge, scripts) when 2+ visible form inputs exist.
+- Greenhouse form below fold: scroll to first form input before vision agent handoff, otherwise vision agent sees job description and clicks "Apply" repeatedly.
+- Vision agent "done" but not submitted: try DOM-based click_submit_button() before falling back to vision coordinate clicks for the final submit.

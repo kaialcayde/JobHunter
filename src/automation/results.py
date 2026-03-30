@@ -22,6 +22,7 @@ class HandlerResult(Enum):
     NEEDS_MANUAL = "needs_manual"
     REQUIRES_REGISTRATION = "requires_registration"
     REQUIRES_VERIFICATION = "requires_verification"
+    REQUIRES_EXISTING_LOGIN = "requires_existing_login"
 
 
 @dataclass

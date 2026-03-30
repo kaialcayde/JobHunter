@@ -19,7 +19,10 @@ personal:
     zip_code: ""
     country: "United States"
   date_of_birth: ""  # optional — some applications ask for this
-
+  languages:
+    - "English (native)"
+    - "Tagalog (fluent)"
+    
 work_authorization:
   authorized_us: true
   requires_sponsorship: false
@@ -37,7 +40,6 @@ work_experience:
     start_date: ""      # e.g. "2022-01"
     end_date: ""        # e.g. "2024-06" or "present"
     description: ""     # brief summary — the LLM uses your full resume for details
-
 skills:
   languages: []         # e.g. ["Python", "SQL", "Java"]
   frameworks: []        # e.g. ["Spark", "Airflow", "React"]

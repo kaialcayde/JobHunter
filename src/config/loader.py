@@ -89,6 +89,14 @@ def get_profile_summary(profile: dict) -> str:
         if exp.get("title"):
             lines.append(f"Experience: {exp['title']} at {exp.get('company', 'N/A')} ({exp.get('start_date', '?')} - {exp.get('end_date', 'present')})")
 
+    # Projects (DISTINCT from work experience — no employer, not paid employment)
+    for proj in profile.get("projects", []):
+        if proj.get("name"):
+            label = proj["name"]
+            if proj.get("subtitle"):
+                label += f" ({proj['subtitle']})"
+            lines.append(f"Project [NOT work experience — no company/employer]: {label} [{proj.get('date', '')}]")
+
     # Skills
     skills = profile.get("skills", {})
     all_skills = skills.get("languages", []) + skills.get("frameworks", []) + skills.get("tools", [])

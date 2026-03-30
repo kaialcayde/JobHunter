@@ -1,0 +1,4153 @@
+{
+  "candidates": [
+    {
+      "label": "(no label)",
+      "tag": "A",
+      "className": "toggle toggle--menu",
+      "role": "button",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<a class=\"toggle toggle--menu\" aria-controls=\"menu__panel\" aria-expanded=\"false\" aria-haspopup=\"true\" aria-label=\"Main menu toggle\" href=\"#\" role=\"button\" tabindex=\"0\">\n            <div class=\"toggle__icon\" aria-hidden=\"true\"></div>\n        </a>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_40791",
+      "outerHTML": "<div id=\"ui-widget_40791\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"40791-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"></div><select name=\"40791[]\" tabindex=\"-1\" class=\"WizardFieldHidden CheckBoxListFormField AutoCompl"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "WizardFieldHidden CheckBoxListFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessi",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "40791",
+      "outerHTML": "<select name=\"40791[]\" tabindex=\"-1\" class=\"WizardFieldHidden CheckBoxListFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"40791\" multiple=\"\" data-select2-id=\"40791\" aria-hidden=\"true\"><option value=\"451\" selected=\"1\" data-select2-id=\"2\">Amazon Web S"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default\" dir=\"ltr\" data-select2-id=\"1\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--multiple select2Container40791\" role=\"combobox\" aria-labelledby=\""
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--multiple select2Container40791\" role=\"combobox\" aria-labelledby=\"40791-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"-1\" aria-disa"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--multiple select2Container40791",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--multiple select2Container40791\" role=\"combobox\" aria-labelledby=\"40791-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"-1\" aria-disabled=\"false\"><ul class=\""
+    },
+    {
+      "label": "(no label)",
+      "tag": "UL",
+      "className": "select2-selection__rendered",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<ul class=\"select2-selection__rendered\"><li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Amazon Web Services\" data-select2-id=\"67\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Amazon Web Services</li><li c"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Amazon Web Services\" data-select2-id=\"67\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Amazon Web Services</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Anomaly detection\" data-select2-id=\"68\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Anomaly detection</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Apache Airflow\" data-select2-id=\"69\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Apache Airflow</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Apache Spark\" data-select2-id=\"70\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Apache Spark</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"API Design\" data-select2-id=\"71\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>API Design</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Application Programming Interface Development\" data-select2-id=\"72\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Application Programming Interface Developme"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Architecture\" data-select2-id=\"73\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Architecture</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Artificial Intelligence\" data-select2-id=\"74\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Artificial Intelligence</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Audit\" data-select2-id=\"75\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Audit</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Automation\" data-select2-id=\"76\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Automation</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"C++\" data-select2-id=\"77\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>C++</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Capital Stocks\" data-select2-id=\"78\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Capital Stocks</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Cascading Style Sheets\" data-select2-id=\"79\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Cascading Style Sheets</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Cloudflare\" data-select2-id=\"80\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Cloudflare</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Consulting\" data-select2-id=\"81\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Consulting</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Data Engineering\" data-select2-id=\"82\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Data Engineering</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Data ingestion\" data-select2-id=\"83\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Data ingestion</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Data Science\" data-select2-id=\"84\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Data Science</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Databricks\" data-select2-id=\"85\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Databricks</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Docker\" data-select2-id=\"86\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Docker</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Engineering\" data-select2-id=\"87\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Engineering</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"FastAPI\" data-select2-id=\"88\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>FastAPI</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Firebase\" data-select2-id=\"89\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Firebase</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Flask\" data-select2-id=\"90\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Flask</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Fusion Flight Tracking System\" data-select2-id=\"91\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Fusion Flight Tracking System</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Git\" data-select2-id=\"92\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Git</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Heroku\" data-select2-id=\"93\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Heroku</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"HyperText Markup Language\" data-select2-id=\"94\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>HyperText Markup Language</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Inverse Kinematics\" data-select2-id=\"95\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Inverse Kinematics</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"JavaScript\" data-select2-id=\"96\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>JavaScript</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Large Language Model\" data-select2-id=\"97\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Large Language Model</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Logging\" data-select2-id=\"98\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Logging</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Machine Learning\" data-select2-id=\"99\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Machine Learning</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Management\" data-select2-id=\"100\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Management</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Manufacturing\" data-select2-id=\"101\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Manufacturing</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Matlab\" data-select2-id=\"102\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Matlab</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Mechanical Engineering\" data-select2-id=\"103\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Mechanical Engineering</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Metalworking\" data-select2-id=\"104\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Metalworking</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Musical Orchestration\" data-select2-id=\"105\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Musical Orchestration</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Next.js\" data-select2-id=\"106\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Next.js</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Node.js\" data-select2-id=\"107\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Node.js</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"OpenCV\" data-select2-id=\"108\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>OpenCV</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Pipelines\" data-select2-id=\"109\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Pipelines</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Playwright\" data-select2-id=\"110\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Playwright</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Pose Estimation\" data-select2-id=\"111\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Pose Estimation</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"PostgreSQL\" data-select2-id=\"112\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>PostgreSQL</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Python\" data-select2-id=\"113\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Python</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"PyTorch\" data-select2-id=\"114\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>PyTorch</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"React\" data-select2-id=\"115\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>React</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Representational State Transfer\" data-select2-id=\"116\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Representational State Transfer</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Revocation\" data-select2-id=\"117\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Revocation</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Robotics\" data-select2-id=\"118\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Robotics</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Savings\" data-select2-id=\"119\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Savings</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Snowflake\" data-select2-id=\"120\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Snowflake</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Software Engineering\" data-select2-id=\"121\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Software Engineering</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"SQLite\" data-select2-id=\"122\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>SQLite</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Structured Query Language\" data-select2-id=\"123\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Structured Query Language</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Tableau\" data-select2-id=\"124\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Tableau</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Tensorflow\" data-select2-id=\"125\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Tensorflow</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Trajectory\" data-select2-id=\"126\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Trajectory</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Transformers\" data-select2-id=\"127\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Transformers</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"TypeScript\" data-select2-id=\"128\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>TypeScript</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Vue.js\" data-select2-id=\"129\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Vue.js</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Woodworking Routers\" data-select2-id=\"130\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Woodworking Routers</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__choice",
+      "role": "option",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__choice\" tabindex=\"-1\" role=\"option\" title=\"Workday\" data-select2-id=\"131\"><span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>Workday</li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__choice__remove",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__choice__remove\" role=\"button\" tabindex=\"-1\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-selection__clear",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"132\"><span aria-hidden=\"true\">\u00d7</span></li>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "LI",
+      "className": "select2-search select2-search--inline",
+      "role": "none",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<li class=\"select2-search select2-search--inline\" role=\"none\"><input id=\"40791-search__field\" class=\"select2-search__field\" type=\"search\" tabindex=\"0\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"none\" spellcheck=\"false\" role=\"searchbox\" aria-autocomplete=\"list\" aria-labelledby=\"40791-label\""
+    },
+    {
+      "label": "(no label)",
+      "tag": "INPUT",
+      "className": "select2-search__field",
+      "role": "searchbox",
+      "ariaHaspopup": null,
+      "id": "40791-search__field",
+      "outerHTML": "<input id=\"40791-search__field\" class=\"select2-search__field\" type=\"search\" tabindex=\"0\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"none\" spellcheck=\"false\" role=\"searchbox\" aria-autocomplete=\"list\" aria-labelledby=\"40791-label\" placeholder=\"\" style=\"width: 0.75em;\">"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "Automated Source Picker (hidden)Indeed",
+      "tag": "DIV",
+      "className": "fieldSpec WizardFieldHidden SelectFormField AutoCompleteField fieldSpecPadder",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer663",
+      "outerHTML": "<div class=\"fieldSpec WizardFieldHidden SelectFormField AutoCompleteField fieldSpecPadder\" id=\"fieldSpecContainer663\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"663\" id=\"663-label\">Automated Source Picker (hidden)<span id=\"663-labelValue\" class=\"screenReaderVisibility\">Indeed</span></label><d"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_663",
+      "outerHTML": "<div id=\"ui-widget_663\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"663-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"></div><select name=\"663\" tabindex=\"-1\" class=\"WizardFieldHidden SelectFormField AutoCompleteField Autoc"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "WizardFieldHidden SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "663",
+      "outerHTML": "<select name=\"663\" tabindex=\"-1\" class=\"WizardFieldHidden SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"663\" data-select2-id=\"663\" aria-hidden=\"true\"><option data-select2-id=\"134\"></option><option value=\"60\" selected=\"1\" data-select2-id=\"135"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default\" dir=\"ltr\" data-select2-id=\"133\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container663\" role=\"combobox\" aria-labelledby=\"66"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container663\" role=\"combobox\" aria-labelledby=\"663-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"f"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container663",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container663\" role=\"combobox\" aria-labelledby=\"663-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span class=\"selec"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-663-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-663-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\" title=\"Indeed\">Indeed<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"136\"><span aria-hidden=\"true\">\u00d7</span></span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__clear",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"136\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "Pronouns",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField fieldSpecPadder",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer616",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField fieldSpecPadder\" id=\"fieldSpecContainer616\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"616\" id=\"616-label\">Pronouns</label><select name=\"616\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"616\" data-hiddenvalue=\"\" ari"
+    },
+    {
+      "label": "Pronouns",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "616",
+      "outerHTML": "<select name=\"616\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"616\" data-hiddenvalue=\"\" aria-labelledby=\"616-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"616_6553\" class=\"WizardFieldInput\" value=\"6553\">Any Pronoun</opt"
+    },
+    {
+      "label": "Country/Territory Code *\nUnited States of America (+1)",
+      "tag": "DIV",
+      "className": "fieldSpec fieldSpec--odd SelectFormField AutoCompleteField isRequired fieldSpecPadder hasErrors",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer6377",
+      "outerHTML": "<div class=\"fieldSpec fieldSpec--odd SelectFormField AutoCompleteField isRequired fieldSpecPadder hasErrors\" id=\"fieldSpecContainer6377\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"6377\" id=\"6377-label\">Country/Territory Code<span aria-hidden=\"true\" class=\"labelRequiredIcon\"> *</"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_6377",
+      "outerHTML": "<div id=\"ui-widget_6377\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"6377-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"><p>100 options available. Use the up and down keys to navigate. Press Enter to select an option, or p"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "fieldSpec--odd SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "6377",
+      "outerHTML": "<select name=\"6377\" tabindex=\"-1\" class=\"fieldSpec--odd SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"6377\" data-select2-id=\"6377\" aria-hidden=\"true\"><option data-select2-id=\"138\"></option><option value=\"239669\" data-select2-id=\"173\">United "
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below\" dir=\"ltr\" data-select2-id=\"137\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container6377\" role=\"com"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container6377\" role=\"combobox\" aria-labelledby=\"6377-label\" aria-describedby=\"6377-errorMessage\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"true\" required=\"true\" data-required=\"true\" aria-invalid=\""
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container6377",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container6377\" role=\"combobox\" aria-labelledby=\"6377-label\" aria-describedby=\"6377-errorMessage\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"true\" required=\"true\" data-required=\"true\" aria-invalid=\"true\" tabindex=\"0\" aria-"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-6377-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-6377-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\" title=\"United States of America (+1)\">United States of America (+1)<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"175\"><span a"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__clear",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"175\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "countryFieldSelect WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "170",
+      "outerHTML": "<select id=\"170\" class=\"countryFieldSelect WizardFieldInputContainer WizardFieldInput\" name=\"170\" tabindex=\"0\" aria-required=\"true\" required=\"true\" data-required=\"true\" data-country-type=\"1\" aria-invalid=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select a country</option><option class=\"WizardF"
+    },
+    {
+      "label": "State",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField fieldSpecPadder",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer169",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField fieldSpecPadder\" id=\"fieldSpecContainer169\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"169\" id=\"169-label\">State</label><select name=\"169\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"169\" data-hiddenvalue=\"\" aria-l"
+    },
+    {
+      "label": "State",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "169",
+      "outerHTML": "<select name=\"169\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"169\" data-hiddenvalue=\"\" aria-labelledby=\"169-label\"><option class=\"WizardFieldInput\" value=\"\" selected=\"selected\">Select an option</option><option class=\"WizardFieldInput\" value=\"4799\">Alabama</o"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer172-3-sample",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer172-3-sample\" data-schema-field-id=\"43\" data-samplerow=\"1\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"172-3-sample\" id=\"172-3-sample-label\">Is Current Position?<span ari"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "172-3-sample",
+      "outerHTML": "<select name=\"172-3-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-sample\" aria-labelledby=\"172-3-sample-label\" data-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-sample_37\" class=\"WizardFieldI"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer172-3-0",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset\" id=\"fieldSpecContainer172-3-0\" data-schema-field-id=\"43\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"172-3-0\" id=\"172-3-0-label\">Is Current Position?<span aria-hidden=\"true\" class=\"l"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "172-3-0",
+      "outerHTML": "<select name=\"172-3-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-0\" aria-labelledby=\"172-3-0-label\" aria-describedby=\"172-3-0-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" "
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer172-3-1",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset\" id=\"fieldSpecContainer172-3-1\" data-schema-field-id=\"43\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"172-3-1\" id=\"172-3-1-label\">Is Current Position?<span aria-hidden=\"true\" class=\"l"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "172-3-1",
+      "outerHTML": "<select name=\"172-3-1\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-1\" aria-labelledby=\"172-3-1-label\" aria-describedby=\"172-3-1-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" "
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer172-3-2",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset\" id=\"fieldSpecContainer172-3-2\" data-schema-field-id=\"43\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"172-3-2\" id=\"172-3-2-label\">Is Current Position?<span aria-hidden=\"true\" class=\"l"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "172-3-2",
+      "outerHTML": "<select name=\"172-3-2\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-2\" aria-labelledby=\"172-3-2-label\" aria-describedby=\"172-3-2-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" "
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer172-3-3",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset\" id=\"fieldSpecContainer172-3-3\" data-schema-field-id=\"43\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"172-3-3\" id=\"172-3-3-label\">Is Current Position?<span aria-hidden=\"true\" class=\"l"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "172-3-3",
+      "outerHTML": "<select name=\"172-3-3\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-3\" aria-labelledby=\"172-3-3-label\" aria-describedby=\"172-3-3-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" "
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer172-3-4",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset\" id=\"fieldSpecContainer172-3-4\" data-schema-field-id=\"43\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"172-3-4\" id=\"172-3-4-label\">Is Current Position?<span aria-hidden=\"true\" class=\"l"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "172-3-4",
+      "outerHTML": "<select name=\"172-3-4\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-4\" aria-labelledby=\"172-3-4-label\" aria-describedby=\"172-3-4-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" "
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer172-3-5",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset\" id=\"fieldSpecContainer172-3-5\" data-schema-field-id=\"43\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"172-3-5\" id=\"172-3-5-label\">Is Current Position?<span aria-hidden=\"true\" class=\"l"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "172-3-5",
+      "outerHTML": "<select name=\"172-3-5\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-5\" aria-labelledby=\"172-3-5-label\" aria-describedby=\"172-3-5-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" "
+    },
+    {
+      "label": "Degree Type *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer2238-1-sample",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer2238-1-sample\" data-schema-field-id=\"1873\" data-samplerow=\"1\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"2238-1-sample\" id=\"2238-1-sample-label\">Degree Type<span aria-hi"
+    },
+    {
+      "label": "Degree Type *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "2238-1-sample",
+      "outerHTML": "<select name=\"2238-1-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"2238-1-sample\" aria-labelledby=\"2238-1-sample-label\" data-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"2238-1-sample_6558\" class=\"Wizard"
+    },
+    {
+      "label": "School *Select an option",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer2238-2-sample",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer2238-2-sample\" data-schema-field-id=\"1874\" data-samplerow=\"1\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"2238-2-sample\" id=\"2238-2-sample-label\">School"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_2238-2-sample",
+      "outerHTML": "<div id=\"ui-widget_2238-2-sample\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"2238-2-sample-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"></div><select name=\"2238-2-sample\" tabindex=\"-1\" class=\"SelectFormField AutoComplet"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "2238-2-sample",
+      "outerHTML": "<select name=\"2238-2-sample\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-2-sample\" data-select2-id=\"2238-2-sample\" aria-hidden=\"true\"><option data-select2-id=\"140\"></option></select>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default\" dir=\"ltr\" data-select2-id=\"139\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-2-sample\" role=\"combobox\" aria-labe"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-2-sample\" role=\"combobox\" aria-labelledby=\"2238-2-sample-label\" aria-haspopup=\"true\" aria-expanded=\"false\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span class=\"s"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container2238-2-sample",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container2238-2-sample\" role=\"combobox\" aria-labelledby=\"2238-2-sample-label\" aria-haspopup=\"true\" aria-expanded=\"false\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span class=\"select2-selection__render"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-2238-2-sample-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-2238-2-sample-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\"><span class=\"select2-selection__placeholder WizardFieldInput\">Select an option</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__placeholder WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__placeholder WizardFieldInput\">Select an option</span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "Field of Study *Select an option",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer2238-3-sample",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer2238-3-sample\" data-schema-field-id=\"1875\" data-samplerow=\"1\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"2238-3-sample\" id=\"2238-3-sample-label\">Field "
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_2238-3-sample",
+      "outerHTML": "<div id=\"ui-widget_2238-3-sample\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"2238-3-sample-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"></div><select name=\"2238-3-sample\" tabindex=\"-1\" class=\"SelectFormField AutoComplet"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "2238-3-sample",
+      "outerHTML": "<select name=\"2238-3-sample\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-3-sample\" data-select2-id=\"2238-3-sample\" aria-hidden=\"true\"><option data-select2-id=\"142\"></option></select>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default\" dir=\"ltr\" data-select2-id=\"141\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-3-sample\" role=\"combobox\" aria-labe"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-3-sample\" role=\"combobox\" aria-labelledby=\"2238-3-sample-label\" aria-haspopup=\"true\" aria-expanded=\"false\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span class=\"s"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container2238-3-sample",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container2238-3-sample\" role=\"combobox\" aria-labelledby=\"2238-3-sample-label\" aria-haspopup=\"true\" aria-expanded=\"false\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span class=\"select2-selection__render"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-2238-3-sample-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-2238-3-sample-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\"><span class=\"select2-selection__placeholder WizardFieldInput\">Select an option</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__placeholder WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__placeholder WizardFieldInput\">Select an option</span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "Degree Type *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer2238-1-0",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer2238-1-0\" data-schema-field-id=\"1873\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"2238-1-0\" id=\"2238-1-0-label\">Degree Type<span aria-hidden=\"true\" class=\"labelRequiredIc"
+    },
+    {
+      "label": "Degree Type *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "2238-1-0",
+      "outerHTML": "<select name=\"2238-1-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"2238-1-0\" aria-labelledby=\"2238-1-0-label\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"2238-1-0_65"
+    },
+    {
+      "label": "School *\nUniversity of California-Los Angeles",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer2238-2-0",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer2238-2-0\" data-schema-field-id=\"1874\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"2238-2-0\" id=\"2238-2-0-label\">School<span aria-hidden=\"true\" class=\"la"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_2238-2-0",
+      "outerHTML": "<div id=\"ui-widget_2238-2-0\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"2238-2-0-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"><p>100 options available. Use the up and down keys to navigate. Press Enter to select an opti"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "2238-2-0",
+      "outerHTML": "<select name=\"2238-2-0\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-2-0\" data-select2-id=\"2238-2-0\" aria-hidden=\"true\"><option data-select2-id=\"144\"></option><option value=\"131995\" data-select2-id=\"162\">University"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below\" dir=\"ltr\" data-select2-id=\"143\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-2-0\" role="
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-2-0\" role=\"combobox\" aria-labelledby=\"2238-2-0-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"true\" required=\"true\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disa"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container2238-2-0",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container2238-2-0\" role=\"combobox\" aria-labelledby=\"2238-2-0-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"true\" required=\"true\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span class"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-2238-2-0-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-2238-2-0-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\" title=\"University of California-Los Angeles\">University of California-Los Angeles<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__clear",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"164\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "Field of Study *\nMechanical Engineering",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer2238-3-0",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer2238-3-0\" data-schema-field-id=\"1875\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"2238-3-0\" id=\"2238-3-0-label\">Field of Study<span aria-hidden=\"true\" c"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_2238-3-0",
+      "outerHTML": "<div id=\"ui-widget_2238-3-0\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"2238-3-0-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"><p>100 options available. Use the up and down keys to navigate. Press Enter to select an opti"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "2238-3-0",
+      "outerHTML": "<select name=\"2238-3-0\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-3-0\" data-select2-id=\"2238-3-0\" aria-hidden=\"true\"><option data-select2-id=\"146\"></option><option value=\"364893\" data-select2-id=\"165\">Mechanical"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below\" dir=\"ltr\" data-select2-id=\"145\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-3-0\" role="
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container2238-3-0\" role=\"combobox\" aria-labelledby=\"2238-3-0-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"true\" required=\"true\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disa"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container2238-3-0",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container2238-3-0\" role=\"combobox\" aria-labelledby=\"2238-3-0-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"true\" required=\"true\" data-required=\"true\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span class"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-2238-3-0-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-2238-3-0-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\" title=\"Mechanical Engineering\">Mechanical Engineering<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"167\"><span aria-hidden"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__clear",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"167\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "LanguageSelect an option",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField AutoCompleteField fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer629-1-sample",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField AutoCompleteField fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer629-1-sample\" data-schema-field-id=\"26\" data-samplerow=\"1\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"629-1-sample\" id=\"629-1-sample-label\">Language<span id=\"629-1-sample-label"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_629-1-sample",
+      "outerHTML": "<div id=\"ui-widget_629-1-sample\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"629-1-sample-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"></div><select name=\"629-1-sample\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteFi"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "629-1-sample",
+      "outerHTML": "<select name=\"629-1-sample\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"629-1-sample\" data-select2-id=\"629-1-sample\" aria-hidden=\"true\"><option data-select2-id=\"148\"></option></select>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default\" dir=\"ltr\" data-select2-id=\"147\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container629-1-sample\" role=\"combobox\" aria-label"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container629-1-sample\" role=\"combobox\" aria-labelledby=\"629-1-sample-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"0"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container629-1-sample",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container629-1-sample\" role=\"combobox\" aria-labelledby=\"629-1-sample-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\">"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-629-1-sample-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-629-1-sample-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\"><span class=\"select2-selection__placeholder WizardFieldInput\">Select an option</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__placeholder WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__placeholder WizardFieldInput\">Select an option</span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "Written Level",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer629-2-sample",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer629-2-sample\" data-schema-field-id=\"27\" data-samplerow=\"1\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"629-2-sample\" id=\"629-2-sample-label\">Written Level</label><select name=\"629-2-sample\" tabin"
+    },
+    {
+      "label": "Written Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "629-2-sample",
+      "outerHTML": "<select name=\"629-2-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-2-sample\" aria-labelledby=\"629-2-sample-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-2-sample_33\" class=\"WizardFieldInput\" value=\"33\">Nati"
+    },
+    {
+      "label": "Spoken Level",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer629-3-sample",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer629-3-sample\" data-schema-field-id=\"28\" data-samplerow=\"1\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"629-3-sample\" id=\"629-3-sample-label\">Spoken Level</label><select name=\"629-3-sample\" tabind"
+    },
+    {
+      "label": "Spoken Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "629-3-sample",
+      "outerHTML": "<select name=\"629-3-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-3-sample\" aria-labelledby=\"629-3-sample-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-3-sample_33\" class=\"WizardFieldInput\" value=\"33\">Nati"
+    },
+    {
+      "label": "Language\nEnglish",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField AutoCompleteField fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer629-1-0",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField AutoCompleteField fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer629-1-0\" data-schema-field-id=\"26\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"629-1-0\" id=\"629-1-0-label\">Language<span id=\"629-1-0-labelValue\" class=\"screenReaderVisibility\">E"
+    },
+    {
+      "label": "(no label)",
+      "tag": "DIV",
+      "className": "ui-widget AutocompleteSelectFieldUIWidget tc_formField",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "ui-widget_629-1-0",
+      "outerHTML": "<div id=\"ui-widget_629-1-0\" class=\"ui-widget AutocompleteSelectFieldUIWidget tc_formField\" lang=\"en\"><div id=\"629-1-0-liveContainer\" class=\"screenReaderVisibility\" aria-live=\"assertive\" aria-atomic=\"true\"><p>100 options available. Use the up and down keys to navigate. Press Enter to select an option"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "629-1-0",
+      "outerHTML": "<select name=\"629-1-0\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"629-1-0\" data-select2-id=\"629-1-0\" aria-hidden=\"true\"><option data-select2-id=\"150\"></option><option value=\"10\" data-select2-id=\"169\">English</option><"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2 select2-container WizardFieldInputContainer WizardFieldInput select2-container--default select2-container--below\" dir=\"ltr\" data-select2-id=\"149\" style=\"width: 100%;\"><span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container629-1-0\" role=\""
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "selection",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"selection\"><span class=\"select2-selection select2-selection--single select2Container629-1-0\" role=\"combobox\" aria-labelledby=\"629-1-0-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"0\" aria-dis"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection select2-selection--single select2Container629-1-0",
+      "role": "combobox",
+      "ariaHaspopup": "true",
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection select2-selection--single select2Container629-1-0\" role=\"combobox\" aria-labelledby=\"629-1-0-label\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-required=\"false\" required=\"false\" data-required=\"false\" aria-invalid=\"false\" tabindex=\"0\" aria-disabled=\"false\"><span clas"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__rendered WizardFieldInput",
+      "role": "textbox",
+      "ariaHaspopup": null,
+      "id": "select2-629-1-0-container",
+      "outerHTML": "<span class=\"select2-selection__rendered WizardFieldInput\" id=\"select2-629-1-0-container\" role=\"textbox\" aria-readonly=\"true\" tabindex=\"-1\" title=\"English\">English<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"171\"><span aria-hidden=\"true\">\u00d7</span></span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__clear",
+      "role": "button",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__clear\" role=\"button\" tabindex=\"-1\" data-select2-id=\"171\"><span aria-hidden=\"true\">\u00d7</span></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "select2-selection__arrow",
+      "role": "presentation",
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"select2-selection__arrow\" role=\"presentation\"><b role=\"presentation\"></b></span>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SPAN",
+      "className": "dropdown-wrapper",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "",
+      "outerHTML": "<span class=\"dropdown-wrapper\" aria-hidden=\"true\"></span>"
+    },
+    {
+      "label": "Written Level",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer629-2-0",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer629-2-0\" data-schema-field-id=\"27\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"629-2-0\" id=\"629-2-0-label\">Written Level</label><select name=\"629-2-0\" tabindex=\"0\" class=\" SelectFormField WizardF"
+    },
+    {
+      "label": "Written Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "629-2-0",
+      "outerHTML": "<select name=\"629-2-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-2-0\" aria-labelledby=\"629-2-0-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-2-0_33\" class=\"WizardFieldInput\" value=\"33\">Native</option><option i"
+    },
+    {
+      "label": "Spoken Level",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer629-3-0",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset\" id=\"fieldSpecContainer629-3-0\" data-schema-field-id=\"28\"><label class=\"WizardFieldLabel tc_formLabel\" for=\"629-3-0\" id=\"629-3-0-label\">Spoken Level</label><select name=\"629-3-0\" tabindex=\"0\" class=\" SelectFormField WizardFi"
+    },
+    {
+      "label": "Spoken Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "629-3-0",
+      "outerHTML": "<select name=\"629-3-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-3-0\" aria-labelledby=\"629-3-0-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-3-0_33\" class=\"WizardFieldInput\" value=\"33\">Native</option><option i"
+    },
+    {
+      "label": "Are you 18 years or older? *",
+      "tag": "DIV",
+      "className": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "fieldSpecContainer8283",
+      "outerHTML": "<div class=\"fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors\" id=\"fieldSpecContainer8283\"><label class=\"requiredField WizardFieldLabel tc_formLabel\" for=\"8283\" id=\"8283-label\">Are you 18 years or older?<span aria-hidden=\"true\" class=\"labelRequiredIcon\"> *</span></label><div><select nam"
+    },
+    {
+      "label": "Are you 18 years or older? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "role": null,
+      "ariaHaspopup": null,
+      "id": "8283",
+      "outerHTML": "<select name=\"8283\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"8283\" aria-labelledby=\"8283-label\" aria-describedby=\"8283-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Sel"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "WizardFieldHidden CheckBoxListFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessi",
+      "id": "40791",
+      "name": "40791[]",
+      "options": [
+        "Amazon Web Services",
+        "Anomaly detection",
+        "Apache Airflow",
+        "Apache Spark",
+        "API Design",
+        "Application Programming Interface Development",
+        "Architecture",
+        "Artificial Intelligence",
+        "Audit",
+        "Automation"
+      ],
+      "outerHTML": "<select name=\"40791[]\" tabindex=\"-1\" class=\"WizardFieldHidden CheckBoxListFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"40791\" multiple=\"\" data-select2-id=\"40791\" aria-hidden=\"true\"><option value=\"451\" selected=\"1\" data-select2-id=\"2\">Amazon Web Services</option><option value=\"349915\" selected=\"1\" data-select2-id=\"3\">Anomaly detection</option><option value=\"349916\" selected=\"1\" data-select2-id=\"4\">Apache Airflow</option><option value=\"500\" sel"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "WizardFieldHidden SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "663",
+      "name": "663",
+      "options": [
+        "",
+        "Indeed"
+      ],
+      "outerHTML": "<select name=\"663\" tabindex=\"-1\" class=\"WizardFieldHidden SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"663\" data-select2-id=\"663\" aria-hidden=\"true\"><option data-select2-id=\"134\"></option><option value=\"60\" selected=\"1\" data-select2-id=\"135\">Indeed</option></select>"
+    },
+    {
+      "label": "Pronouns",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "616",
+      "name": "616",
+      "options": [
+        "Select an option",
+        "Any Pronoun",
+        "He/Him/His",
+        "He/They",
+        "Prefer Not To Say",
+        "She/Her/Hers",
+        "She/They",
+        "They/He",
+        "They/She",
+        "They/Them/Theirs"
+      ],
+      "outerHTML": "<select name=\"616\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"616\" data-hiddenvalue=\"\" aria-labelledby=\"616-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"616_6553\" class=\"WizardFieldInput\" value=\"6553\">Any Pronoun</option><option id=\"616_6549\" class=\"WizardFieldInput\" value=\"6549\">He/Him/His</option><option id=\"616_6554\" class=\"WizardFieldInput\" value=\"6554\">He/They</option><option id=\"616_214773\" class=\"WizardFiel"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "fieldSpec--odd SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "6377",
+      "name": "6377",
+      "options": [
+        "",
+        "United States of America (+1)"
+      ],
+      "outerHTML": "<select name=\"6377\" tabindex=\"-1\" class=\"fieldSpec--odd SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"6377\" data-select2-id=\"6377\" aria-hidden=\"true\"><option data-select2-id=\"138\"></option><option value=\"239669\" data-select2-id=\"173\">United States of America (+1)</option></select>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "countryFieldSelect WizardFieldInputContainer WizardFieldInput",
+      "id": "170",
+      "name": "170",
+      "options": [
+        "Select a country",
+        "Afghanistan",
+        "Albania",
+        "Algeria",
+        "American Samoa",
+        "Andorra",
+        "Angola",
+        "Anguilla",
+        "Antarctica",
+        "Antigua and Barbuda"
+      ],
+      "outerHTML": "<select id=\"170\" class=\"countryFieldSelect WizardFieldInputContainer WizardFieldInput\" name=\"170\" tabindex=\"0\" aria-required=\"true\" required=\"true\" data-required=\"true\" data-country-type=\"1\" aria-invalid=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select a country</option><option class=\"WizardFieldInput\" value=\"1\">Afghanistan</option><option class=\"WizardFieldInput\" value=\"3\">Albania</option><option class=\"WizardFieldInput\" value=\"4\">Algeria</option><option class=\"WizardFieldInput\" value=\"5"
+    },
+    {
+      "label": "State",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "169",
+      "name": "169",
+      "options": [
+        "Select an option",
+        "Alabama",
+        "Alaska",
+        "American Samoa",
+        "Arizona",
+        "Arkansas",
+        "California",
+        "Colorado",
+        "Connecticut",
+        "Delaware"
+      ],
+      "outerHTML": "<select name=\"169\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"169\" data-hiddenvalue=\"\" aria-labelledby=\"169-label\"><option class=\"WizardFieldInput\" value=\"\" selected=\"selected\">Select an option</option><option class=\"WizardFieldInput\" value=\"4799\">Alabama</option><option class=\"WizardFieldInput\" value=\"4798\">Alaska</option><option class=\"WizardFieldInput\" value=\"4801\">American Samoa</option><option class=\"WizardFieldInput\" value=\"4802\">Arizona</option><o"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "172-3-sample",
+      "name": "172-3-sample",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"172-3-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-sample\" aria-labelledby=\"172-3-sample-label\" data-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-sample_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"172-3-sample_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "172-3-0",
+      "name": "172-3-0",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"172-3-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-0\" aria-labelledby=\"172-3-0-label\" aria-describedby=\"172-3-0-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-0_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"172-3-0_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "172-3-1",
+      "name": "172-3-1",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"172-3-1\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-1\" aria-labelledby=\"172-3-1-label\" aria-describedby=\"172-3-1-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-1_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"172-3-1_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "172-3-2",
+      "name": "172-3-2",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"172-3-2\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-2\" aria-labelledby=\"172-3-2-label\" aria-describedby=\"172-3-2-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-2_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"172-3-2_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "172-3-3",
+      "name": "172-3-3",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"172-3-3\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-3\" aria-labelledby=\"172-3-3-label\" aria-describedby=\"172-3-3-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-3_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"172-3-3_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "172-3-4",
+      "name": "172-3-4",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"172-3-4\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-4\" aria-labelledby=\"172-3-4-label\" aria-describedby=\"172-3-4-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-4_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"172-3-4_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    },
+    {
+      "label": "Is Current Position? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "172-3-5",
+      "name": "172-3-5",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"172-3-5\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"172-3-5\" aria-labelledby=\"172-3-5-label\" aria-describedby=\"172-3-5-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"172-3-5_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"172-3-5_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    },
+    {
+      "label": "Degree Type *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "2238-1-sample",
+      "name": "2238-1-sample",
+      "options": [
+        "Select an option",
+        "Diploma",
+        "Associate's Degree/Diploma",
+        "Bachelor's Degree",
+        "LL.B",
+        "Master's Degree",
+        "Master of Business Administration",
+        "MPhil",
+        "LL.M",
+        "Graduate Diploma"
+      ],
+      "outerHTML": "<select name=\"2238-1-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"2238-1-sample\" aria-labelledby=\"2238-1-sample-label\" data-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"2238-1-sample_6558\" class=\"WizardFieldInput\" value=\"6558\">Diploma</option><option id=\"2238-1-sample_6559\" class=\"WizardFieldInput\" value=\"6559\">Associate's Degree/Diploma</option><option id=\"2238-1-sample_6560\" class=\"WizardFieldInpu"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "2238-2-sample",
+      "name": "2238-2-sample",
+      "options": [
+        ""
+      ],
+      "outerHTML": "<select name=\"2238-2-sample\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-2-sample\" data-select2-id=\"2238-2-sample\" aria-hidden=\"true\"><option data-select2-id=\"140\"></option></select>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "2238-3-sample",
+      "name": "2238-3-sample",
+      "options": [
+        ""
+      ],
+      "outerHTML": "<select name=\"2238-3-sample\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-3-sample\" data-select2-id=\"2238-3-sample\" aria-hidden=\"true\"><option data-select2-id=\"142\"></option></select>"
+    },
+    {
+      "label": "Degree Type *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "2238-1-0",
+      "name": "2238-1-0",
+      "options": [
+        "Select an option",
+        "Diploma",
+        "Associate's Degree/Diploma",
+        "Bachelor's Degree",
+        "LL.B",
+        "Master's Degree",
+        "Master of Business Administration",
+        "MPhil",
+        "LL.M",
+        "Graduate Diploma"
+      ],
+      "outerHTML": "<select name=\"2238-1-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"2238-1-0\" aria-labelledby=\"2238-1-0-label\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"2238-1-0_6558\" class=\"WizardFieldInput\" value=\"6558\">Diploma</option><option id=\"2238-1-0_6559\" class=\"WizardFieldInput\" value=\"6559\">Associate's Degree/Diploma</option><option id=\"2238-1-0_6560\" class=\"WizardFi"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "2238-2-0",
+      "name": "2238-2-0",
+      "options": [
+        "",
+        "University of California-Los Angeles"
+      ],
+      "outerHTML": "<select name=\"2238-2-0\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-2-0\" data-select2-id=\"2238-2-0\" aria-hidden=\"true\"><option data-select2-id=\"144\"></option><option value=\"131995\" data-select2-id=\"162\">University of California-Los Angeles</option></select>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "2238-3-0",
+      "name": "2238-3-0",
+      "options": [
+        "",
+        "Mechanical Engineering"
+      ],
+      "outerHTML": "<select name=\"2238-3-0\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"2238-3-0\" data-select2-id=\"2238-3-0\" aria-hidden=\"true\"><option data-select2-id=\"146\"></option><option value=\"364893\" data-select2-id=\"165\">Mechanical Engineering</option></select>"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "629-1-sample",
+      "name": "629-1-sample",
+      "options": [
+        ""
+      ],
+      "outerHTML": "<select name=\"629-1-sample\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"629-1-sample\" data-select2-id=\"629-1-sample\" aria-hidden=\"true\"><option data-select2-id=\"148\"></option></select>"
+    },
+    {
+      "label": "Written Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "629-2-sample",
+      "name": "629-2-sample",
+      "options": [
+        "Select an option",
+        "Native",
+        "Fluent",
+        "Business Fluent",
+        "Conversational"
+      ],
+      "outerHTML": "<select name=\"629-2-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-2-sample\" aria-labelledby=\"629-2-sample-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-2-sample_33\" class=\"WizardFieldInput\" value=\"33\">Native</option><option id=\"629-2-sample_34\" class=\"WizardFieldInput\" value=\"34\">Fluent</option><option id=\"629-2-sample_35\" class=\"WizardFieldInput\" value=\"35\">Business Fluent</option><option id=\"629-2-sa"
+    },
+    {
+      "label": "Spoken Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "629-3-sample",
+      "name": "629-3-sample",
+      "options": [
+        "Select an option",
+        "Native",
+        "Fluent",
+        "Business Fluent",
+        "Conversational"
+      ],
+      "outerHTML": "<select name=\"629-3-sample\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-3-sample\" aria-labelledby=\"629-3-sample-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-3-sample_33\" class=\"WizardFieldInput\" value=\"33\">Native</option><option id=\"629-3-sample_34\" class=\"WizardFieldInput\" value=\"34\">Fluent</option><option id=\"629-3-sample_35\" class=\"WizardFieldInput\" value=\"35\">Business Fluent</option><option id=\"629-3-sa"
+    },
+    {
+      "label": "(no label)",
+      "tag": "SELECT",
+      "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible",
+      "id": "629-1-0",
+      "name": "629-1-0",
+      "options": [
+        "",
+        "English"
+      ],
+      "outerHTML": "<select name=\"629-1-0\" tabindex=\"-1\" class=\"SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select2-hidden-accessible\" id=\"629-1-0\" data-select2-id=\"629-1-0\" aria-hidden=\"true\"><option data-select2-id=\"150\"></option><option value=\"10\" data-select2-id=\"169\">English</option></select>"
+    },
+    {
+      "label": "Written Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "629-2-0",
+      "name": "629-2-0",
+      "options": [
+        "Select an option",
+        "Native",
+        "Fluent",
+        "Business Fluent",
+        "Conversational"
+      ],
+      "outerHTML": "<select name=\"629-2-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-2-0\" aria-labelledby=\"629-2-0-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-2-0_33\" class=\"WizardFieldInput\" value=\"33\">Native</option><option id=\"629-2-0_34\" class=\"WizardFieldInput\" value=\"34\">Fluent</option><option id=\"629-2-0_35\" class=\"WizardFieldInput\" value=\"35\">Business Fluent</option><option id=\"629-2-0_226964\" class=\"WizardFieldInpu"
+    },
+    {
+      "label": "Spoken Level",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "629-3-0",
+      "name": "629-3-0",
+      "options": [
+        "Select an option",
+        "Native",
+        "Fluent",
+        "Business Fluent",
+        "Conversational"
+      ],
+      "outerHTML": "<select name=\"629-3-0\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"629-3-0\" aria-labelledby=\"629-3-0-label\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"629-3-0_33\" class=\"WizardFieldInput\" value=\"33\">Native</option><option id=\"629-3-0_34\" class=\"WizardFieldInput\" value=\"34\">Fluent</option><option id=\"629-3-0_35\" class=\"WizardFieldInput\" value=\"35\">Business Fluent</option><option id=\"629-3-0_226964\" class=\"WizardFieldInpu"
+    },
+    {
+      "label": "Are you 18 years or older? *",
+      "tag": "SELECT",
+      "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+      "id": "8283",
+      "name": "8283",
+      "options": [
+        "Select an option",
+        "Yes",
+        "No"
+      ],
+      "outerHTML": "<select name=\"8283\" tabindex=\"0\" class=\" SelectFormField WizardFieldInputContainer WizardFieldInput\" id=\"8283\" aria-labelledby=\"8283-label\" aria-describedby=\"8283-errorMessage\" aria-invalid=\"true\" data-required=\"true\" required=\"true\" aria-required=\"true\"><option class=\"WizardFieldInput\" value=\"\">Select an option</option><option id=\"8283_37\" class=\"WizardFieldInput\" value=\"37\">Yes</option><option id=\"8283_38\" class=\"WizardFieldInput\" value=\"38\">No</option></select>"
+    }
+  ],
+  "fields": [
+    {
+      "label": "Employer (hidden)",
+      "containerClass": "fieldSpec WizardFieldHidden TextField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": "WizardFieldHidden TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "40812"
+        }
+      ]
+    },
+    {
+      "label": "Position Title (hidden)",
+      "containerClass": "fieldSpec WizardFieldHidden TextField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": "WizardFieldHidden TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "40813"
+        }
+      ]
+    },
+    {
+      "label": "Skills (hidden)",
+      "containerClass": "fieldSpec WizardFieldHidden CheckBoxListFormField AutoCompleteField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-multiple",
+          "className": "WizardFieldHidden CheckBoxListFormField AutoCompleteField AutocompleteSelectFiel",
+          "name": "40791[]"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--multiple select2Container40791",
+          "name": ""
+        },
+        {
+          "tag": "INPUT",
+          "type": "search",
+          "className": "select2-search__field",
+          "name": "40791-search__field"
+        }
+      ]
+    },
+    {
+      "label": "Automated Source Picker (hidden)Indeed",
+      "containerClass": "fieldSpec WizardFieldHidden SelectFormField AutoCompleteField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "WizardFieldHidden SelectFormField AutoCompleteField AutocompleteSelectFieldChild",
+          "name": "663"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container663",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "First Name *",
+      "containerClass": "fieldSpec fieldSpec--odd TextField isRequired fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": "fieldSpec--odd TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "162"
+        }
+      ]
+    },
+    {
+      "label": "Last Name *",
+      "containerClass": "fieldSpec fieldSpec--even TextField isRequired fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": "fieldSpec--even TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "163"
+        }
+      ]
+    },
+    {
+      "label": "Pronouns",
+      "containerClass": "fieldSpec SelectFormField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "616"
+        }
+      ]
+    },
+    {
+      "label": "Email (Username) *",
+      "containerClass": "fieldSpec EmailField isRequired fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "email",
+          "className": " EmailField WizardFieldInputContainer WizardFieldInput",
+          "name": "2700"
+        }
+      ]
+    },
+    {
+      "label": "Password *",
+      "containerClass": "fieldSpec fieldSpec--odd PasswordField isRequired fieldSpecPadder hasErrors",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "password",
+          "className": "fieldSpec--odd PasswordField WizardFieldInputContainer WizardFieldInput",
+          "name": "796"
+        }
+      ]
+    },
+    {
+      "label": "Confirm Password *",
+      "containerClass": "fieldSpec fieldSpec--even PasswordField isRequired fieldSpecPadder hasErrors",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "password",
+          "className": "fieldSpec--even PasswordField WizardFieldInputContainer WizardFieldInput",
+          "name": "797"
+        }
+      ]
+    },
+    {
+      "label": "Country/Territory Code *\nUnited States of America (+1)",
+      "containerClass": "fieldSpec fieldSpec--odd SelectFormField AutoCompleteField isRequired fieldSpecPadder hasErrors",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "fieldSpec--odd SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtm",
+          "name": "6377"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container6377",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "Primary Phone Number *",
+      "containerClass": "fieldSpec fieldSpec--even TextField isRequired fieldSpecPadder hasErrors",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "tel",
+          "className": "fieldSpec--even TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "617"
+        }
+      ]
+    },
+    {
+      "label": "Address",
+      "containerClass": "fieldSpec StreetField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " StreetField WizardFieldInputContainer WizardFieldInput",
+          "name": "251"
+        }
+      ]
+    },
+    {
+      "label": "Country/Territory of Residence *",
+      "containerClass": "fieldSpec CountryField isRequired fieldSpecPadder hasErrors",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "countryFieldSelect WizardFieldInputContainer WizardFieldInput",
+          "name": "170"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "countryField1"
+        }
+      ]
+    },
+    {
+      "label": "State",
+      "containerClass": "fieldSpec SelectFormField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "169"
+        }
+      ]
+    },
+    {
+      "label": "City",
+      "containerClass": "fieldSpec CityField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " CityField WizardFieldInputContainer WizardFieldInput",
+          "name": "168"
+        }
+      ]
+    },
+    {
+      "label": "Postal Code",
+      "containerClass": "fieldSpec PostalCodeField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " PostalCodeField WizardFieldInputContainer WizardFieldInput",
+          "name": "39505"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec fieldSpec--label--hidden MultipleDatasetEntryFormField--cols2 datasetField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-sample"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-sample"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-sample"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-sample"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-sample"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "172-5-sample_hidden"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-0"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "172-5-0_hidden"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-1"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-1"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-1"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-1"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-1"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-2"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-2"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-2"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-2"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-2"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-3"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-3"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-3"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-3"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-3"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-4"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-4"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-4"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-4"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-4"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-5"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-5"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-5"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-5"
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-5"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "multipleDatasetEntry_172_rowOffset"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-sample"
+        }
+      ]
+    },
+    {
+      "label": "Position Title *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-sample"
+        }
+      ]
+    },
+    {
+      "label": "Is Current Position? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-sample"
+        }
+      ]
+    },
+    {
+      "label": "Start Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-sample"
+        }
+      ]
+    },
+    {
+      "label": "End Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-sample"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "172-5-sample_hidden"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-0"
+        }
+      ]
+    },
+    {
+      "label": "Position Title *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-0"
+        }
+      ]
+    },
+    {
+      "label": "Is Current Position? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-0"
+        }
+      ]
+    },
+    {
+      "label": "Start Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-0"
+        }
+      ]
+    },
+    {
+      "label": "End Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "172-5-0_hidden"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-1"
+        }
+      ]
+    },
+    {
+      "label": "Position Title *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-1"
+        }
+      ]
+    },
+    {
+      "label": "Is Current Position? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-1"
+        }
+      ]
+    },
+    {
+      "label": "Start Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-1"
+        }
+      ]
+    },
+    {
+      "label": "End Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-1"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-2"
+        }
+      ]
+    },
+    {
+      "label": "Position Title *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-2"
+        }
+      ]
+    },
+    {
+      "label": "Is Current Position? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-2"
+        }
+      ]
+    },
+    {
+      "label": "Start Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-2"
+        }
+      ]
+    },
+    {
+      "label": "End Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-2"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-3"
+        }
+      ]
+    },
+    {
+      "label": "Position Title *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-3"
+        }
+      ]
+    },
+    {
+      "label": "Is Current Position? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-3"
+        }
+      ]
+    },
+    {
+      "label": "Start Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-3"
+        }
+      ]
+    },
+    {
+      "label": "End Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-3"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-4"
+        }
+      ]
+    },
+    {
+      "label": "Position Title *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-4"
+        }
+      ]
+    },
+    {
+      "label": "Is Current Position? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-4"
+        }
+      ]
+    },
+    {
+      "label": "Start Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-4"
+        }
+      ]
+    },
+    {
+      "label": "End Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-4"
+        }
+      ]
+    },
+    {
+      "label": "Company Name *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-1-5"
+        }
+      ]
+    },
+    {
+      "label": "Position Title *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-2-5"
+        }
+      ]
+    },
+    {
+      "label": "Is Current Position? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-3-5"
+        }
+      ]
+    },
+    {
+      "label": "Start Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-4-5"
+        }
+      ]
+    },
+    {
+      "label": "End Date *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "172-5-5"
+        }
+      ]
+    },
+    {
+      "label": "Degree Type *",
+      "containerClass": "fieldSpec fieldSpec--label--hidden MultipleDatasetEntryFormField--cols2 datasetField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-1-sample"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-2-sample"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-2-sample",
+          "name": ""
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-5-sample"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "2238-5-sample_hidden"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-3-sample"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-3-sample",
+          "name": ""
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-4-sample"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-1-0"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-2-0"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-2-0",
+          "name": ""
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-5-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "2238-5-0_hidden"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-3-0"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-3-0",
+          "name": ""
+        },
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-4-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "multipleDatasetEntry_2238_rowOffset"
+        }
+      ]
+    },
+    {
+      "label": "Degree Type *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-1-sample"
+        }
+      ]
+    },
+    {
+      "label": "School *Select an option",
+      "containerClass": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-2-sample"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-2-sample",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "If none of the above, please specify below: *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-5-sample"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "2238-5-sample_hidden"
+        }
+      ]
+    },
+    {
+      "label": "Field of Study *Select an option",
+      "containerClass": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-3-sample"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-3-sample",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "Graduation Month/Year *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-4-sample"
+        }
+      ]
+    },
+    {
+      "label": "Degree Type *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-1-0"
+        }
+      ]
+    },
+    {
+      "label": "School *\nUniversity of California-Los Angeles",
+      "containerClass": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-2-0"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-2-0",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "If none of the above, please specify below: *",
+      "containerClass": "fieldSpec TextField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-5-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "2238-5-0_hidden"
+        }
+      ]
+    },
+    {
+      "label": "Field of Study *\nMechanical Engineering",
+      "containerClass": "fieldSpec SelectFormField AutoCompleteField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "2238-3-0"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container2238-3-0",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "Graduation Month/Year *",
+      "containerClass": "fieldSpec DateFormField isRequired fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "month",
+          "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "2238-4-0"
+        }
+      ]
+    },
+    {
+      "label": "Last School Attended",
+      "containerClass": "fieldSpec WizardFieldHidden TextField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": "WizardFieldHidden TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "9994"
+        }
+      ]
+    },
+    {
+      "label": "LanguageSelect an option",
+      "containerClass": "fieldSpec fieldSpec--label--hidden MultipleDatasetEntryFormField--cols2 datasetField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "629-1-sample"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container629-1-sample",
+          "name": ""
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-2-sample"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-3-sample"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "629-1-0"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container629-1-0",
+          "name": ""
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-2-0"
+        },
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-3-0"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "multipleDatasetEntry_629_rowOffset"
+        }
+      ]
+    },
+    {
+      "label": "LanguageSelect an option",
+      "containerClass": "fieldSpec SelectFormField AutoCompleteField fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "629-1-sample"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container629-1-sample",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "Written Level",
+      "containerClass": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-2-sample"
+        }
+      ]
+    },
+    {
+      "label": "Spoken Level",
+      "containerClass": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-3-sample"
+        }
+      ]
+    },
+    {
+      "label": "Language\nEnglish",
+      "containerClass": "fieldSpec SelectFormField AutoCompleteField fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+          "name": "629-1-0"
+        },
+        {
+          "tag": "SPAN",
+          "type": "combobox",
+          "className": "select2-selection select2-selection--single select2Container629-1-0",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "label": "Written Level",
+      "containerClass": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-2-0"
+        }
+      ]
+    },
+    {
+      "label": "Spoken Level",
+      "containerClass": "fieldSpec SelectFormField fieldSpecPadder fieldSpec--in-dataset",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "629-3-0"
+        }
+      ]
+    },
+    {
+      "label": "URL",
+      "containerClass": "fieldSpec WebsiteField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " WebsiteField WizardFieldInputContainer WizardFieldInput",
+          "name": "622"
+        }
+      ]
+    },
+    {
+      "label": "Notes",
+      "containerClass": "fieldSpec TextField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "className": " TextField WizardFieldInputContainer WizardFieldInput",
+          "name": "623"
+        }
+      ]
+    },
+    {
+      "label": "Cover Letter or any additional file",
+      "containerClass": "fieldSpec FileSchemaField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "file_8154_fileNumber"
+        },
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "className": " FileSchemaField WizardFieldInputContainer WizardFieldInput",
+          "name": "file_8154"
+        }
+      ]
+    },
+    {
+      "label": "Are you 18 years or older? *",
+      "containerClass": "fieldSpec SelectFormField isRequired fieldSpecPadder hasErrors",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "SELECT",
+          "type": "select-one",
+          "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+          "name": "8283"
+        }
+      ]
+    },
+    {
+      "label": "I acknowledge and agree to the Careers Privacy Policy and th",
+      "containerClass": "fieldSpec AcceptanceCheckboxField isRequired fieldSpecPadder hasErrors",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "checkbox",
+          "className": "WizardFieldInput",
+          "name": "209"
+        },
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "209_unselectedIndicator"
+        }
+      ]
+    },
+    {
+      "label": "Job Variable",
+      "containerClass": "fieldSpec WizardFieldHidden JobVariableField fieldSpecPadder",
+      "containerTag": "DIV",
+      "inputTypes": [
+        {
+          "tag": "INPUT",
+          "type": "hidden",
+          "className": "",
+          "name": "11497"
+        }
+      ]
+    }
+  ],
+  "url": "https://bloomberg.avature.net/careers/Register?jobId=18119&source=Indeed",
+  "title": "Register | Bloomberg"
+}

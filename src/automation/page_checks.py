@@ -298,6 +298,21 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
             return None  # recovered
         console.print(f"  [yellow]Stored cookies expired for {get_site_domain(current_url)}[/]")
 
+    # --- ATS auto-register short-circuit ---
+    # If this domain supports auto-registration, don't try the alternate URL
+    # (which is a job board listing page, useless for ATS registration).
+    # Return REQUIRES_LOGIN so the kernel routes to DETECT_AUTH_TYPE → REGISTER.
+    # Use full hostname (not collapsed domain) so *.avature.net patterns match bloomberg.avature.net.
+    from urllib.parse import urlparse as _urlparse
+    from .account_registry import is_auto_register_allowed
+    _hostname = _urlparse(current_url).hostname or ""
+    if _hostname and is_auto_register_allowed(_hostname, settings or {}):
+        console.print(f"  [cyan]ATS domain -- skipping alternate URL, attempting auto-register flow[/]")
+        return StepResult(
+            result=HandlerResult.REQUIRES_LOGIN,
+            message=f"ATS login wall -- routing to auto-register for {_hostname}"
+        )
+
     # --- Alternate URL fallback ---
     if listing_url and listing_url != original_url:
         console.print(f"  [yellow]Login wall -- trying alternate URL: {listing_url[:60]}[/]")

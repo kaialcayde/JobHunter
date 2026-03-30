@@ -14,6 +14,7 @@
     //
     // SINGLE-JOB TESTING (debug loop)
     //   Apply Job (by ID)          apply to one specific job — prompts for ID
+    //   Apply Job --debug          same, but pauses after DOM pre-fill + each vision round for inspection
     //   Apply Job (next available) apply to next tailored job — no prompt
     //   Retry Failed Jobs          reset failed -> tailored so Apply Job can re-run them
     //
@@ -310,6 +311,22 @@
             "request": "launch",
             "module": "src",
             "args": ["apply-job"],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "console": "integratedTerminal",
+            "osx": {
+                "python": "${workspaceFolder}/venv/bin/python"
+            },
+            "windows": {
+                "python": "${workspaceFolder}/venv/Scripts/python.exe"
+            }
+        },
+        {
+            "name": "JobHunter: Apply Job --debug (pause after DOM fill, each vision round)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src",
+            "args": ["apply-job", "${input:jobId}", "--debug"],
             "cwd": "${workspaceFolder}",
             "python": "${workspaceFolder}/venv/bin/python",
             "console": "integratedTerminal",

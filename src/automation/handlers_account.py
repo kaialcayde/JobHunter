@@ -20,16 +20,17 @@ console = Console(force_terminal=True)
 # Auth-type detection
 # ------------------------------------------------------------------
 
-def handle_detect_auth_type(page, url: str, settings: dict) -> StepResult:
+def handle_detect_auth_type(page, url: str, settings: dict, account_registry=None) -> StepResult:
     """Determine if the current page is a login wall or a registration wall.
 
     Called when NAVIGATE returns REQUIRES_LOGIN. Differentiates:
     - Registration wall: "Create Account", "Sign Up", confirm-password field
-    - Login wall: standard sign-in form
+    - Login wall: standard sign-in form (attempts to navigate to registration page)
 
     Only attempts registration if auto_register is enabled AND domain is
     on the auto_register_domains allowlist.
     """
+    from urllib.parse import urlparse
     from .account_registry import is_auto_register_allowed
     from .page_checks import get_site_domain, detect_registration_wall
 
@@ -40,31 +41,180 @@ def handle_detect_auth_type(page, url: str, settings: dict) -> StepResult:
             message="auto_register is disabled"
         )
 
-    domain = get_site_domain(page.url)
+    # Use full hostname for pattern matching (*.avature.net won't match collapsed avature.net)
+    hostname = urlparse(page.url).hostname or ""
+    domain = get_site_domain(page.url)  # used as display/log key
 
-    if not is_auto_register_allowed(domain, settings):
+    if not is_auto_register_allowed(hostname, settings):
         return StepResult(
             result=HandlerResult.REQUIRES_LOGIN,
-            message=f"Domain {domain} not in auto_register_domains allowlist"
+            message=f"Domain {hostname} not in auto_register_domains allowlist"
         )
 
+    # Check for existing account first -- try login before attempting registration
+    if account_registry is not None and account_registry.has_account(hostname):
+        console.print(f"  [cyan]Existing account found for {domain} -- attempting registry login[/]")
+        return StepResult(
+            result=HandlerResult.REQUIRES_EXISTING_LOGIN,
+            metadata={"domain": hostname},
+            message=f"Existing account found for {domain} -- attempting login"
+        )
+
+    # Try to navigate to the registration/application form.
+    # Many ATS sites show a combined "Login OR Create Account" page. Always try to click
+    # a Create Account / Sign Up link first so we land on the actual form before deciding
+    # whether it's a registration form or a direct application form (e.g. Avature's
+    # "CREATE PROFILE" drops straight into the multi-step application, no separate
+    # account creation step + email verification).
+    REGISTER_LINK_TEXTS = [
+        "Create Profile", "Create Account", "Create an Account",
+        "Sign Up", "Register", "New User", "Join", "Get Started",
+    ]
+    for text in REGISTER_LINK_TEXTS:
+        for role in ("link", "button"):
+            try:
+                el = page.get_by_role(role, name=text, exact=False).first
+                if el.is_visible(timeout=500):
+                    el.click()
+                    try:
+                        page.wait_for_load_state("domcontentloaded", timeout=5000)
+                    except PlaywrightTimeoutError:
+                        pass
+                    # Check application form FIRST -- it's more specific than registration wall.
+                    # "Or Sign if you are already registered" contains "register" as a substring
+                    # which can falsely trigger detect_registration_wall on application pages.
+                    if _is_application_form(page):
+                        console.print(f"  [cyan]Navigated to application form on {domain} -- handing off to fill agent[/]")
+                        return StepResult(
+                            result=HandlerResult.SUCCESS,
+                            metadata={"domain": hostname},
+                            message=f"Navigated to application form on {domain}"
+                        )
+                    if detect_registration_wall(page):
+                        console.print(f"  [cyan]Navigated to registration page on {domain}[/]")
+                        return StepResult(
+                            result=HandlerResult.REQUIRES_REGISTRATION,
+                            metadata={"domain": hostname},
+                            message=f"Navigated to registration page on {domain}"
+                        )
+                    # Clicked but didn't land on a recognizable form -- keep searching
+            except Exception:
+                continue
+
+    # No navigation link found -- check if the current page IS already a registration form
     if detect_registration_wall(page):
         console.print(f"  [cyan]Registration wall detected on {domain} -- attempting auto-registration[/]")
         return StepResult(
             result=HandlerResult.REQUIRES_REGISTRATION,
-            metadata={"domain": domain},
+            metadata={"domain": hostname},
             message=f"Registration wall detected on {domain}"
         )
 
-    return StepResult(
-        result=HandlerResult.REQUIRES_LOGIN,
-        message=f"Login wall on {domain} (not a registration wall)"
-    )
+    return StepResult(result=HandlerResult.REQUIRES_LOGIN, message=f"Login wall on {domain} (not a registration wall)")
 
 
 # ------------------------------------------------------------------
 # Registration form fill
 # ------------------------------------------------------------------
+
+def _is_application_form(page) -> bool:
+    """Detect if the page is an application form (resume upload, personal info steps, etc.)
+    rather than an account registration form (email + password + confirm-password).
+
+    Used to distinguish ATS platforms like Avature that combine profile creation with
+    the application itself — no separate account registration + email verification needed.
+    """
+    try:
+        return page.evaluate("""() => {
+            const text = (document.body?.innerText || '').toLowerCase();
+            const hasFileUpload = !!document.querySelector('input[type="file"]');
+            const appSignals = ['upload your resume', 'upload resume', 'attach resume',
+                                'personal information', 'select your resume',
+                                'finalize application', 'work experience'];
+            const hasAppText = appSignals.some(s => text.includes(s));
+            const pwFields = document.querySelectorAll('input[type="password"]');
+            const isRegistrationForm = pwFields.length >= 2;  // confirm-password = registration
+            return (hasFileUpload || hasAppText) && !isRegistrationForm;
+        }""")
+    except Exception:
+        return False
+
+
+def handle_login_registry(page, domain: str, settings: dict, finder,
+                          account_registry, conn, app_id: int, job_id: int) -> StepResult:
+    """Log in to an ATS tenant portal using stored registry credentials.
+
+    Called when DETECT_AUTH_TYPE returns REQUIRES_EXISTING_LOGIN (account exists
+    in registry). Fills email + password and submits the login form.
+
+    Returns:
+        SUCCESS  -- login succeeded (kernel retries NAVIGATE)
+        FAILED   -- login failed (kernel routes to REGISTER to re-register)
+    """
+    from ..db import log_action
+
+    log_action(conn, "login_registry_start", f"Attempting registry login on {domain}", app_id, job_id)
+
+    creds = account_registry.get_credentials(domain)
+    if not creds:
+        logger.warning(f"handle_login_registry: no credentials for {domain}")
+        return StepResult(
+            result=HandlerResult.FAILED,
+            metadata={"domain": domain},
+            message=f"No credentials found for {domain}"
+        )
+
+    if finder:
+        email_el = finder.find_element(page, "email_field", domain)
+        if email_el:
+            try:
+                email_el.element.fill(creds["email"])
+            except Exception as e:
+                logger.debug(f"handle_login_registry: email fill failed: {e}")
+
+        pw_el = finder.find_element(page, "password_field", domain)
+        if pw_el:
+            try:
+                account_registry.fill_credential(page, pw_el.selector_used, "password", domain)
+            except Exception as e:
+                logger.debug(f"handle_login_registry: password fill failed: {e}")
+
+        submit_el = finder.find_element(page, "submit_button", domain)
+        if submit_el:
+            try:
+                submit_el.element.click()
+                try:
+                    page.wait_for_load_state("networkidle", timeout=5000)
+                except PlaywrightTimeoutError:
+                    pass
+            except Exception as e:
+                logger.debug(f"handle_login_registry: submit click failed: {e}")
+
+    # Check if login succeeded (no longer on login page)
+    from .detection import detect_login_page
+    if not detect_login_page(page):
+        account_registry.mark_active(domain)
+        log_action(conn, "login_registry_success", f"Registry login succeeded on {domain}", app_id, job_id)
+        console.print(f"  [green]Registry login succeeded on {domain}[/]")
+        return StepResult(
+            result=HandlerResult.SUCCESS,
+            metadata={"domain": domain},
+            message=f"Registry login succeeded on {domain}"
+        )
+
+    # Login failed -- kernel routes to REGISTER via FAILED transition
+    console.print(f"  [yellow]Registry login failed on {domain} -- will attempt re-registration[/]")
+    log_action(conn, "login_registry_failed", f"Registry login failed on {domain}", app_id, job_id)
+    try:
+        page.screenshot(path=f"data/logs/debug_login_registry_failed_{domain}.png")
+    except Exception:
+        pass
+    return StepResult(
+        result=HandlerResult.FAILED,
+        metadata={"domain": domain},
+        message=f"Registry login failed on {domain}"
+    )
+
 
 def handle_register(page, domain: str, settings: dict, finder,
                     account_registry, conn, app_id: int, job_id: int) -> StepResult:
@@ -83,9 +233,17 @@ def handle_register(page, domain: str, settings: dict, finder,
     platform = detect_ats_platform(domain)
     tenant = extract_tenant(domain, platform)
 
-    # Step 1: generate and persist credentials BEFORE touching the form
-    creds = account_registry.generate_credentials(domain, tenant=tenant, platform=platform)
-    log_action(conn, "register_start", f"Registering on {domain} (platform={platform})", app_id, job_id)
+    # Step 1: reuse existing credentials if present (e.g. fill_vision status from a prior partial run),
+    # otherwise generate fresh ones. This ensures the same password is used across retries.
+    existing = account_registry.get_credentials(domain)
+    if existing:
+        creds = existing
+        logger.debug(f"handle_register: reusing existing credentials for {domain}")
+        log_action(conn, "register_start", f"Registering on {domain} (reusing credentials)", app_id, job_id)
+    else:
+        use_alias = settings.get("automation", {}).get("use_email_aliases", False)
+        creds = account_registry.generate_credentials(domain, tenant=tenant, platform=platform, use_alias=use_alias)
+        log_action(conn, "register_start", f"Registering on {domain} (platform={platform})", app_id, job_id)
 
     # Step 2: load profile for name fields
     try:
@@ -167,7 +325,7 @@ def handle_register(page, domain: str, settings: dict, finder,
 
 def handle_verify_registration(page, domain: str, settings: dict,
                                 conn, app_id: int, job_id: int,
-                                account_registry) -> StepResult:
+                                account_registry, company_hint: str = None) -> StepResult:
     """Handle post-registration email verification (OTP or magic link).
 
     Uses the Phase 4 email poller if email_polling is enabled.
@@ -187,7 +345,7 @@ def handle_verify_registration(page, domain: str, settings: dict,
             poller.connect()
 
             # Try OTP first
-            code = poller.request_verification(domain, "otp", timeout=poll_timeout)
+            code = poller.request_verification(domain, "otp", timeout=poll_timeout, company_hint=company_hint)
             if code:
                 otp_field = find_otp_field(page)
                 if otp_field:

@@ -34,6 +34,7 @@ from .handlers import (
 )
 from .handlers_account import (
     handle_detect_auth_type,
+    handle_login_registry,
     handle_register,
     handle_verify_registration,
 )
@@ -57,6 +58,7 @@ class State(Enum):
     SOLVE_CAPTCHA = "solve_captcha"
     RECOVER_LOGIN = "recover_login"
     DETECT_AUTH_TYPE = "detect_auth_type"
+    LOGIN_REGISTRY = "login_registry"
     REGISTER = "register"
     VERIFY_REGISTRATION = "verify_registration"
     VERIFY = "verify"
@@ -128,9 +130,15 @@ class ApplicationKernel:
         (State.NAVIGATE, HandlerResult.FAILED_DEAD_PAGE): State.CLEANUP,
         (State.NAVIGATE, HandlerResult.FAILED_ERROR): State.CLEANUP,
 
-        # Auth-type detection: registration wall vs login wall
+        # Auth-type detection: registration wall vs login wall vs existing account
+        (State.DETECT_AUTH_TYPE, HandlerResult.SUCCESS): State.DETECT_STRATEGY,  # navigated to application form directly
         (State.DETECT_AUTH_TYPE, HandlerResult.REQUIRES_REGISTRATION): State.REGISTER,
+        (State.DETECT_AUTH_TYPE, HandlerResult.REQUIRES_EXISTING_LOGIN): State.LOGIN_REGISTRY,
         (State.DETECT_AUTH_TYPE, HandlerResult.REQUIRES_LOGIN): State.CLEANUP,
+
+        # Registry login: success retries job URL, failure falls through to fresh registration
+        (State.LOGIN_REGISTRY, HandlerResult.SUCCESS): State.NAVIGATE,
+        (State.LOGIN_REGISTRY, HandlerResult.FAILED): State.REGISTER,
 
         # Registration flow
         (State.REGISTER, HandlerResult.SUCCESS): State.VERIFY_REGISTRATION,
@@ -144,7 +152,7 @@ class ApplicationKernel:
         (State.ROUTE, HandlerResult.FAILED): State.CLEANUP,
         (State.ROUTE, HandlerResult.FAILED_DEAD_PAGE): State.CLEANUP,
         (State.ROUTE, HandlerResult.CAPTCHA_DETECTED): State.CLEANUP,
-        (State.ROUTE, HandlerResult.REQUIRES_LOGIN): State.CLEANUP,
+        (State.ROUTE, HandlerResult.REQUIRES_LOGIN): State.DETECT_AUTH_TYPE,  # ATS login wall after Apply click
         (State.ROUTE, HandlerResult.FAILED_ERROR): State.CLEANUP,
 
         (State.DETECT_STRATEGY, HandlerResult.SUCCESS): None,
@@ -252,6 +260,7 @@ class ApplicationKernel:
             State.SOLVE_CAPTCHA: self._handle_solve_captcha,
             State.RECOVER_LOGIN: self._handle_recover_login,
             State.DETECT_AUTH_TYPE: self._handle_detect_auth_type,
+            State.LOGIN_REGISTRY: self._handle_login_registry,
             State.REGISTER: self._handle_register,
             State.VERIFY_REGISTRATION: self._handle_verify_registration,
         }[state]
@@ -361,6 +370,7 @@ class ApplicationKernel:
         result = handle_fill_vision(
             ctx.page, ctx.job, ctx.settings, ctx.resume_file, ctx.cl_file,
             ctx.conn, ctx.app_id, ctx.job_id, ctx.app_dir, ctx.take_screenshot,
+            account_registry=ctx.account_registry,
         )
         if "page" in result.metadata:
             ctx.page = result.metadata["page"]
@@ -407,12 +417,21 @@ class ApplicationKernel:
                     ctx.account_registry = AccountRegistry()
                 except ValueError as e:
                     logger.warning(f"AccountRegistry init failed: {e}")
-        return handle_detect_auth_type(ctx.page, ctx.url, ctx.settings)
+        return handle_detect_auth_type(ctx.page, ctx.url, ctx.settings, ctx.account_registry)
+
+    def _handle_login_registry(self, ctx: KernelContext) -> StepResult:
+        """Log in using stored registry credentials."""
+        from urllib.parse import urlparse
+        domain = urlparse(ctx.page.url).hostname or ""
+        return handle_login_registry(
+            ctx.page, domain, ctx.settings, ctx.finder,
+            ctx.account_registry, ctx.conn, ctx.app_id, ctx.job_id,
+        )
 
     def _handle_register(self, ctx: KernelContext) -> StepResult:
         """Fill and submit the ATS registration form."""
-        from .page_checks import get_site_domain
-        domain = get_site_domain(ctx.page.url)
+        from urllib.parse import urlparse
+        domain = urlparse(ctx.page.url).hostname or ""
         return handle_register(
             ctx.page, domain, ctx.settings, ctx.finder,
             ctx.account_registry, ctx.conn, ctx.app_id, ctx.job_id,
@@ -420,11 +439,12 @@ class ApplicationKernel:
 
     def _handle_verify_registration(self, ctx: KernelContext) -> StepResult:
         """Handle post-registration email verification."""
-        from .page_checks import get_site_domain
-        domain = get_site_domain(ctx.page.url)
+        from urllib.parse import urlparse
+        domain = urlparse(ctx.page.url).hostname or ""
         return handle_verify_registration(
             ctx.page, domain, ctx.settings,
             ctx.conn, ctx.app_id, ctx.job_id, ctx.account_registry,
+            company_hint=ctx.company,
         )
 
     # --- Cleanup ---

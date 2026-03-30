@@ -358,7 +358,8 @@ def click_apply_button(page, finder=None):
     result = page.evaluate("""() => {
         const applyTexts = [
             'apply now', 'apply', 'apply for this job', 'apply for this position',
-            "i'm interested", 'im interested', 'submit application', 'start application'
+            "i'm interested", 'im interested', 'submit application', 'start application',
+            'continue application', 'continue your application', 'complete application'
         ];
 
         // Check links first
@@ -473,7 +474,7 @@ def click_next_button(page, finder=None) -> bool:
                 '[role="dialog"], .artdeco-modal'
             );
             const scope = (modal && modal.offsetWidth > 0) ? modal : document;
-            if (scope === document) {
+            if (scope === document && document.body) {
                 window.scrollTo(0, document.body.scrollHeight);
             }
 
@@ -494,7 +495,7 @@ def click_next_button(page, finder=None) -> bool:
                 }
             }
 
-            const textMatches = ['next', 'continue', 'review'];
+            const textMatches = ['next', 'continue', 'review', 'save and continue', 'save'];
             const buttons = scope.querySelectorAll('button, input[type="submit"], a');
             for (const btn of buttons) {
                 if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
@@ -515,7 +516,7 @@ def click_next_button(page, finder=None) -> bool:
     for frame in page.frames[1:]:
         try:
             clicked = frame.evaluate("""() => {
-                const textMatches = ['next', 'continue', 'review'];
+                const textMatches = ['next', 'continue', 'review', 'save and continue', 'save'];
                 const buttons = document.querySelectorAll('button, input[type="submit"], a');
                 for (const btn of buttons) {
                     if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
@@ -582,7 +583,7 @@ def click_submit_button(page, finder=None) -> bool:
                 '[role="dialog"], .artdeco-modal'
             );
             const scope = (modal && modal.offsetWidth > 0) ? modal : document;
-            if (scope === document) {
+            if (scope === document && document.body) {
                 window.scrollTo(0, document.body.scrollHeight);
             }
 

@@ -246,6 +246,50 @@ Amazon Jobs uses a multi-step application form (Contact info -> General question
 
 ---
 
+## Avature (avature.net)
+
+Platform module: none (create when needed)
+
+### Domain Pattern
+- `*.avature.net` (e.g. `bloomberg.avature.net`)
+- Each employer gets a subdomain tenant — treat each as a distinct account
+
+### Auth Flow
+Clicking Apply navigates to the job detail page, then redirects to a login page at `{tenant}.avature.net`. The user has no existing account — auto-registration is required.
+
+### Registration
+The login page has a "Create Account" or "Sign Up" link. `handle_detect_auth_type` clicks it to navigate to the registration form, then the standard `handle_register` fills name/email/password and submits.
+
+### Alternate URL Trap
+The job's `listing_url` often points to Indeed. If `try_recover_login` falls back to the Indeed URL, it hits a **Cloudflare CAPTCHA** (verified in `debug_no_submit.png` for job #280). The vision agent cannot complete this challenge.
+
+**Fix:** `try_recover_login` now short-circuits for any domain in `auto_register_domains` — skips the alternate URL entirely and returns `REQUIRES_LOGIN` so the kernel routes to `DETECT_AUTH_TYPE → REGISTER`.
+
+### Domain Collapse Gotcha
+`ATS_DOMAINS` contains `avature.net`, so `get_site_domain("bloomberg.avature.net")` collapses to `avature.net`. But `fnmatch.fnmatch("avature.net", "*.avature.net")` returns False (no prefix before the dot). All places that call `is_auto_register_allowed` or use the domain as an account registry key now use `urlparse(url).hostname` (full hostname) instead of the collapsed domain.
+
+### Account Registry Key
+`bloomberg.avature.net` is stored as the full hostname key — not `avature.net`. This prevents credential collisions between different employers using Avature.
+
+### Resume Upload Step (Upload-Only Page)
+Avature's first application step is a resume-upload-only page ("Select Your Resume"). It has a "From Device" file chooser button and a "CONTINUE" button — but NO visible text inputs. DOM pre-fill uploads the resume successfully, but the code did not click "Continue" afterward. The vision agent then started on the same upload step, looped for 9 rounds trying to re-upload and click Continue via coordinates — which doesn't work on Avature.
+
+**Fix:** After `handle_file_uploads()` in `handle_fill_vision`, count visible text-type inputs. If fewer than 2 are visible (upload-only step), call `click_next_button()` immediately. The page advances to Personal Information before the vision agent starts.
+
+**Root cause of coordinate click failure:** Avature's Continue button requires a Playwright native click (via `get_by_role` or `page.locator()`). Coordinate-based `page.mouse.click(x, y)` does not trigger the button's JS handler reliably.
+
+### Gmail `+` Aliases Normalized to Base Email
+Avature (and many ATS platforms) **normalize Gmail plus-addressing**: `kalcaydecl+avature-bloomberg@gmail.com` is treated as `kalcaydecl@gmail.com` for duplicate checking. When `use_email_aliases: true`, auto-registration attempts fail with "There's an existing record with that email" if the base email already has an account on the site.
+
+**Fix:** Keep `use_email_aliases: false` and manually seed the base email credentials via `python -m src set-account bloomberg.avature.net kalcaydecl@gmail.com Pog1ako1`. When registration detects "existing record", it switches to login and uses the stored credentials automatically.
+
+### Configuration
+- `selectors.py` `ATS_DOMAINS`: `avature.net` added
+- `account_registry.py` `_ATS_PATTERNS`: `"avature": [r"\.avature\.net$"]`
+- `settings.yaml` + `settings.example.yaml` `auto_register_domains`: `*.avature.net`
+
+---
+
 ## Indeed
 
 Platform module: none (create when needed)
@@ -370,6 +414,13 @@ Tracking click/navigation failures where clicking a button (Apply, Submit, Next)
 - **Type-loop detection gap:** The detection only checked for "re-fill"/"appears empty" keywords in reasoning, but Paylocity's model output uses "not filled"/"required but" phrasing instead.
 - **Fix applied:** Extended type-loop keyword matching to include "not filled" and "required but" patterns so the 4-round bypass triggers correctly.
 - **Further fix:** Added DOM fallback for `type` action: after coordinate-based typing, verify the field value via `_find_input_at_coords()`. If empty, use `page.fill()` or JS value dispatch with React-compatible events (`nativeSetter.call()` + `input`/`change`/`blur` events). DOM fill is now tried FIRST before coordinate typing.
+
+### Bloomberg/Avature — Alternate URL Leads to Cloudflare CAPTCHA
+
+- **URL pattern:** `bloomberg.avature.net/...`
+- **Symptom:** Vision agent interacted with a Cloudflare challenge page (1 action, status=done). "Application submitted via DOM click!" rejected by verify — job marked failed.
+- **Root cause:** `try_recover_login` tried the `listing_url` (Indeed) before checking if the ATS domain supports auto-registration. Indeed responded with a Cloudflare interstitial, not an application form.
+- **Fix applied:** `try_recover_login` now short-circuits for any domain matching `auto_register_domains` patterns — returns `REQUIRES_LOGIN` immediately so kernel routes to `DETECT_AUTH_TYPE` instead of falling through to the alternate URL.
 
 ### Greenhouse — React-Select Dropdowns Stay Empty After Select Action
 

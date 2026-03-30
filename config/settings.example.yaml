@@ -57,7 +57,7 @@ automation:
   vision_model: "gpt-4o"
   vision_logging: true             # log each vision agent step to console
   vision_detail: "high"            # "low" = 85 tokens/image, "high" = 12-17K tokens/image
-  fabricate_answers: false          # generate answers for subjective questions (e.g. "why this company?") from resume/cover letter. Does NOT fabricate skills/experience
+  fabricate_answers: true          # generate answers for subjective questions (e.g. "why this company?") from resume/cover letter. Does NOT fabricate skills/experience
   manual_login: false              # pause and open browser for manual login when login is required
   manual_otp: false                # prompt in terminal for OTP/verification codes
   manual_verification: false       # prompt in terminal for general verification challenges
@@ -73,6 +73,7 @@ automation:
 
   # ATS Account Creation (Phase 6)
   auto_register: true            # auto-create accounts on ATS tenant platforms that require registration
+  use_email_aliases: false        # use plus-alias emails (user+tag@gmail.com) for ATS accounts; false = use main email
   auto_register_domains:          # domain patterns allowed for auto-registration (requires REGISTRY_KEY in .env)
     - "*.myworkdayjobs.com"
     - "*.wd*.myworkday.com"
@@ -80,6 +81,7 @@ automation:
     - "*.greenhouse.io"
     - "*.smartrecruiters.com"
     - "*.taleo.net"
+    - "*.avature.net"
 
 scheduler:
   enabled: true

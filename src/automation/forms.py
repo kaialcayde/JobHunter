@@ -300,6 +300,48 @@ def dom_select_fallback(page, x: int, y: int, text: str) -> bool:
         except Exception as e:
             logger.debug(f"React-Select fallback failed: {e}")
 
+    # Last resort: find a hidden native <select> by proximity to coordinates.
+    # Some ATS platforms (e.g. Avature) wrap a hidden <select> inside a custom UI overlay.
+    # elementFromPoint can't find hidden elements, so we search all <select>s by layout position.
+    try:
+        result = page.evaluate("""({x, y, text}) => {
+            const selects = Array.from(document.querySelectorAll('select'));
+            const textLower = text.toLowerCase();
+            let best = null, bestDist = Infinity;
+            for (const sel of selects) {
+                // Walk up to find a visible ancestor for position reference
+                let posEl = sel;
+                while (posEl && posEl.getBoundingClientRect().width === 0) {
+                    posEl = posEl.parentElement;
+                }
+                if (!posEl) continue;
+                const rect = posEl.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dist = Math.hypot(cx - x, cy - y);
+                if (dist < 150 && dist < bestDist) {
+                    // Check if any option matches the desired text
+                    const match = Array.from(sel.options).find(o =>
+                        o.text.trim().toLowerCase().includes(textLower) ||
+                        textLower.includes(o.text.trim().toLowerCase())
+                    );
+                    if (match) { best = {sel, value: match.value}; bestDist = dist; }
+                }
+            }
+            if (!best) return null;
+            const proto = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+            if (proto && proto.set) proto.set.call(best.sel, best.value);
+            else best.sel.value = best.value;
+            best.sel.dispatchEvent(new Event('change', {bubbles: true}));
+            best.sel.dispatchEvent(new Event('input', {bubbles: true}));
+            return best.value;
+        }""", {"x": x, "y": y, "text": text})
+        if result:
+            page.wait_for_timeout(300)
+            return True
+    except Exception as e:
+        logger.debug(f"Hidden select proximity search failed: {e}")
+
     return False
 
 
@@ -954,31 +996,52 @@ def handle_file_uploads(page, resume_file: Optional[Path], cl_file: Optional[Pat
         }""", file_input)
 
         try:
+            # Determine which file to upload for this input
+            upload_file: Optional[Path] = None
+            upload_label = "file"
             if any(kw in label for kw in ["resume", "cv", "curriculum"]):
-                if resume_file and resume_file.exists():
-                    file_input.set_input_files(str(resume_file))
-                    page.wait_for_timeout(800)
-                    console.print(f"  Uploaded resume: {resume_file.name}")
+                upload_file = resume_file
+                upload_label = "resume"
             elif any(kw in label for kw in ["cover letter", "cover_letter", "coverletter"]):
-                if cl_file and cl_file.exists():
-                    file_input.set_input_files(str(cl_file))
-                    page.wait_for_timeout(800)
-                    console.print(f"  Uploaded cover letter: {cl_file.name}")
+                upload_file = cl_file
+                upload_label = "cover letter"
             else:
-                # Generic file upload -- use position: first=resume, second=cover letter
-                if generic_upload_idx == 0 and resume_file and resume_file.exists():
-                    file_input.set_input_files(str(resume_file))
-                    page.wait_for_timeout(800)
-                    console.print(f"  Uploaded resume (position {generic_upload_idx + 1}): {resume_file.name}")
-                elif generic_upload_idx == 1 and cl_file and cl_file.exists():
-                    file_input.set_input_files(str(cl_file))
-                    page.wait_for_timeout(800)
-                    console.print(f"  Uploaded cover letter (position {generic_upload_idx + 1}): {cl_file.name}")
-                elif resume_file and resume_file.exists():
-                    file_input.set_input_files(str(resume_file))
-                    page.wait_for_timeout(800)
-                    console.print(f"  Uploaded file (defaulting to resume): {resume_file.name}")
+                # Generic: position-based
+                if generic_upload_idx == 0:
+                    upload_file = resume_file
+                    upload_label = f"resume (position {generic_upload_idx + 1})"
+                elif generic_upload_idx == 1:
+                    upload_file = cl_file
+                    upload_label = f"cover letter (position {generic_upload_idx + 1})"
+                else:
+                    upload_file = resume_file
+                    upload_label = "file (defaulting to resume)"
                 generic_upload_idx += 1
+
+            if upload_file and upload_file.exists():
+                # Try expect_file_chooser first: finds visible trigger button near the input
+                # and intercepts the OS dialog that platforms like Avature open on click.
+                uploaded = False
+                trigger_texts = [
+                    "From Device", "Browse", "Choose File", "Upload", "Attach", "Select File",
+                ]
+                for text in trigger_texts:
+                    try:
+                        trigger = page.get_by_role("button", name=text, exact=False).first
+                        if trigger.is_visible(timeout=500):
+                            with page.expect_file_chooser(timeout=5000) as fc_info:
+                                trigger.click()
+                            fc_info.value.set_files(str(upload_file))
+                            page.wait_for_timeout(4000)
+                            console.print(f"  Uploaded {upload_label} via file chooser ({text}): {upload_file.name}")
+                            uploaded = True
+                            break
+                    except Exception:
+                        continue
+                if not uploaded:
+                    file_input.set_input_files(str(upload_file))
+                    page.wait_for_timeout(1500)
+                    console.print(f"  Uploaded {upload_label}: {upload_file.name}")
         except Exception as e:
             if "navigation" in str(e).lower() or "destroyed" in str(e).lower():
                 console.print(f"  [dim]Upload triggered page navigation -- continuing[/]")

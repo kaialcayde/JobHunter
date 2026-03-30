@@ -22,6 +22,7 @@ class Personal(BaseModel):
     phone: str = ""
     address: Address = Address()
     date_of_birth: str = ""
+    languages: list[str] = []
 
     @field_validator("email")
     @classmethod
@@ -86,6 +87,13 @@ class WorkExperience(BaseModel):
     description: str = ""
 
 
+class Project(BaseModel):
+    name: str = ""
+    subtitle: str = ""        # short descriptor, e.g. "Automated Application Pipeline"
+    date: str = ""            # free-form, e.g. "March 2026" or "October – December 2024"
+    description: str = ""     # one or more bullet points / sentences
+
+
 class Skills(BaseModel):
     languages: list[str] = []
     frameworks: list[str] = []
@@ -140,6 +148,7 @@ class Profile(BaseModel):
     work_authorization: WorkAuthorization = WorkAuthorization()
     education: list[Education] = []
     work_experience: list[WorkExperience] = []
+    projects: list[Project] = []
     skills: Skills = Skills()
     links: Links = Links()
     preferences: Preferences = Preferences()
@@ -228,6 +237,7 @@ class Automation(BaseModel):
 
     # ATS Account Creation (Phase 6)
     auto_register: bool = False          # auto-create accounts on ATS tenant platforms
+    use_email_aliases: bool = False      # use plus-alias emails (user+tag@gmail.com) for ATS accounts
     auto_register_domains: list[str] = [
         "*.myworkdayjobs.com",
         "*.wd*.myworkday.com",

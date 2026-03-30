@@ -196,7 +196,7 @@ LISTING_EXCEPTION_PATTERNS = [
 ATS_DOMAINS = [
     "myworkdayjobs.com", "workday.com", "greenhouse.io", "lever.co",
     "icims.com", "smartrecruiters.com", "ashbyhq.com", "taleo.net",
-    "jobvite.com", "adp.com", "ultipro.com",
+    "jobvite.com", "adp.com", "ultipro.com", "avature.net",
 ]
 
 

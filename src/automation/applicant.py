@@ -185,9 +185,11 @@ def apply_to_jobs():
     console.print("\n[bold green]Application round complete![/]")
 
 
-def apply_to_single_job_by_id(job_id: int):
+def apply_to_single_job_by_id(job_id: int, debug: bool = False):
     """Apply to a specific job by database ID. Used for testing/debugging."""
     settings = load_settings()
+    if debug:
+        settings.setdefault("automation", {})["debug_mode"] = True
     take_screenshot = settings.get("automation", {}).get("screenshot_before_submit", True)
 
     conn = get_connection()

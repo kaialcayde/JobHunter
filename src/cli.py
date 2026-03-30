@@ -214,11 +214,14 @@ def cmd_apply():
 
 def cmd_apply_job():
     """Apply to a specific job by ID, or the next available job if no ID given."""
-    if len(sys.argv) >= 3:
+    debug_mode = "--debug" in sys.argv
+    id_args = [a for a in sys.argv[2:] if not a.startswith("--")]
+
+    if id_args:
         try:
-            job_id = int(sys.argv[2])
+            job_id = int(id_args[0])
         except ValueError:
-            console.print(f"[red]Invalid job ID: {sys.argv[2]}[/]")
+            console.print(f"[red]Invalid job ID: {id_args[0]}[/]")
             return
     else:
         # No ID given -- pick the next available job
@@ -233,9 +236,24 @@ def cmd_apply_job():
         job_id = jobs[0]["id"]
         console.print(f"[bold]Auto-selected next job: #{job_id} - {jobs[0].get('title', '?')} @ {jobs[0].get('company', '?')}[/]")
     console.print(f"[bold blue]== Test Apply: Job #{job_id} ==[/]")
+    if debug_mode:
+        console.print("[bold yellow]DEBUG MODE: will pause after DOM pre-fill and each vision round[/]")
     _check_linkedin_auth()
     from .automation import apply_to_single_job_by_id
-    apply_to_single_job_by_id(job_id)
+    apply_to_single_job_by_id(job_id, debug=debug_mode)
+
+
+def cmd_set_account():
+    """Manually seed account credentials: set-account <domain> <email> <password>"""
+    if len(sys.argv) < 4:
+        console.print("[yellow]Usage: python -m src set-account <domain> <email> <password>[/]")
+        console.print("[dim]Example: python -m src set-account bloomberg.avature.net user@gmail.com MyPassword123[/]")
+        return
+    domain, email, password = sys.argv[2], sys.argv[3], sys.argv[4]
+    from .automation.account_registry import AccountRegistry
+    registry = AccountRegistry()
+    registry.seed_credentials(domain, email, password)
+    console.print(f"[green]✓[/] Stored credentials for {domain} ({email})")
 
 
 def cmd_seed_answers():
@@ -853,6 +871,7 @@ def main():
         console.print("  [bold]answers[/]     Review and fill in unanswered form questions")
         console.print("  [bold]seed-answers[/] Seed answer bank from profile.yaml")
         console.print("  [bold]apply-job[/]   Apply to a specific job by ID (testing/debugging)")
+        console.print("  [bold]set-account[/]  Manually store ATS account credentials (email & password)")
         console.print("\nFlags:")
         console.print("  [bold]--refresh_profile[/]  Force re-seed answer bank from profile (use with pipeline)")
         return
@@ -894,6 +913,8 @@ def main():
         cmd_seed_answers()
     elif command in ("apply-job", "apply_job"):
         cmd_apply_job()
+    elif command in ("set-account", "set_account"):
+        cmd_set_account()
     else:
         console.print(f"[red]Unknown command: {command}[/]")
         console.print("Run 'python -m src' for usage info.")

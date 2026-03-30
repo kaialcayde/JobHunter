@@ -1,0 +1,832 @@
+[
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "jobId",
+    "id": "",
+    "className": "",
+    "value": "18119",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "jobIds",
+    "id": "",
+    "className": "",
+    "value": "",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "referer",
+    "id": "",
+    "className": "",
+    "value": "\"https:\\/\\/bloomberg.avature.net\\/career",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "currentStepIndex",
+    "id": "",
+    "className": "",
+    "value": "0",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "entityData",
+    "id": "",
+    "className": "",
+    "value": "amtZTU5OQk5SUmdZOHF6MzBoZ2MvT0FzQ2V2L0VH",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "visitedStepIds",
+    "id": "",
+    "className": "",
+    "value": "23",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "committedStepIds",
+    "id": "",
+    "className": "",
+    "value": "23",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "stepIndexesStack",
+    "id": "",
+    "className": "",
+    "value": "0",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "162",
+    "id": "162",
+    "className": "fieldSpec--odd TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Kai",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "163",
+    "id": "163",
+    "className": "fieldSpec--even TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Alcayde",
+    "placeholder": ""
+  },
+  {
+    "label": "Pronouns",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "616",
+    "id": "616",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "6549",
+    "placeholder": ""
+  },
+  {
+    "label": "Email (Username) *",
+    "tag": "INPUT",
+    "type": "email",
+    "name": "2700",
+    "id": "2700",
+    "className": " EmailField WizardFieldInputContainer WizardFieldInput",
+    "value": "kalcaydecl@gmail.com",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "password",
+    "name": "796",
+    "id": "796",
+    "className": "fieldSpec--odd PasswordField WizardFieldInputContainer WizardFieldInput",
+    "value": "Lu6Cr2Vw4Mt5",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "password",
+    "name": "797",
+    "id": "797",
+    "className": "fieldSpec--even PasswordField WizardFieldInputContainer WizardFieldInput",
+    "value": "Lu6Cr2Vw4Mt5",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "6377",
+    "id": "6377",
+    "className": "fieldSpec--odd SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtm",
+    "value": "239669",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "tel",
+    "name": "617",
+    "id": "617",
+    "className": "fieldSpec--even TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "6262831122",
+    "placeholder": ""
+  },
+  {
+    "label": "Address",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "251",
+    "id": "251",
+    "className": " StreetField WizardFieldInputContainer WizardFieldInput",
+    "value": "Alhambra, CA, United States",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "170",
+    "id": "170",
+    "className": "countryFieldSelect WizardFieldInputContainer WizardFieldInput",
+    "value": "233",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "countryField1",
+    "id": "countryField1",
+    "className": "",
+    "value": "170",
+    "placeholder": ""
+  },
+  {
+    "label": "State",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "169",
+    "id": "169",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "4803",
+    "placeholder": ""
+  },
+  {
+    "label": "City",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "168",
+    "id": "168",
+    "className": " CityField WizardFieldInputContainer WizardFieldInput",
+    "value": "Alhambra",
+    "placeholder": ""
+  },
+  {
+    "label": "Postal Code",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "39505",
+    "id": "39505",
+    "className": " PostalCodeField WizardFieldInputContainer WizardFieldInput",
+    "value": "91801",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "172-5-sample",
+    "id": "172-5-sample",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "172-5-sample_hidden",
+    "id": "172-5-sample_hidden",
+    "className": "",
+    "value": "1",
+    "placeholder": ""
+  },
+  {
+    "label": "Company Name *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-1-0",
+    "id": "172-1-0",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Intuitive Surgical",
+    "placeholder": ""
+  },
+  {
+    "label": "Position Title *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-2-0",
+    "id": "172-2-0",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Data Engineer",
+    "placeholder": ""
+  },
+  {
+    "label": "Is Current Position? *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "172-3-0",
+    "id": "172-3-0",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "37",
+    "placeholder": ""
+  },
+  {
+    "label": "Start Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-4-0",
+    "id": "172-4-0",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2025-07",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "172-5-0",
+    "id": "172-5-0",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "172-5-0_hidden",
+    "id": "172-5-0_hidden",
+    "className": "",
+    "value": "1",
+    "placeholder": ""
+  },
+  {
+    "label": "Company Name *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-1-1",
+    "id": "172-1-1",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Job Hunter",
+    "placeholder": ""
+  },
+  {
+    "label": "Position Title *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-2-1",
+    "id": "172-2-1",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Job Hunter - Automated Application Pipel",
+    "placeholder": ""
+  },
+  {
+    "label": "Is Current Position? *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "172-3-1",
+    "id": "172-3-1",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "38",
+    "placeholder": ""
+  },
+  {
+    "label": "Start Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-4-1",
+    "id": "172-4-1",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2026-03",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-5-1",
+    "id": "172-5-1",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2026-03",
+    "placeholder": ""
+  },
+  {
+    "label": "Company Name *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-1-2",
+    "id": "172-1-2",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Valit",
+    "placeholder": ""
+  },
+  {
+    "label": "Position Title *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-2-2",
+    "id": "172-2-2",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Consulting Deliverable Management Platfo",
+    "placeholder": ""
+  },
+  {
+    "label": "Is Current Position? *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "172-3-2",
+    "id": "172-3-2",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "38",
+    "placeholder": ""
+  },
+  {
+    "label": "Start Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-4-2",
+    "id": "172-4-2",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2026-01",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-5-2",
+    "id": "172-5-2",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2026-03",
+    "placeholder": ""
+  },
+  {
+    "label": "Company Name *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-1-3",
+    "id": "172-1-3",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Intuitive Surgical",
+    "placeholder": ""
+  },
+  {
+    "label": "Position Title *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-2-3",
+    "id": "172-2-3",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Supplier Engineer",
+    "placeholder": ""
+  },
+  {
+    "label": "Is Current Position? *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "172-3-3",
+    "id": "172-3-3",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "38",
+    "placeholder": ""
+  },
+  {
+    "label": "Start Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-4-3",
+    "id": "172-4-3",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2024-10",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-5-3",
+    "id": "172-5-3",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2025-07",
+    "placeholder": ""
+  },
+  {
+    "label": "Company Name *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-1-4",
+    "id": "172-1-4",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Stock Price Prediction with Multimodal T",
+    "placeholder": ""
+  },
+  {
+    "label": "Position Title *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-2-4",
+    "id": "172-2-4",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Stock Price Prediction",
+    "placeholder": ""
+  },
+  {
+    "label": "Is Current Position? *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "172-3-4",
+    "id": "172-3-4",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "38",
+    "placeholder": ""
+  },
+  {
+    "label": "Start Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-4-4",
+    "id": "172-4-4",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2024-10",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-5-4",
+    "id": "172-5-4",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2024-12",
+    "placeholder": ""
+  },
+  {
+    "label": "Company Name *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-1-5",
+    "id": "172-1-5",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Harada Robotics",
+    "placeholder": ""
+  },
+  {
+    "label": "Position Title *",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "172-2-5",
+    "id": "172-2-5",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "Robotics Software Engineering Intern",
+    "placeholder": ""
+  },
+  {
+    "label": "Is Current Position? *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "172-3-5",
+    "id": "172-3-5",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "38",
+    "placeholder": ""
+  },
+  {
+    "label": "Start Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-4-5",
+    "id": "172-4-5",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2023-06",
+    "placeholder": ""
+  },
+  {
+    "label": "End Date *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "172-5-5",
+    "id": "172-5-5",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2023-08",
+    "placeholder": ""
+  },
+  {
+    "label": "Company Name *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "multipleDatasetEntry_172_rowOffset",
+    "id": "multipleDatasetEntry_172_rowOffset",
+    "className": "",
+    "value": "5",
+    "placeholder": ""
+  },
+  {
+    "label": "If none of the above, please specify below: *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "2238-5-sample",
+    "id": "2238-5-sample",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "",
+    "placeholder": ""
+  },
+  {
+    "label": "If none of the above, please specify below: *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "2238-5-sample_hidden",
+    "id": "2238-5-sample_hidden",
+    "className": "",
+    "value": "1",
+    "placeholder": ""
+  },
+  {
+    "label": "Degree Type *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "2238-1-0",
+    "id": "2238-1-0",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "6560",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "2238-2-0",
+    "id": "2238-2-0",
+    "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+    "value": "131995",
+    "placeholder": ""
+  },
+  {
+    "label": "If none of the above, please specify below: *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "2238-5-0",
+    "id": "2238-5-0",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "",
+    "placeholder": ""
+  },
+  {
+    "label": "If none of the above, please specify below: *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "2238-5-0_hidden",
+    "id": "2238-5-0_hidden",
+    "className": "",
+    "value": "1",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "2238-3-0",
+    "id": "2238-3-0",
+    "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+    "value": "364893",
+    "placeholder": ""
+  },
+  {
+    "label": "Graduation Month/Year *",
+    "tag": "INPUT",
+    "type": "month",
+    "name": "2238-4-0",
+    "id": "2238-4-0",
+    "className": " DateFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "2024-06",
+    "placeholder": ""
+  },
+  {
+    "label": "Degree Type *",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "multipleDatasetEntry_2238_rowOffset",
+    "id": "multipleDatasetEntry_2238_rowOffset",
+    "className": "",
+    "value": "0",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "629-1-0",
+    "id": "629-1-0",
+    "className": "SelectFormField AutoCompleteField AutocompleteSelectFieldChildHtmlElement select",
+    "value": "10",
+    "placeholder": ""
+  },
+  {
+    "label": "Written Level",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "629-2-0",
+    "id": "629-2-0",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "34",
+    "placeholder": ""
+  },
+  {
+    "label": "Spoken Level",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "629-3-0",
+    "id": "629-3-0",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "34",
+    "placeholder": ""
+  },
+  {
+    "label": "LanguageSelect an option",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "multipleDatasetEntry_629_rowOffset",
+    "id": "multipleDatasetEntry_629_rowOffset",
+    "className": "",
+    "value": "0",
+    "placeholder": ""
+  },
+  {
+    "label": "URL",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "622",
+    "id": "622",
+    "className": " WebsiteField WizardFieldInputContainer WizardFieldInput",
+    "value": "https://www.linkedin.com/in/kai-alcayde/",
+    "placeholder": ""
+  },
+  {
+    "label": "Notes",
+    "tag": "INPUT",
+    "type": "text",
+    "name": "623",
+    "id": "623",
+    "className": " TextField WizardFieldInputContainer WizardFieldInput",
+    "value": "GitHub: https://github.com/kaialcayde",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "file_8154_fileNumber",
+    "id": "",
+    "className": "",
+    "value": "",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "file",
+    "name": "file_8154",
+    "id": "8154",
+    "className": " FileSchemaField WizardFieldInputContainer WizardFieldInput",
+    "value": "C:\\fakepath\\base_cover_letter.docx",
+    "placeholder": ""
+  },
+  {
+    "label": "Are you 18 years or older? *",
+    "tag": "SELECT",
+    "type": "select-one",
+    "name": "8283",
+    "id": "8283",
+    "className": " SelectFormField WizardFieldInputContainer WizardFieldInput",
+    "value": "37",
+    "placeholder": ""
+  },
+  {
+    "label": "I acknowledge and agree to the Careers Privacy Policy and th",
+    "tag": "INPUT",
+    "type": "checkbox",
+    "name": "209",
+    "id": "209",
+    "className": "WizardFieldInput",
+    "value": "1",
+    "placeholder": ""
+  },
+  {
+    "label": "I acknowledge and agree to the Careers Privacy Policy and th",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "209_unselectedIndicator",
+    "id": "209_unselectedIndicator",
+    "className": "",
+    "value": "0",
+    "placeholder": ""
+  },
+  {
+    "label": "(no label)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "",
+    "id": "11497",
+    "className": "",
+    "value": "9896",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "uploadedResumeId",
+    "id": "",
+    "className": "",
+    "value": "qHPkIyHSo/rhwrWuIeEAcHONiW1SCDBBynrILbWb",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "timeZone",
+    "id": "",
+    "className": "",
+    "value": "America/Los_Angeles",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "sourceId",
+    "id": "",
+    "className": "",
+    "value": "1",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "source",
+    "id": "",
+    "className": "",
+    "value": "Indeed",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "tags",
+    "id": "",
+    "className": "",
+    "value": "",
+    "placeholder": ""
+  },
+  {
+    "label": "Employer (hidden)",
+    "tag": "INPUT",
+    "type": "hidden",
+    "name": "redirectURL",
+    "id": "",
+    "className": "",
+    "value": "",
+    "placeholder": ""
+  }
+]

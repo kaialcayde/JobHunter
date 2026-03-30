@@ -62,51 +62,73 @@ class EmailPoller:
             self._conn = None
 
     def request_verification(self, domain: str, type: str = "otp",
-                             timeout: int = 120) -> str | None:
+                             timeout: int = 120,
+                             company_hint: str = None) -> str | None:
         """High-level API: poll for a verification artifact.
 
         Args:
             domain: The site that triggered verification (for filtering sender)
             type: "otp" or "magic_link"
             timeout: Max seconds to wait
+            company_hint: Company name — broadens search when ATS emails come from
+                          the company domain rather than the ATS platform domain
 
         Returns:
             OTP code string, magic link URL, or None if timeout
         """
         if type == "otp":
-            return self.poll_for_otp(domain_filter=domain, timeout=timeout)
+            return self.poll_for_otp(domain_filter=domain, company_hint=company_hint, timeout=timeout)
         elif type == "magic_link":
             return self.poll_for_magic_link(domain_filter=domain, timeout=timeout)
         return None
 
-    def poll_for_otp(self, domain_filter: str = None,
+    def poll_for_otp(self, domain_filter: str = None, company_hint: str = None,
                      timeout: int = 120) -> str | None:
         """Poll inbox for OTP codes. Returns the code or None.
 
         Checks every 5 seconds for new emails matching the filter.
         Only considers emails received after poll started (timestamp filtering).
+
+        Args:
+            domain_filter: ATS domain (e.g. "avature.net") — used for FROM filter.
+            company_hint:  Company name (e.g. "bloomberg") — broadens search when the ATS
+                           sends verification email from the company's own domain instead of
+                           the ATS platform domain (e.g. no-reply@bloomberg.com).
         """
         start_time = time.time()
+
+        # Relevance keywords for broad-fallback body filtering
+        relevance_keywords = []
+        if domain_filter:
+            relevance_keywords.append(domain_filter.split(".")[0].lower())  # e.g. "avature"
+        if company_hint:
+            relevance_keywords.append(company_hint.lower())  # e.g. "bloomberg"
 
         while time.time() - start_time < timeout:
             try:
                 self._conn.select("INBOX")
-
-                # Search for recent emails (within last minute before poll start)
                 since_date = time.strftime("%d-%b-%Y", time.gmtime(start_time - 60))
-                if domain_filter:
-                    criteria = f'(FROM "{domain_filter}" SINCE "{since_date}")'
-                else:
-                    criteria = f'(SINCE "{since_date}")'
 
-                _, message_ids = self._conn.search(None, criteria)
-                ids = message_ids[0].split()
+                # Try narrow FROM filter first
+                if domain_filter:
+                    _, mid = self._conn.search(None, f'(FROM "{domain_filter}" SINCE "{since_date}")')
+                    ids = mid[0].split()
+                    using_broad = False
+                else:
+                    ids = []
+                    using_broad = False
+
+                # If no results with FROM filter, fall back to all recent emails
+                # (ATS may send from company domain, e.g. no-reply@bloomberg.com)
+                if not ids:
+                    _, mid = self._conn.search(None, f'(SINCE "{since_date}")')
+                    ids = mid[0].split()
+                    using_broad = True
 
                 for msg_id in reversed(ids):  # newest first
                     _, msg_data = self._conn.fetch(msg_id, "(RFC822)")
                     msg = email.message_from_bytes(msg_data[0][1])
 
-                    # Skip emails older than our poll start
                     msg_date = email.utils.parsedate_to_datetime(msg["Date"]) if msg["Date"] else None
                     if msg_date and msg_date.timestamp() < start_time - 60:
                         continue
@@ -114,6 +136,13 @@ class EmailPoller:
                     body = self._extract_body(msg)
                     if not body:
                         continue
+
+                    # Broad fallback: require relevance keyword in body to avoid
+                    # picking up unrelated OTPs (banking, two-factor, etc.)
+                    if using_broad and relevance_keywords:
+                        body_lower = body.lower()
+                        if not any(kw in body_lower for kw in relevance_keywords):
+                            continue
 
                     for pattern in OTP_PATTERNS:
                         match = re.search(pattern, body, re.IGNORECASE)
