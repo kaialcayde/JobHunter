@@ -34,27 +34,21 @@ Primary goal: build a self-sufficient resume applier that can reliably run the f
   - `applicant.py` - Batch orchestration: caps, round-robin distribution, parallel browsers
   - `browser_scripts/` - Browser-context JS assets loaded into `page.evaluate(...)` / `frame.evaluate(...)`
   - `kernel.py` - Application state machine (single-job lifecycle: SETUP → NAVIGATE → ROUTE → FILL → VERIFY → CLEANUP)
-  - `handlers.py` - Thin public facade for stateless handler functions
-  - `handlers_steps/` - Internal setup/navigation/fill/verify handler modules
-  - `handlers_account.py` - Thin public facade for ATS auth/registration handlers
-  - `auth_flow/` - Internal ATS auth-type detection, login, registration, verification
+  - `handlers/` - Public handler package with setup/navigation/fill/verify modules
+  - `handlers_account/` - Public ATS auth/registration package
   - `results.py` - Canonical types: HandlerResult enum + StepResult dataclass
   - `element_finder.py` - 6-level element discovery escalation (cache → heuristic → a11y → text → LLM)
   - `selector_cache.py` - SQLite-backed adaptive selector memory (confidence decay, bootstrap from SELECTOR_INTENTS)
   - `selectors.py` - Centralized selector constants (button texts, modal selectors, CAPTCHA indicators, ATS domains)
   - `page_checks.py` - Page inspection (dead page, listing, access denied, CAPTCHA, login), login recovery, URL utilities
   - `detection.py` - CAPTCHA/login detection, modal dismissal, Apply/Next/Submit button clicking
-  - `forms.py` - Thin public facade for unified form extraction/fill API
-  - `forms_helpers/` - Internal DOM, Playwright, coordinate, select, and upload helpers
-  - `vision_agent.py` - Thin public facade for GPT-4o vision fallback
-  - `vision/` - Internal vision client, loop, action, OTP, and submission modules
+  - `forms/` - Public form package with DOM, Playwright, coordinate, select, and upload helpers
+  - `vision_agent/` - Public vision-agent package with client, loop, action, OTP, and submission modules
   - `captcha_solver.py` - 2Captcha integration, reCAPTCHA v2/Enterprise, hCaptcha, Turnstile, Cloudflare auto-challenge
   - `email_poller.py` - IMAP-based OTP/verification email polling (code extraction, magic link detection)
   - `platforms/` - Platform-specific automation (one module per job board with custom quirks)
-    - `linkedin.py` - Thin public facade for LinkedIn logic
-    - `linkedin_parts/` - LinkedIn modal and apply internals
-    - `avature.py` - Thin public facade for Avature support
-    - `avature_parts/` - Avature widget-prefill and page-flow internals
+    - `linkedin/` - Public LinkedIn automation package
+    - `avature/` - Public Avature automation package
     - `greenhouse.py` - (create when needed) reCAPTCHA Enterprise gate
 
 ## Important Conventions
@@ -68,11 +62,11 @@ Primary goal: build a self-sufficient resume applier that can reliably run the f
 - **Config edits must mirror to example files** - when editing `config/settings.yaml` or `config/profile.yaml`, always apply the same structural changes (new keys, removed keys, reordering) to `config/settings.example.yaml` or `config/profile.example.yaml` respectively. Example files are checked into git; the real config files are gitignored
 - **Read LEARNINGS.md before changing automation code** - contains hard-won platform-specific quirks (LinkedIn modals, ATS button texts, vision agent pitfalls). Reference it before making changes, update it when discovering new platform behavior
 - **New platform quirks get their own LEARNINGS.md section** - each job board (LinkedIn, SmartRecruiters, Greenhouse, etc.) has its own section documenting apply button text, selectors, URL patterns, and known gotchas
-- **Platform-specific code goes in `src/automation/platforms/`** - when a job board needs custom modal handling, login flows, or unique form structures, create a dedicated module (e.g., `platforms/smartrecruiters.py`). Generic behavior stays in `detection.py` and `forms.py`
+- **Platform-specific code goes in `src/automation/platforms/`** - when a job board needs custom modal handling, login flows, or unique form structures, create a dedicated package (e.g., `platforms/smartrecruiters/`). Generic behavior stays in `detection.py` and `forms/`
 - **Reusable browser JS goes in `src/automation/browser_scripts/`** - when DOM logic inside `page.evaluate(...)` or `frame.evaluate(...)` becomes non-trivial or reused, move it into a dedicated `.js` asset under `browser_scripts/`. Keep tiny one-line evaluate calls inline only when they are truly local.
 - **Do not create one giant master JS file** - keep browser scripts split by concern (`forms/`, `detection/`, `linkedin/`, `captcha/`, etc.). Each script should expose one function expression compatible with Playwright `evaluate(script, args)`.
 - **Pass dynamic values through evaluate args, not string interpolation** - this keeps browser scripts reusable and avoids brittle injected JS strings, especially for tokens, selectors, and text values.
-- **Keep automation facade modules thin** - public modules like `forms.py`, `handlers.py`, `handlers_account.py`, `vision_agent.py`, and platform entry modules should stay import-stable facades while implementation moves into responsibility-based subpackages.
+- **Prefer same-name packages over giant files** - keep public automation APIs under package roots like `forms/`, `handlers/`, `handlers_account/`, `vision_agent/`, and `platforms/<ats>/`, with smaller modules underneath them.
 - **New ATS button texts go in `src/automation/selectors.py`** - keep apply/next/submit text lists centralized there so both Python logic and browser scripts can share the same canonical button vocabulary. Document new platform-specific button text in LEARNINGS.md
 - **Always add debug screenshots on automation failures** - when adding or modifying automation code that can fail (CAPTCHA unsolved, button not found, form not submitted, etc.), save a debug screenshot to `data/logs/` with a descriptive name (e.g., `debug_captcha_unsolved.png`, `debug_no_apply_button.png`). Screenshots are essential for diagnosing headless browser issues
 - **Read the "Clicks" section of LEARNINGS.md before changing automation code** - this section logs click/navigation failures where a button is clicked but the page doesn't transition (Apply doesn't open form, Submit doesn't submit, invisible CAPTCHA gates, etc.). Use it as context for any automation change. When a new click failure is discovered, add it with platform, URL pattern, symptom, and root cause
@@ -81,7 +75,7 @@ Primary goal: build a self-sufficient resume applier that can reliably run the f
 - **Playwright-first, LLM-second automation** - prefer stable Playwright selectors, DOM extraction, native input filling, stored sessions, and reusable cookies first. Use the LLM or vision agent only when deterministic browser automation is insufficient.
 - **DOM-First, Vision-Last philosophy** — DOM pre-fill handles deterministic fields (name, email, phone, address, education, languages, consent checkboxes, file uploads). Vision agent handles only unpredictable free-text fields. When adding ATS support: inspect DOM via `--debug` mode first, write a platform module if custom widgets exist, then vision cleans up the rest. Never rely on vision to brute-force fields that DOM can fill.
 - **Platform modules handle non-standard DOM** — when a major ATS uses custom dropdown/widget components that don't match standard patterns (e.g. Avature's click-to-open divs, Workday shadow DOM), create `platforms/<ats>.py` with a `prefill(page, profile, settings)` function. Register it in `platforms/__init__.py:get_platform_prefill()`. Do NOT add ATS-specific hacks to the generic `extract_form_fields`.
-- **Platform-owned page flow stays in platform packages** — if an ATS needs deterministic multi-step page handling inside the vision path, expose it from `platforms/__init__.py` as a platform hook. Do NOT embed ATS-specific page-state logic directly inside generic `vision_agent.py`.
+- **Platform-owned page flow stays in platform packages** — if an ATS needs deterministic multi-step page handling inside the vision path, expose it from `platforms/__init__.py` as a platform hook. Do NOT embed ATS-specific page-state logic directly inside generic `vision_agent/`.
 - **Debug/inspect mode** — `python -m src apply-job <id> --debug` pauses after DOM pre-fill and after each vision round. Saves per-pause screenshots to `data/logs/`. Use when developing new platform modules — inspect the live browser to understand component structure before writing targeted DOM code.
 - **Account registry seeding** — When an ATS account exists but wasn't auto-generated (e.g., manually created on the site or password lost), use `python -m src set-account <domain> <email> <password>` to store the credentials encrypted. The system uses these during the "existing record" → login flow. Keep `use_email_aliases: false` to avoid Avature duplicate-email errors from Gmail + aliases.
 
@@ -130,7 +124,7 @@ Side states: `SOLVE_CAPTCHA` (with pre-CAPTCHA state resume), `RECOVER_LOGIN`, `
 config/profile.yaml ──→ src/config/loader.py ──→ src/core/tailoring.py (profile summary for LLM)
 config/settings.yaml ─→ src/config/loader.py ──→ all modules (settings dict)
 .env ─────────────────→ src/core/tailoring.py (OPENAI_API_KEY)
-                       → src/automation/vision_agent.py (OPENAI_API_KEY)
+                       → src/automation/vision_agent/ (OPENAI_API_KEY)
                        → src/automation/captcha_solver.py (CAPTCHA_API_KEY)
                        → src/automation/email_poller.py (EMAIL_USER, EMAIL_APP_PASSWORD)
 ```
@@ -142,16 +136,16 @@ src/cli.py
  ├─ cmd_tailor() ──→ src/core/tailoring.py ──→ src/core/document.py (DOCX/PDF)
  └─ cmd_apply() ───→ src/automation/applicant.py (batch orchestration)
                       → src/automation/kernel.py (single-job state machine)
-                        ├─ handlers.py (stateless workers per state)
+                        ├─ handlers/ (stateless workers per state)
                         ├─ element_finder.py (6-level element discovery)
                         ├─ selector_cache.py (adaptive selector memory)
                         ├─ page_checks.py (CAPTCHA/login/dead page detection, login recovery)
                         ├─ detection.py (button clicking, modal dismiss)
-                        ├─ forms.py (field extraction + filling, unified API)
-                        ├─ vision_agent.py (external ATS via GPT-4o screenshots)
+                        ├─ forms/ (field extraction + filling, unified API)
+                        ├─ vision_agent/ (external ATS via GPT-4o screenshots)
                         ├─ captcha_solver.py (2Captcha API)
                         ├─ email_poller.py (IMAP OTP/verification polling)
-                        └─ platforms/linkedin.py (Easy Apply modal, share profile, SDUI)
+                        └─ platforms/linkedin/ (Easy Apply modal, share profile, SDUI)
 ```
 
 ### Data Flow
@@ -172,3 +166,4 @@ Cookies → data/linkedin_auth.json + data/site_auth/{domain}.json
 - See `ARCHITECTURE.md` for the full directory guide, data flow, and import graph
 - See `TODO.md` for pending features and improvements
 - See `LEARNINGS.md` for platform-specific automation quirks and debugging lessons
+

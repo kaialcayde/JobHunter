@@ -1,0 +1,24 @@
+Flow
+
+applicant.py runs the batch: pick jobs, open browsers, hand each job to the kernel.
+kernel.py runs one application as a state machine: SETUP -> NAVIGATE -> ROUTE -> DETECT_STRATEGY -> FILL_SELECTOR/FILL_VISION -> VERIFY -> CLEANUP.
+handlers/ owns those state workers.
+setup.py prepares paths/DB state, navigation.py gets to the real form, fill.py runs selector or vision filling, verification.py confirms outcome and closes out.
+handlers_account/ is the side path for ATS auth walls.
+detect.py decides login vs registration, login.py uses stored credentials, register.py creates accounts, verification.py handles email verification.
+Deterministic fill happens first through forms/ and platform prefill hooks in platforms/init.py.
+If the page is still messy or custom, vision_agent/ runs screenshot-driven actions, then submission checks.
+End state is written through results.py, DB updates, and application folder moves in cleanup.
+Package Map
+
+browser_scripts/: small browser-side JS functions used by page.evaluate(...). Grouped by concern: forms/, detection/, auth/, captcha/, linkedin/, page_checks/, vision/, element_finder/. loader.py loads and caches them.
+forms/: generic form API. api.py is the main entrypoint, dom_backend.py does DOM extraction/filling, playwright_backend.py does locator-based work, coordinates.py handles coordinate fallback, selects.py handles non-native selects, uploads.py handles files.
+vision_agent/: generic vision loop. client.py talks to the model, actions.py executes returned actions, loop.py coordinates rounds, submission.py checks submit readiness and success, otp.py handles code-entry cases.
+platforms/linkedin/: LinkedIn-specific modal/apply flow. modals.py handles blocking/share-profile UI, apply.py handles Easy Apply/opening/post-apply behavior.
+platforms/avature/: Avature-specific deterministic logic. prefill.py is the main hook, lookup.py finds fields, field_fill.py fills them, select2.py handles Select2 widgets, work_history.py handles work-history sections, vision.py owns Avature-specific page flow inside the generic vision path.
+detection.py: generic “what page is this and what button should I click” utilities.
+page_checks.py: dead-page, access-denied, login, listing-shell, and recovery checks.
+element_finder.py: escalating element lookup when selectors are weak.
+selector_cache.py and selectors.py: learned selector memory plus canonical selector/text constants.
+captcha_solver.py, email_poller.py, and account_registry.py: support services for CAPTCHA, OTP/email, and stored site credentials.
+The core design is: public package __init__.py files expose stable APIs, each submodule does one narrow job, browser-only DOM logic lives in browser_scripts/, and ATS-specific behavior stays under platforms/ instead of leaking into generic automation.

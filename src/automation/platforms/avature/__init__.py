@@ -1,6 +1,6 @@
-"""Compatibility facade for Avature ATS platform helpers."""
+"""Public Avature automation package."""
 
-from .avature_parts.field_fill import (
+from .field_fill import (
     _fill_date_field,
     _fill_text_field,
     _get_current_work_experience,
@@ -10,23 +10,25 @@ from .avature_parts.field_fill import (
     _normalize_date,
     _standard_select,
 )
-from .avature_parts.lookup import (
+from .lookup import (
     _find_control_id_by_label,
     _find_input_id_by_label,
     _find_select_id_by_label,
     _normalize_label_text,
     _parse_dataset_field_id,
 )
-from .avature_parts.prefill import prefill
-from .avature_parts.select2 import (
+from .prefill import prefill
+from .select2 import (
     _click_option_by_index,
     _select2_click_result,
     _select2_pick,
 )
-from .avature_parts.work_history import _sweep_remaining_select2
+from .vision import handle_avature_page
+from .work_history import _sweep_remaining_select2
 
 __all__ = [
     "prefill",
+    "handle_avature_page",
     "_select2_pick",
     "_select2_click_result",
     "_click_option_by_index",

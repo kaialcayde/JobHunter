@@ -1,4 +1,4 @@
-"""Internal helpers for ATS login and registration flows."""
+"""Public ATS login and registration handler package."""
 
 from .detect import _is_application_form, handle_detect_auth_type
 from .login import handle_login_registry

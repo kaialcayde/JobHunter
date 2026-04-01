@@ -307,7 +307,7 @@ class ApplicationKernel:
             logger.debug(f"Debug screenshot failed: {e}")
 
     # --- Handler adapters ---
-    # Wrap existing handlers from handlers.py, adapting KernelContext
+    # Wrap existing handlers from the handlers package, adapting KernelContext
     # to their current signatures and updating context with results.
 
     def _handle_setup(self, ctx: KernelContext) -> StepResult:

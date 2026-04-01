@@ -23,6 +23,6 @@ def get_platform_vision_page_handler(url: str):
     from ..account_registry import detect_ats_platform
 
     if detect_ats_platform(url) == "avature":
-        from .avature_parts.vision import handle_avature_page
+        from .avature import handle_avature_page
         return handle_avature_page
     return None

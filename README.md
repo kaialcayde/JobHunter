@@ -136,7 +136,7 @@ Important architecture rules:
 - DOM-first, vision-last for application filling.
 - Reusable browser-side DOM logic lives in `src/automation/browser_scripts/`.
 - Load specific JS assets into `page.evaluate(...)`; do not create one giant master JS file.
-- Keep public automation modules thin and import-stable; move implementation into responsibility-based subpackages.
+- Prefer same-name packages for large automation surfaces; keep the public import paths stable while splitting internals into smaller modules.
 - Platform-specific page-state handling belongs behind platform hooks in `src/automation/platforms/`.
 - Handlers return structured `StepResult` values.
 - The kernel owns state transitions.
@@ -163,28 +163,22 @@ src/
     applicant.py          Batch orchestration
     browser_scripts/      Browser-side JS assets for page/frame.evaluate()
     kernel.py             Explicit application state machine
-    handlers.py           Thin public facade for state handlers
-    handlers_steps/       Setup/navigation/fill/verify handler internals
-    handlers_account.py   Thin public facade for ATS auth/registration handlers
-    auth_flow/            ATS auth-type detection, login, register, verify
+    handlers/             Public handler package with setup/navigation/fill/verify modules
+    handlers_account/     Public ATS auth/registration package
     results.py            HandlerResult and StepResult
     detection.py          Apply/login/CAPTCHA detection
     page_checks.py        Blocker checks and login recovery
-    forms.py              Thin public facade for DOM extraction/filling/uploads
-    forms_helpers/        DOM, Playwright, select, coordinate, upload helpers
+    forms/                Public form package with DOM, Playwright, select, and upload helpers
     element_finder.py     Escalating element lookup
     selector_cache.py     Adaptive selector memory
     selectors.py          Intent bootstrap and selector constants
-    vision_agent.py       Thin public facade for GPT-4o vision fallback
-    vision/               Vision client, loop, action, OTP, submission helpers
+    vision_agent/         Public vision-agent package with client, loop, action, OTP, and submission modules
     captcha_solver.py     2Captcha integration
     email_poller.py       IMAP OTP handling
     account_registry.py   Encrypted ATS account store
     platforms/
-      linkedin.py         Thin public facade for LinkedIn automation
-      linkedin_parts/     LinkedIn modal/apply internals
-      avature.py          Thin public facade for Avature support
-      avature_parts/      Avature prefill and page-flow internals
+      linkedin/           Public LinkedIn automation package
+      avature/            Public Avature automation package
 config/
   profile.example.yaml
   settings.example.yaml

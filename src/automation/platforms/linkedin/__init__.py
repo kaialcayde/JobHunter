@@ -1,4 +1,4 @@
-"""Internal LinkedIn helpers."""
+"""Public LinkedIn automation package."""
 
 from .apply import click_linkedin_apply, handle_linkedin_post_apply
 from .modals import (

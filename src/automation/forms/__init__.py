@@ -1,4 +1,4 @@
-"""Internal helpers for the public forms facade."""
+"""Public forms package."""
 
 from .api import extract_fields, fill_fields
 from .coordinates import find_input_at_coords, dom_fill_fallback, dom_select_fallback

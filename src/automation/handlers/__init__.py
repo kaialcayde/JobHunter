@@ -1,4 +1,4 @@
-"""Internal step handlers for the application kernel."""
+"""Public handler package for the application kernel."""
 
 from .fill import handle_fill_selector, handle_fill_vision
 from .navigation import handle_navigate, handle_route

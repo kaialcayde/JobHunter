@@ -53,29 +53,23 @@ src/
     applicant.py               Batch orchestration across jobs/sites
     browser_scripts/           Reusable JS assets loaded into page.evaluate()
     kernel.py                  Explicit single-job state machine
-    handlers.py                Thin public facade for workflow handlers
-    handlers_steps/            Setup/navigation/fill/verify handler internals
-    handlers_account.py        Thin public facade for ATS auth/account flows
-    auth_flow/                 ATS auth detection, login, register, verification internals
+    handlers/                  Public handler package with setup/navigation/fill/verify modules
+    handlers_account/          Public ATS auth/account package
     results.py                 HandlerResult enum + StepResult dataclass
     detection.py               Apply button, CAPTCHA, modal, login detection
     page_checks.py             Blocker checks and login recovery
-    forms.py                   Thin public facade for form extraction/fill API
-    forms_helpers/             DOM, Playwright, coordinate, select, upload internals
+    forms/                     Public form package with DOM, Playwright, coordinate, select, upload modules
     element_finder.py          Escalating element discovery
     selector_cache.py          SQLite-backed adaptive selector memory
     selectors.py               Intent bootstrap and selector constants
-    vision_agent.py            Thin public facade for the vision agent
-    vision/                    Vision client, loop, action, OTP, submission internals
+    vision_agent/              Public vision-agent package with client, loop, action, OTP, submission modules
     captcha_solver.py          2Captcha integration
     email_poller.py            IMAP verification polling
     account_registry.py        Encrypted ATS credential store
     platforms/
       __init__.py
-      linkedin.py              Thin public facade for LinkedIn automation
-      linkedin_parts/          LinkedIn modal and apply internals
-      avature.py               Thin public facade for Avature support
-      avature_parts/           Avature prefill and page-flow internals
+      linkedin/                Public LinkedIn automation package
+      avature/                 Public Avature automation package
 ```
 
 ## Browser Script Pattern
@@ -92,22 +86,22 @@ Rules:
 
 ## Automation Packaging Pattern
 
-The public automation modules are thin compatibility facades. They keep stable imports like:
+The public automation APIs now live in same-name packages. They keep stable imports like:
 
 - `from src.automation.forms import extract_fields`
 - `from src.automation.handlers import handle_route`
 - `from src.automation.vision_agent import run_vision_agent`
 - `from src.automation.platforms.linkedin import click_linkedin_apply`
 
-Implementation moves into responsibility-based subpackages:
+Implementation lives in smaller modules inside those package roots:
 
-- `forms_helpers/` for extraction/fill/upload internals
-- `handlers_steps/` for kernel-state workers
-- `auth_flow/` for ATS auth and registration
-- `vision/` for OpenAI client, loop, action execution, OTP, and submission checks
-- `platforms/*_parts/` for platform-specific internal logic
+- `forms/` for extraction/fill/upload internals
+- `handlers/` for kernel-state workers
+- `handlers_account/` for ATS auth and registration
+- `vision_agent/` for OpenAI client, loop, action execution, OTP, and submission checks
+- `platforms/<ats>/` for platform-specific internal logic
 
-This gives smaller files and subfolders without breaking the existing import surface across the codebase.
+This gives smaller files and subfolders without changing the external import surface across the codebase.
 
 ## Platform Hooks
 
@@ -117,7 +111,7 @@ Rules:
 
 - Platform-specific DOM prefill stays behind `platforms/__init__.py:get_platform_prefill()`.
 - Platform-specific deterministic page handling inside the vision path stays behind `platforms/__init__.py:get_platform_vision_page_handler()`.
-- Generic modules like `vision_agent.py` and `handlers.py` should call those hooks, not embed ATS-specific page-state logic directly.
+- Generic modules like `vision_agent/` and `handlers/` should call those hooks, not embed ATS-specific page-state logic directly.
 
 ## Config and Runtime Files
 
@@ -299,7 +293,7 @@ This supports:
 Phase 6 concepts are represented in code now:
 
 - `account_registry.py` stores ATS credentials encrypted
-- `handlers_account.py` supports:
+- `handlers_account/` supports:
   - auth wall classification
   - registry login
   - registration flows on allowlisted domains
