@@ -4,6 +4,10 @@
 
 - [ ] averture websites (like bloomberg) not completely working - fix next time but i dumped like a weekend into this lol. Just go next
 
+- [ ] working on Job #267 - playright types in constantly but 15 rounds of vision?
+- I feel like it gets it down then has fields it can't fill out or something with issues? I'm not sure
+ 
+
 - [ ] reseed ansewr bank vs refresh profile? combine both? I don't know
 - [ ] need to confirm how skip_captcha_sites: false
   captcha_solving: true
