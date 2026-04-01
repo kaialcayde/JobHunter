@@ -44,6 +44,11 @@ def _get_model(settings: dict) -> str:
     return settings.get("openai", {}).get("model", "gpt-4o")
 
 
+def _get_form_model(settings: dict) -> str:
+    openai_cfg = settings.get("openai", {})
+    return openai_cfg.get("form_model") or openai_cfg.get("model", "gpt-4o")
+
+
 def _get_temperature(settings: dict) -> float:
     return settings.get("openai", {}).get("temperature", 0.7)
 
@@ -349,7 +354,7 @@ Return ONLY valid JSON — no explanation, no markdown fences.
         try:
             logger.debug(f"OpenAI API call for form filling (attempt {attempt+1}/3)...")
             response = client.chat.completions.create(
-                model=_get_model(settings),
+                model=_get_form_model(settings),
                 temperature=0.3,  # Lower temperature for form filling — want precision
                 messages=[
                     {"role": "system", "content": "You fill out job application forms accurately using the applicant's real profile data. Return only valid JSON."},

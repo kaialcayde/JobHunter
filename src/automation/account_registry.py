@@ -13,6 +13,7 @@ import secrets
 import sqlite3
 from base64 import urlsafe_b64encode
 from hashlib import pbkdf2_hmac
+from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
 
@@ -195,9 +196,31 @@ _ATS_PATTERNS: dict[str, list[str]] = {
     "avature":        [r"\.avature\.net$"],
 }
 
+_AVATURE_PATH_MARKERS = (
+    "/careers/invitetoapply",
+    "/careers/login",
+    "/careers/register",
+    "/careers/applicationmethods",
+    "/careers/applicationform",
+    "/careers/finalizeapplication",
+)
+
+
+def is_avature_url(value: str) -> bool:
+    """Detect Avature flows on both native and custom-branded hosts."""
+    lower = (value or "").lower()
+    if "avature.net" in lower:
+        return True
+
+    parsed = urlparse(value if "://" in value else f"https://{value}")
+    path = (parsed.path or "").lower()
+    return any(marker in path for marker in _AVATURE_PATH_MARKERS)
+
 
 def detect_ats_platform(domain: str) -> str | None:
-    """Identify the ATS platform from domain string."""
+    """Identify the ATS platform from a domain or full URL string."""
+    if is_avature_url(domain):
+        return "avature"
     for platform, patterns in _ATS_PATTERNS.items():
         if any(re.search(p, domain) for p in patterns):
             return platform
@@ -215,13 +238,26 @@ def extract_tenant(domain: str, platform: str | None) -> str:
         return domain.split(".")[0]
     if platform == "icims":
         return domain.split(".")[0].replace("jobs-", "").replace("jobs.", "")
+    if platform == "avature":
+        parts = domain.split(".")
+        if len(parts) >= 2 and parts[0].lower() == "apply":
+            return parts[1]
     return domain.split(".")[0]
 
 
 def is_auto_register_allowed(domain: str, settings: dict) -> bool:
-    """Check if domain matches any pattern in auto_register_domains allowlist."""
+    """Check if a domain or URL matches the auto_register allowlist."""
     auto_register = settings.get("automation", {}).get("auto_register", False)
     if not auto_register:
         return False
+
+    parsed = urlparse(domain if "://" in domain else f"https://{domain}")
+    hostname = parsed.hostname or domain
     patterns = settings.get("automation", {}).get("auto_register_domains", [])
-    return any(fnmatch.fnmatch(domain, p) for p in patterns)
+    if any(fnmatch.fnmatch(hostname, p) for p in patterns):
+        return True
+
+    if is_avature_url(domain):
+        return any("avature.net" in p for p in patterns)
+
+    return False

@@ -4,9 +4,9 @@ All button texts, Playwright selectors, URL patterns, and detection phrases
 live here. When a new ATS platform uses non-standard text, add it here
 and document it in LEARNINGS.md.
 
-NOTE: JS-embedded selectors (inside page.evaluate() strings) stay inline
-in their respective modules since they run in browser context. Those
-modules reference constants here via comments for discoverability.
+NOTE: Browser-context DOM logic now lives primarily under
+`src/automation/browser_scripts/`. Keep reusable selector/text lists here and
+pass them into those scripts from Python when practical.
 """
 
 # ── Apply Button ────────────────────────────────────────────────────
@@ -16,6 +16,7 @@ APPLY_BUTTON_TEXTS = [
     "apply now", "apply", "apply for this job", "apply for this position",
     "i'm interested", "im interested", "submit application", "start application",
     "begin application", "apply at company name",
+    "continue application", "continue your application", "complete application",
 ]
 
 # Playwright selectors for Apply buttons (non-LinkedIn)
@@ -63,7 +64,7 @@ NEXT_BUTTON_JS_SELECTORS = [
     '[data-testid*="next"]',
 ]
 
-NEXT_BUTTON_JS_TEXTS = ["next", "continue", "review"]
+NEXT_BUTTON_JS_TEXTS = ["next", "continue", "review", "save and continue", "save"]
 
 
 # ── Submit Button ───────────────────────────────────────────────────

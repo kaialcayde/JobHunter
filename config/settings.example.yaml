@@ -37,6 +37,7 @@ scraping:
 
 openai:
   model: "gpt-4o"
+  form_model: "gpt-4o-mini"
   temperature: 0.7
 
 tailoring:

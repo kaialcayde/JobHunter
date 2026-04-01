@@ -195,6 +195,7 @@ class JobSearch(BaseModel):
 
 class OpenAIConfig(BaseModel):
     model: str = "gpt-4o"
+    form_model: str = "gpt-4o-mini"
     temperature: float = 0.7
 
     @field_validator("temperature")

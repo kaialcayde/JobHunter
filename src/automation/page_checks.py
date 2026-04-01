@@ -15,8 +15,15 @@ from rich.console import Console
 from ..db import get_connection, update_job_status, log_action
 from ..utils import LINKEDIN_AUTH_STATE, SITE_AUTH_DIR
 
+from .browser_scripts import evaluate_script
 from .detection import detect_captcha, try_solve_captcha, detect_login_page
-from .selectors import ATS_DOMAINS, LISTING_SIGNALS, LISTING_EXCEPTION_PATTERNS, FORCE_APPLY_SELECTORS
+from .selectors import (
+    ACCESS_DENIED_PHRASES,
+    ATS_DOMAINS,
+    FORCE_APPLY_SELECTORS,
+    LISTING_EXCEPTION_PATTERNS,
+    LISTING_SIGNALS,
+)
 from .results import HandlerResult, StepResult
 
 logger = logging.getLogger(__name__)
@@ -34,23 +41,7 @@ def is_dead_page(page) -> bool:
     if "linkedin.com" not in url:
         return False  # Never flag external ATS pages as dead
 
-    return page.evaluate("""() => {
-        const body = document.body;
-        if (!body) return true;
-
-        // LinkedIn footer-only page: no main content area, just nav + footer links
-        const main = document.querySelector(
-            'main, .scaffold-layout__main, .jobs-search__job-details, ' +
-            '.jobs-unified-top-card, .job-view-layout'
-        );
-        if (main && main.innerText.trim().length > 50) return false;
-
-        // Check total visible text -- LinkedIn footer pages have < 300 chars
-        const cleaned = (body.innerText || '').replace(/\\s+/g, ' ').trim();
-        if (cleaned.length < 300) return true;
-
-        return false;
-    }""")
+    return evaluate_script(page, "page_checks/is_dead_page.js")
 
 
 def is_listing_page(page) -> bool:
@@ -66,28 +57,17 @@ def is_listing_page(page) -> bool:
         return False
 
     # Check for APPLICATION form inputs (not search/filter fields common on listing pages)
-    form_count = page.evaluate("""() => {
-        const inputs = document.querySelectorAll(
-            'input[type="text"], input[type="email"], input[type="tel"], ' +
-            'textarea, select, input[type="file"]'
-        );
-        let count = 0;
-        for (const el of inputs) {
-            // Check DOM presence with non-zero dimensions (not viewport visibility)
-            if (el.offsetWidth === 0 && el.offsetHeight === 0 && el.getClientRects().length === 0) continue;
-            // Exclude search/filter inputs (common on listing pages)
-            const name = (el.name || '').toLowerCase();
-            const id = (el.id || '').toLowerCase();
-            const placeholder = (el.placeholder || '').toLowerCase();
-            const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
-            const allAttrs = name + ' ' + id + ' ' + placeholder + ' ' + ariaLabel;
-            if (allAttrs.match(/search|filter|keyword|location|sort|query/)) continue;
-            count++;
-        }
-        return count;
-    }""")
+    form_count = evaluate_script(page, "page_checks/count_application_fields.js")
     if form_count >= 2:
         return False  # Probably a form page
+
+    # TEKsystems uses a listing/search shell at /v1/s/ with no application form
+    # fields and a prominent Filter button. This page title says "Job Application"
+    # even though we're not on the actual application form yet.
+    if "apply.teksystems.com/v1/s/" in url:
+        has_listing_shell = evaluate_script(page, "page_checks/has_teksystems_listing_shell.js")
+        if has_listing_shell and form_count == 0:
+            return True
 
     # Check for common listing page indicators
     body_text = (page.text_content("body") or "").lower()[:5000]
@@ -98,19 +78,11 @@ def is_listing_page(page) -> bool:
 def is_access_denied(page) -> bool:
     """Detect 'Access Denied' or similar bot-block pages that aren't CAPTCHA/login."""
     try:
-        return page.evaluate("""() => {
-            const text = (document.body?.innerText || '').slice(0, 3000).toLowerCase();
-            const title = (document.title || '').toLowerCase();
-            const denied = ['access denied', 'access to this page has been denied',
-                            '403 forbidden', 'you don\\'t have permission',
-                            'request blocked', 'this page is not available',
-                            'there has been a critical error', '500 internal server error',
-                            'this site is experiencing technical difficulties'];
-            for (const d of denied) {
-                if (text.includes(d) || title.includes(d)) return true;
-            }
-            return false;
-        }""")
+        return evaluate_script(
+            page,
+            "page_checks/is_access_denied.js",
+            {"deniedPhrases": ACCESS_DENIED_PHRASES},
+        )
     except Exception:
         return False
 
@@ -145,46 +117,11 @@ def force_apply_click(page) -> bool:
     Returns True if navigation happened.
     """
     # --- Strategy 1: Find the apply URL embedded in the page ---
-    apply_url = page.evaluate("""() => {
-        // Check all links for apply/workday/greenhouse URLs
-        const links = document.querySelectorAll('a[href]');
-        for (const link of links) {
-            const href = link.href;
-            const text = (link.textContent || '').toLowerCase().trim();
-            // Match "Apply" links pointing to ATS domains
-            if (text.includes('apply') && href.startsWith('http')) {
-                const ats = ['myworkdayjobs.com', 'workday.com', 'greenhouse.io',
-                             'lever.co', 'icims.com', 'smartrecruiters.com',
-                             'ashbyhq.com', 'taleo.net', 'jobvite.com',
-                             'adp.com', 'ultipro.com'];
-                for (const domain of ats) {
-                    if (href.includes(domain)) return href;
-                }
-                // Also return any external link from an Apply button
-                if (!href.includes(window.location.hostname)) return href;
-            }
-        }
-
-        // Check onclick handlers and data attributes for URLs
-        const buttons = document.querySelectorAll(
-            'button[onclick], a[onclick], [data-apply-url], [data-href], [data-url]'
-        );
-        for (const btn of buttons) {
-            const text = (btn.textContent || '').toLowerCase();
-            if (!text.includes('apply')) continue;
-            // Check data attributes
-            for (const attr of ['data-apply-url', 'data-href', 'data-url']) {
-                const val = btn.getAttribute(attr);
-                if (val && val.startsWith('http')) return val;
-            }
-            // Check onclick for URLs
-            const onclick = btn.getAttribute('onclick') || '';
-            const match = onclick.match(/(?:window\\.open|location\\.href|location\\.assign)\\s*\\(\\s*['"]([^'"]+)['"]/);
-            if (match) return match[1];
-        }
-
-        return null;
-    }""")
+    apply_url = evaluate_script(
+        page,
+        "page_checks/extract_apply_url.js",
+        {"atsDomains": ATS_DOMAINS},
+    )
 
     if apply_url:
         console.print(f"  [dim]Found apply URL in page: {apply_url[:80]}[/]")
@@ -196,14 +133,7 @@ def force_apply_click(page) -> bool:
         return True
 
     # --- Strategy 2: Intercept window.open() by overriding it, then click ---
-    page.evaluate("""() => {
-        window.__captured_popup_url = null;
-        const origOpen = window.open;
-        window.open = function(url) {
-            window.__captured_popup_url = url;
-            return origOpen.apply(this, arguments);
-        };
-    }""")
+    evaluate_script(page, "page_checks/install_popup_capture.js")
 
     for selector in FORCE_APPLY_SELECTORS:
         try:
@@ -306,7 +236,10 @@ def try_recover_login(page, original_url: str, listing_url: str, conn, app_id, j
     from urllib.parse import urlparse as _urlparse
     from .account_registry import is_auto_register_allowed
     _hostname = _urlparse(current_url).hostname or ""
-    if _hostname and is_auto_register_allowed(_hostname, settings or {}):
+    if (
+        (current_url and is_auto_register_allowed(current_url, settings or {}))
+        or (original_url and is_auto_register_allowed(original_url, settings or {}))
+    ):
         console.print(f"  [cyan]ATS domain -- skipping alternate URL, attempting auto-register flow[/]")
         return StepResult(
             result=HandlerResult.REQUIRES_LOGIN,
@@ -362,20 +295,7 @@ def detect_registration_wall(page) -> bool:
     - No "Sign In" / "Welcome Back" text that would indicate a pure login wall
     """
     try:
-        return page.evaluate("""() => {
-            const text = document.body.innerText.toLowerCase();
-            const pwFields = document.querySelectorAll('input[type="password"]');
-            const hasConfirmPw = pwFields.length >= 2;
-
-            const registerSignals = [
-                'create account', 'create your account', 'sign up',
-                'register', 'new user', 'join now', 'get started',
-            ];
-            const hasRegisterText = registerSignals.some(s => text.includes(s));
-
-            // Registration: confirm-password field OR explicit register text
-            return hasConfirmPw || hasRegisterText;
-        }""")
+        return evaluate_script(page, "auth/detect_registration_wall.js")
     except Exception:
         return False
 

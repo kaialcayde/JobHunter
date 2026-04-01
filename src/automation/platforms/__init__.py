@@ -9,9 +9,20 @@ def get_platform_prefill(url: str):
     BEFORE the vision agent runs. This keeps deterministic fields out of the
     vision loop entirely.
     """
-    url_lower = url.lower()
-    if "avature.net" in url_lower:
+    from ..account_registry import detect_ats_platform
+
+    if detect_ats_platform(url) == "avature":
         from .avature import prefill
         return prefill
     # Future: workday, greenhouse, taleo, etc.
+    return None
+
+
+def get_platform_vision_page_handler(url: str):
+    """Return a platform-owned page handler for the generic vision loop, or None."""
+    from ..account_registry import detect_ats_platform
+
+    if detect_ats_platform(url) == "avature":
+        from .avature_parts.vision import handle_avature_page
+        return handle_avature_page
     return None

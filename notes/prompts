@@ -13,6 +13,7 @@ For each iteration:
    sqlite3 data/jobhunter.db "UPDATE jobs SET status='tailored' WHERE id=<JOB_ID>"
 6. Re-run and repeat until applied or confirmed unresolvable
 7. look at debug screenshots if necessary
+8. Delete the pngs in vision_round_screenshots so future iterations don't run into confusion
 
 After every run (pass or fail):
 - Update LEARNINGS.md with any new platform quirk, selector finding, or failure pattern

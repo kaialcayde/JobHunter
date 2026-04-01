@@ -14,6 +14,8 @@ import urllib.request
 import certifi
 from dotenv import load_dotenv
 
+from .browser_scripts import evaluate_script
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -99,61 +101,7 @@ def solve_recaptcha_v2(page, sitekey: str, enterprise: bool = False) -> bool:
     if not token:
         return False
 
-    # Inject the token into the page
-    page.evaluate(f"""() => {{
-        const token = '{token}';
-
-        // Fill all recaptcha response textareas
-        document.querySelectorAll('[id*="g-recaptcha-response"]').forEach(ta => {{
-            ta.style.display = '';
-            ta.value = token;
-        }});
-
-        // Try multiple callback invocation strategies
-        try {{
-            // 1. data-callback on .g-recaptcha or any recaptcha widget
-            const widgets = document.querySelectorAll('.g-recaptcha, [data-callback]');
-            for (const el of widgets) {{
-                const cbName = el.getAttribute('data-callback');
-                if (cbName && typeof window[cbName] === 'function') {{
-                    window[cbName](token);
-                    return;
-                }}
-            }}
-
-            // 2. grecaptcha enterprise callback (used by Greenhouse and others)
-            if (typeof grecaptcha !== 'undefined') {{
-                // Try enterprise API first
-                if (grecaptcha.enterprise && grecaptcha.enterprise.execute) {{
-                    try {{ grecaptcha.enterprise.execute(); }} catch(e) {{}}
-                }}
-                // Walk registered widget callbacks via internal state
-                if (grecaptcha.render && grecaptcha.getResponse) {{
-                    // Some sites register callbacks via grecaptcha.render() opts
-                    // Try widget IDs 0-5
-                    for (let i = 0; i < 5; i++) {{
-                        try {{
-                            const resp = document.querySelector('#g-recaptcha-response-' + i);
-                            if (resp) {{ resp.value = token; }}
-                        }} catch(e) {{}}
-                    }}
-                }}
-            }}
-
-            // 3. Search for callbacks in common variable names
-            const cbNames = ['onCaptchaSuccess', 'captchaCallback', 'recaptchaCallback',
-                             'onRecaptchaSuccess', 'handleCaptcha', 'verifyCaptcha'];
-            for (const name of cbNames) {{
-                if (typeof window[name] === 'function') {{
-                    window[name](token);
-                    return;
-                }}
-            }}
-
-            // 4. Dispatch a custom event some frameworks listen for
-            window.dispatchEvent(new CustomEvent('captcha-solved', {{ detail: token }}));
-        }} catch(e) {{}}
-    }}""")
+    evaluate_script(page, "captcha/inject_recaptcha_token.js", token)
     page.wait_for_timeout(500)
     logger.info("reCAPTCHA v2 token injected")
     return True
@@ -180,16 +128,7 @@ def solve_hcaptcha(page, sitekey: str) -> bool:
     if not token:
         return False
 
-    # Inject hCaptcha response
-    page.evaluate(f"""() => {{
-        // Set the response textarea
-        const textareas = document.querySelectorAll('[name="h-captcha-response"], [name="g-recaptcha-response"]');
-        textareas.forEach(ta => {{ ta.value = '{token}'; }});
-        // Try hcaptcha callback
-        if (typeof hcaptcha !== 'undefined') {{
-            try {{ hcaptcha.execute(); }} catch(e) {{}}
-        }}
-    }}""")
+    evaluate_script(page, "captcha/inject_hcaptcha_token.js", token)
     page.wait_for_timeout(500)
     logger.info("hCaptcha token injected")
     return True
@@ -216,15 +155,7 @@ def solve_turnstile(page, sitekey: str) -> bool:
     if not token:
         return False
 
-    # Inject Turnstile response
-    page.evaluate(f"""() => {{
-        const input = document.querySelector('[name="cf-turnstile-response"]');
-        if (input) input.value = '{token}';
-        // Try callback
-        if (typeof turnstile !== 'undefined') {{
-            try {{ turnstile.execute(); }} catch(e) {{}}
-        }}
-    }}""")
+    evaluate_script(page, "captcha/inject_turnstile_token.js", token)
     page.wait_for_timeout(500)
     logger.info("Turnstile token injected")
     return True
@@ -240,12 +171,7 @@ def _wait_for_cloudflare_auto_challenge(page) -> bool:
     from .detection import detect_captcha
 
     # Check if this looks like a Cloudflare auto-challenge (not a widget)
-    is_auto_challenge = page.evaluate("""() => {
-        const body = (document.body?.textContent || '').toLowerCase().slice(0, 2000);
-        return body.includes('checking your browser') ||
-               body.includes('verify you are human') ||
-               !!document.querySelector('#challenge-running, #challenge-form, #cf-challenge-running');
-    }""")
+    is_auto_challenge = evaluate_script(page, "captcha/detect_auto_challenge.js")
 
     if not is_auto_challenge:
         return False
@@ -276,89 +202,22 @@ def solve_captcha(page) -> bool:
         return False
 
     # --- reCAPTCHA (v2 or Enterprise) ---
-    recaptcha_info = page.evaluate("""() => {
-        let sitekey = null;
-        let enterprise = false;
-
-        // Check .g-recaptcha widget
-        const el = document.querySelector('.g-recaptcha');
-        if (el) sitekey = el.getAttribute('data-sitekey');
-
-        // Check iframe src
-        if (!sitekey) {
-            const iframe = document.querySelector('iframe[src*="recaptcha"]');
-            if (iframe) {
-                const match = iframe.src.match(/[?&]k=([^&]+)/);
-                if (match) sitekey = match[1];
-                // Enterprise iframes use recaptcha/enterprise
-                if (iframe.src.includes('/enterprise')) enterprise = true;
-            }
-        }
-
-        // Detect Enterprise: check for grecaptcha.enterprise or enterprise scripts
-        if (typeof grecaptcha !== 'undefined' && grecaptcha.enterprise) enterprise = true;
-        const scripts = document.querySelectorAll('script[src*="recaptcha"]');
-        for (const s of scripts) {
-            if (s.src.includes('enterprise')) { enterprise = true; break; }
-        }
-
-        return sitekey ? { sitekey, enterprise } : null;
-    }""")
+    recaptcha_info = evaluate_script(page, "captcha/get_recaptcha_info.js")
     if recaptcha_info:
         variant = "Enterprise" if recaptcha_info["enterprise"] else "v2"
         console.print(f"  [cyan]Solving reCAPTCHA {variant}...[/]")
         return solve_recaptcha_v2(page, recaptcha_info["sitekey"], recaptcha_info["enterprise"])
 
     # --- hCaptcha ---
-    sitekey = page.evaluate("""() => {
-        const el = document.querySelector('[data-hcaptcha-sitekey]') || document.querySelector('.h-captcha');
-        return el ? (el.getAttribute('data-hcaptcha-sitekey') || el.getAttribute('data-sitekey')) : null;
-    }""")
+    sitekey = evaluate_script(page, "captcha/get_hcaptcha_sitekey.js")
     if not sitekey:
-        sitekey = page.evaluate("""() => {
-            const iframe = document.querySelector('iframe[src*="hcaptcha"]');
-            if (!iframe) return null;
-            const match = iframe.src.match(/sitekey=([^&]+)/);
-            return match ? match[1] : null;
-        }""")
+        sitekey = evaluate_script(page, "captcha/get_hcaptcha_sitekey_from_iframe.js")
     if sitekey:
         console.print(f"  [cyan]Solving hCaptcha...[/]")
         return solve_hcaptcha(page, sitekey)
 
     # --- Cloudflare Turnstile ---
-    sitekey = page.evaluate("""() => {
-        // 1. Standard data-sitekey attribute on widget div
-        const el = document.querySelector('[class*="cf-turnstile"]');
-        if (el) {
-            const key = el.getAttribute('data-sitekey');
-            if (key) return key;
-        }
-
-        // 2. iframe src parameter
-        const iframe = document.querySelector('iframe[src*="challenges.cloudflare.com"]');
-        if (iframe) {
-            const match = iframe.src.match(/sitekey=([^&]+)/);
-            if (match) return match[1];
-        }
-
-        // 3. Check script tags for turnstile.render() calls with sitekey
-        const scripts = document.querySelectorAll('script');
-        for (const script of scripts) {
-            const text = script.textContent || '';
-            // Match turnstile.render({sitekey: '...'}) or sitekey: "..."
-            const m = text.match(/turnstile[.]render\\s*\\([^)]*sitekey\\s*:\\s*['"]([^'"]+)['"]/);
-            if (m) return m[1];
-            // Match data-sitekey="..." in inline HTML
-            const m2 = text.match(/data-sitekey\\s*=\\s*['"]([^'"]+)['"]/);
-            if (m2) return m2[1];
-        }
-
-        // 4. Check any element with data-sitekey (some sites put it on non-standard elements)
-        const anyKey = document.querySelector('[data-sitekey]');
-        if (anyKey) return anyKey.getAttribute('data-sitekey');
-
-        return null;
-    }""")
+    sitekey = evaluate_script(page, "captcha/get_turnstile_sitekey.js")
     if sitekey:
         console.print(f"  [cyan]Solving Cloudflare Turnstile...[/]")
         return solve_turnstile(page, sitekey)

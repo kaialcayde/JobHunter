@@ -1,7 +1,7 @@
 """Page detection and navigation -- CAPTCHA, login, modals, and button clicking.
 
-All selector-based checks are batched into single page.evaluate() calls
-to minimize browser round-trips and eliminate per-selector waits.
+Most browser-context DOM logic is delegated to `automation/browser_scripts/`
+and evaluated as cached JS assets to minimize browser round-trips.
 """
 
 import logging
@@ -9,10 +9,18 @@ import logging
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from rich.console import Console
 
+from .browser_scripts import evaluate_script
 from .platforms.linkedin import dismiss_linkedin_modals
 from .selectors import (
-    APPLY_BUTTON_PW_SELECTORS,
+    APPLY_BUTTON_PW_SELECTORS, APPLY_BUTTON_TEXTS,
+    CAPTCHA_BODY_PHRASES, CAPTCHA_CHALLENGE_SELECTORS,
+    CAPTCHA_KNOWN_PASSIVE_DOMAINS, CAPTCHA_PASSIVE_SELECTORS,
+    LINKEDIN_MODAL_SCOPE_SELECTORS,
+    LOGIN_BODY_PHRASES, LOGIN_GENERIC_URL_PATTERNS, LOGIN_SITE_PATTERNS,
+    MODAL_DISMISS_SELECTORS, MODAL_DISMISS_TEXTS,
+    NEXT_BUTTON_JS_SELECTORS, NEXT_BUTTON_JS_TEXTS,
     NEXT_BUTTON_PW_SELECTORS, NEXT_BUTTON_TEXTS,
+    SUBMIT_BUTTON_JS_SELECTORS, SUBMIT_BUTTON_JS_TEXTS,
     SUBMIT_BUTTON_PW_SELECTORS, SUBMIT_BUTTON_TEXTS,
 )
 
@@ -30,91 +38,16 @@ def detect_captcha(page) -> bool:
     Avoids false positives when CAPTCHA scripts are loaded but the challenge
     has already auto-resolved (e.g. Ashby loads Cloudflare scripts always).
     """
-    reason = page.evaluate("""() => {
-        // Check if the page has visible form fields -- if so, the challenge
-        // likely already passed and script-only detection would be a false positive
-        const hasFormContent = (() => {
-            const inputs = document.querySelectorAll(
-                'input:not([type="hidden"]):not([type="submit"]), textarea, select'
-            );
-            let visibleCount = 0;
-            for (const inp of inputs) {
-                if (inp.offsetWidth > 0 && inp.offsetHeight > 0) visibleCount++;
-                if (visibleCount >= 2) return true;
-            }
-            return false;
-        })();
-
-        // Challenge widget selectors — block if visible, skip if hidden with form content
-        const challengeSelectors = [
-            'iframe[src*="hcaptcha"]',
-            '#captcha',
-            'iframe[src*="challenges.cloudflare.com"]',
-            '[class*="cf-turnstile"]', '#challenge-running', '#challenge-form'
-        ];
-        for (const sel of challengeSelectors) {
-            const el = document.querySelector(sel);
-            if (!el) continue;
-            const isVisible = el.offsetWidth > 0 && el.offsetHeight > 0;
-            if (isVisible) return 'challenge-visible:' + sel;
-            if (!hasFormContent) return 'challenge-no-form:' + sel;
-            // Hidden challenge widget + form content = likely passive/resolved, skip
-        }
-
-        // .g-recaptcha can be visible (blocking) or invisible (passive badge).
-        // Only flag as blocking if it's a visible widget (has dimensions and is not invisible).
-        // When form content exists, invisible reCAPTCHA is passive (e.g. Gem.com, Ashby).
-        const gRecaptcha = document.querySelector('.g-recaptcha');
-        if (gRecaptcha) {
-            const dataSize = gRecaptcha.getAttribute('data-size');
-            const isVisible = gRecaptcha.offsetWidth > 10 && gRecaptcha.offsetHeight > 10;
-            if (dataSize === 'invisible' && hasFormContent) {
-                // Invisible + form loaded = passive, skip
-            } else if (!hasFormContent) {
-                return 'g-recaptcha-no-form';
-            } else if (isVisible) {
-                return 'g-recaptcha-visible(w=' + gRecaptcha.offsetWidth + ',h=' + gRecaptcha.offsetHeight + ')';
-            }
-            // else: .g-recaptcha exists but is hidden/zero-size with form content = passive
-        }
-
-        // Known ATS domains with passive reCAPTCHA that isn't blocking (Ashby, Gem)
-        const knownPassiveDomains = ['ashbyhq.com', 'gem.com'];
-        const isKnownPassive = knownPassiveDomains.some(d => window.location.hostname.includes(d));
-
-        // These selectors indicate reCAPTCHA/CAPTCHA presence but may be passive
-        // (invisible reCAPTCHA badge, loaded-but-resolved scripts).
-        // Only flag when no form content is visible AND not a known-passive domain.
-        if (!hasFormContent && !isKnownPassive) {
-            const passiveSelectors = [
-                '.grecaptcha-badge',
-                'iframe[src*="recaptcha"]',
-                'iframe[title*="reCAPTCHA"]',
-                '[class*="captcha"]'
-            ];
-            for (const sel of passiveSelectors) {
-                if (document.querySelector(sel)) return 'passive:' + sel;
-            }
-        }
-
-        // Script-only detection (invisible reCAPTCHA, pre-loaded Cloudflare, etc.)
-        // Skip if the page already has form content -- the challenge was already passed
-        // Also skip for known ATS domains with passive reCAPTCHA (Ashby, Gem)
-        if (!hasFormContent && !isKnownPassive) {
-            const scripts = document.querySelectorAll(
-                'script[src*="recaptcha"], script[src*="hcaptcha"], script[src*="challenges.cloudflare.com"]'
-            );
-            if (scripts.length > 0) return 'scripts-only';
-        }
-
-        const body = (document.body?.textContent || '').toLowerCase().slice(0, 2000);
-        const phrases = [
-            'verify you are human', 'additional verification required',
-            "please verify you're not a robot", 'checking your browser'
-        ];
-        if (phrases.some(p => body.includes(p))) return 'body-phrase';
-        return null;
-    }""")
+    reason = evaluate_script(
+        page,
+        "detection/detect_captcha.js",
+        {
+            "challengeSelectors": CAPTCHA_CHALLENGE_SELECTORS,
+            "passiveSelectors": CAPTCHA_PASSIVE_SELECTORS,
+            "knownPassiveDomains": CAPTCHA_KNOWN_PASSIVE_DOMAINS,
+            "bodyPhrases": CAPTCHA_BODY_PHRASES,
+        },
+    )
     if reason:
         console.print(f"  [dim]CAPTCHA trigger: {reason}[/]")
     return bool(reason)
@@ -146,43 +79,9 @@ def try_solve_captcha(page, settings: dict) -> bool:
 
         # Token injected but page didn't auto-advance -- try multiple submit strategies
         submit_strategies = [
-            # 1. Click any visible submit/verify/apply button
-            """() => {
-                const btns = document.querySelectorAll('button, input[type="submit"], [role="button"], a.btn, a.button');
-                for (const btn of btns) {
-                    if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-                    const text = (btn.textContent || btn.value || '').toLowerCase().trim();
-                    if (text.match(/^(submit|verify|continue|proceed|check|apply)/)) {
-                        btn.click();
-                        return 'clicked: ' + text.substring(0, 30);
-                    }
-                }
-                return null;
-            }""",
-            # 2. Submit the form containing the recaptcha response
-            """() => {
-                const ta = document.querySelector('[id*="g-recaptcha-response"]');
-                if (ta) {
-                    const form = ta.closest('form');
-                    if (form) { form.submit(); return 'form.submit'; }
-                }
-                return null;
-            }""",
-            # 3. Greenhouse-specific: submit the application form or click Apply
-            """() => {
-                // Greenhouse uses #application_form or form with data-lakitu
-                const ghForm = document.querySelector('#application_form, form[action*="applications"]');
-                if (ghForm) {
-                    const btn = ghForm.querySelector('input[type="submit"], button[type="submit"]');
-                    if (btn) { btn.click(); return 'greenhouse submit btn'; }
-                    ghForm.submit();
-                    return 'greenhouse form.submit';
-                }
-                // Generic fallback
-                const form = document.querySelector('form');
-                if (form) { form.submit(); return 'fallback form.submit'; }
-                return null;
-            }""",
+            "detection/captcha_submit_click.js",
+            "detection/captcha_submit_form.js",
+            "detection/captcha_submit_greenhouse.js",
             # 4. Click inside the reCAPTCHA iframe checkbox (triggers verification)
             None,  # handled separately below
         ]
@@ -198,7 +97,7 @@ def try_solve_captcha(page, settings: dict) -> bool:
                     logger.debug(f"CAPTCHA strategy {i+1} (recaptcha checkbox) failed: {e}")
                     continue
             else:
-                result = page.evaluate(strategy)
+                result = evaluate_script(page, strategy)
                 if not result:
                     continue
                 logger.info(f"CAPTCHA submit strategy {i+1}: {result}")
@@ -236,35 +135,15 @@ def try_solve_captcha(page, settings: dict) -> bool:
 
 def detect_login_page(page) -> bool:
     """Detect if we've landed on a login/signup page (single JS call)."""
-    return page.evaluate("""() => {
-        const url = window.location.href.toLowerCase();
-        // Site-specific login URLs — these are definitive, no password field needed
-        const sitePatterns = [
-            'linkedin.com/signup', 'linkedin.com/login', 'linkedin.com/checkpoint',
-            'linkedin.com/uas/login', 'indeed.com/account/login', 'indeed.com/auth',
-            'glassdoor.com/member/auth', 'amazon.jobs/account/signin',
-            'passport.amazon.jobs'
-        ];
-        if (sitePatterns.some(p => url.includes(p))) return true;
-
-        // Generic URL patterns — require a password field to confirm it's a login page
-        const genericPatterns = ['/login', '/signin', '/sign-in', '/auth/'];
-        if (genericPatterns.some(p => url.includes(p))) {
-            if (document.querySelector('input[type="password"]')) return true;
-        }
-
-        const body = (document.body?.textContent || '').toLowerCase().slice(0, 2000);
-        const loginPhrases = [
-            'sign in to continue', 'sign in to see who you already know',
-            'join linkedin', 'join now', 'log in to indeed', 'create an account',
-            'log in using your', 'log in to your account', 'sign in to your account',
-            'enter your password'
-        ];
-        if (loginPhrases.some(p => body.includes(p))) {
-            if (document.querySelector('input[type="password"]')) return true;
-        }
-        return false;
-    }""")
+    return evaluate_script(
+        page,
+        "detection/detect_login_page.js",
+        {
+            "sitePatterns": LOGIN_SITE_PATTERNS,
+            "genericPatterns": LOGIN_GENERIC_URL_PATTERNS,
+            "loginPhrases": LOGIN_BODY_PHRASES,
+        },
+    )
 
 
 def dismiss_modals(page):
@@ -277,37 +156,11 @@ def dismiss_modals(page):
     if is_linkedin:
         dismiss_linkedin_modals(page)
 
-    # Single JS call to dismiss generic modals
-    page.evaluate("""() => {
-        const selectors = [
-            'button[aria-label="Dismiss"]', 'button[aria-label="Close"]',
-            '[data-test-modal-close-btn]', '.modal__dismiss',
-            'button[class*="close"]', 'button[class*="dismiss"]',
-            '[aria-label="close"]'
-        ];
-        const textMatches = ['dismiss', 'not now', 'no thanks', 'skip'];
-
-        for (const sel of selectors) {
-            try {
-                const btn = document.querySelector(sel);
-                if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
-                    btn.click();
-                    return;
-                }
-            } catch(e) {}
-        }
-
-        // Text-based fallback
-        const buttons = document.querySelectorAll('button');
-        for (const btn of buttons) {
-            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-            const text = (btn.textContent || '').trim().toLowerCase();
-            if (textMatches.some(m => text === m || text.startsWith(m))) {
-                btn.click();
-                return;
-            }
-        }
-    }""")
+    evaluate_script(
+        page,
+        "detection/dismiss_generic_modals.js",
+        {"selectors": MODAL_DISMISS_SELECTORS, "textMatches": MODAL_DISMISS_TEXTS},
+    )
 
 
 def _click_with_popup_detection(page, element):
@@ -355,40 +208,11 @@ def click_apply_button(page, finder=None):
         return click_linkedin_apply(page)
 
     # --- Non-LinkedIn: single JS call to find apply element ---
-    result = page.evaluate("""() => {
-        const applyTexts = [
-            'apply now', 'apply', 'apply for this job', 'apply for this position',
-            "i'm interested", 'im interested', 'submit application', 'start application',
-            'continue application', 'continue your application', 'complete application'
-        ];
-
-        // Check links first
-        const links = document.querySelectorAll('a');
-        for (const a of links) {
-            if (a.offsetWidth === 0 || a.offsetHeight === 0) continue;
-            const text = (a.textContent || '').trim().toLowerCase();
-            if (applyTexts.some(t => text === t || text.startsWith(t)) && a.href && a.href.startsWith('http')) {
-                return { type: 'link', href: a.href };
-            }
-        }
-
-        // Check buttons
-        const buttons = document.querySelectorAll(
-            'button, [data-testid*="apply"], .apply-button, #apply-button, ' +
-            '[data-testid*="interest"], .js-btn-apply'
-        );
-        for (const btn of buttons) {
-            if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-            const text = (btn.textContent || '').trim().toLowerCase();
-            if (applyTexts.some(t => text === t || text.includes(t))) {
-                const tag = btn.tagName.toLowerCase();
-                const href = tag === 'a' ? btn.href : null;
-                if (href && href.startsWith('http')) return { type: 'link', href: href };
-                return { type: 'button' };
-            }
-        }
-        return null;
-    }""")
+    result = evaluate_script(
+        page,
+        "detection/find_apply_target.js",
+        {"applyTexts": APPLY_BUTTON_TEXTS},
+    )
 
     if result and result["type"] == "link":
         console.print(f"  [dim]Following apply link...[/]")
@@ -468,46 +292,18 @@ def click_next_button(page, finder=None) -> bool:
                 continue
 
         # -- JS fallback for non-shadow-DOM cases --
-        clicked = page.evaluate("""() => {
-            const modal = document.querySelector(
-                '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
-                '[role="dialog"], .artdeco-modal'
-            );
-            const scope = (modal && modal.offsetWidth > 0) ? modal : document;
-            if (scope === document && document.body) {
-                window.scrollTo(0, document.body.scrollHeight);
-            }
-
-            const selectors = [
-                'button[aria-label="Continue to next step"]',
-                'button[aria-label="Next"]',
-                'button[aria-label="Review your application"]',
-                'button[aria-label="Review"]',
-                'button[data-automation-id="bottom-navigation-next-button"]',
-                '[data-testid*="next"]',
-            ];
-            for (const sel of selectors) {
-                const btn = scope.querySelector(sel);
-                if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
-                    btn.scrollIntoView({ block: 'center' });
-                    btn.click();
-                    return true;
-                }
-            }
-
-            const textMatches = ['next', 'continue', 'review', 'save and continue', 'save'];
-            const buttons = scope.querySelectorAll('button, input[type="submit"], a');
-            for (const btn of buttons) {
-                if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-                const text = (btn.textContent || btn.value || '').trim().toLowerCase();
-                if (textMatches.some(m => text === m || text.startsWith(m + ' '))) {
-                    btn.scrollIntoView({ block: 'center' });
-                    btn.click();
-                    return true;
-                }
-            }
-            return false;
-        }""")
+        clicked = evaluate_script(
+            page,
+            "detection/click_scoped_button.js",
+            {
+                "modalSelectors": LINKEDIN_MODAL_SCOPE_SELECTORS,
+                "selectors": NEXT_BUTTON_JS_SELECTORS,
+                "textMatches": NEXT_BUTTON_JS_TEXTS,
+                "buttonSelector": 'button, input[type="submit"], a',
+                "scrollToBottom": True,
+                "scrollToTopOnMiss": False,
+            },
+        )
 
         if clicked:
             return True
@@ -515,19 +311,14 @@ def click_next_button(page, finder=None) -> bool:
     # Fallback: check iframes (some ATS embed forms)
     for frame in page.frames[1:]:
         try:
-            clicked = frame.evaluate("""() => {
-                const textMatches = ['next', 'continue', 'review', 'save and continue', 'save'];
-                const buttons = document.querySelectorAll('button, input[type="submit"], a');
-                for (const btn of buttons) {
-                    if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-                    const text = (btn.textContent || btn.value || '').trim().toLowerCase();
-                    if (textMatches.some(m => text === m || text.startsWith(m + ' '))) {
-                        btn.click();
-                        return true;
-                    }
-                }
-                return false;
-            }""")
+            clicked = evaluate_script(
+                frame,
+                "detection/click_text_button.js",
+                {
+                    "textMatches": NEXT_BUTTON_JS_TEXTS,
+                    "buttonSelector": 'button, input[type="submit"], a',
+                },
+            )
             if clicked:
                 return True
         except Exception:
@@ -577,75 +368,39 @@ def click_submit_button(page, finder=None) -> bool:
                 continue
 
         # -- JS fallback for non-shadow-DOM cases --
-        clicked = page.evaluate("""() => {
-            const modal = document.querySelector(
-                '.jobs-easy-apply-modal, .jobs-easy-apply-content, ' +
-                '[role="dialog"], .artdeco-modal'
-            );
-            const scope = (modal && modal.offsetWidth > 0) ? modal : document;
-            if (scope === document && document.body) {
-                window.scrollTo(0, document.body.scrollHeight);
-            }
-
-            const selectors = [
-                'button[aria-label="Submit application"]', 'button[aria-label="Submit"]',
-                '#submit_app', '#submit-application',
-                'button[data-automation-id="submit"]',
-                '.posting-btn-submit', 'button.postings-btn',
-                '.iCIMS_Button', 'button.btn-submit',
-                '[data-testid*="submit"]', '[data-testid*="apply"]',
-                'input[type="submit"]', 'button[type="submit"]',
-            ];
-            for (const sel of selectors) {
-                const btn = scope.querySelector(sel);
-                if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
-                    btn.scrollIntoView({ block: 'center' });
-                    btn.click();
-                    return true;
-                }
-            }
-
-            const textMatches = [
-                'submit application', 'submit', 'send application',
-                'apply', 'complete', 'finish', 'done'
-            ];
-            const buttons = scope.querySelectorAll('button, input[type="submit"], a, [role="button"]');
-            for (const match of textMatches) {
-                for (const btn of buttons) {
-                    if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-                    const text = (btn.textContent || btn.value || '').trim().toLowerCase();
-                    if (text === match || text.startsWith(match)) {
-                        btn.scrollIntoView({ block: 'center' });
-                        btn.click();
-                        return true;
-                    }
-                }
-            }
-
-            if (scope === document) window.scrollTo(0, 0);
-            return false;
-        }""")
+        clicked = evaluate_script(
+            page,
+            "detection/click_scoped_button.js",
+            {
+                "modalSelectors": LINKEDIN_MODAL_SCOPE_SELECTORS,
+                "selectors": SUBMIT_BUTTON_JS_SELECTORS,
+                "textMatches": SUBMIT_BUTTON_JS_TEXTS,
+                "buttonSelector": 'button, input[type="submit"], a, [role="button"]',
+                "scrollToBottom": True,
+                "scrollToTopOnMiss": True,
+            },
+        )
 
         if clicked:
             return True
 
         # Second pass from top of page
         try:
-            clicked = page.evaluate("""() => {
-                const selectors = [
-                    'input[type="submit"]', 'button[type="submit"]',
-                    '[data-testid*="submit"]', '[class*="submit"]',
-                ];
-                for (const sel of selectors) {
-                    const btn = document.querySelector(sel);
-                    if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
-                        btn.scrollIntoView({ block: 'center' });
-                        btn.click();
-                        return true;
-                    }
-                }
-                return false;
-            }""")
+            clicked = evaluate_script(
+                page,
+                "detection/click_scoped_button.js",
+                {
+                    "modalSelectors": None,
+                    "selectors": [
+                        'input[type="submit"]', 'button[type="submit"]',
+                        '[data-testid*="submit"]', '[class*="submit"]',
+                    ],
+                    "textMatches": [],
+                    "buttonSelector": 'button, input[type="submit"], a, [role="button"]',
+                    "scrollToBottom": False,
+                    "scrollToTopOnMiss": False,
+                },
+            )
             if clicked:
                 return True
         except Exception as e:
@@ -654,21 +409,14 @@ def click_submit_button(page, finder=None) -> bool:
     # Fallback: check iframes
     for frame in page.frames[1:]:
         try:
-            clicked = frame.evaluate("""() => {
-                const textMatches = ['submit', 'apply', 'send application', 'complete'];
-                const buttons = document.querySelectorAll('button, input[type="submit"], a, [role="button"]');
-                for (const match of textMatches) {
-                    for (const btn of buttons) {
-                        if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-                        const text = (btn.textContent || btn.value || '').trim().toLowerCase();
-                        if (text === match || text.startsWith(match)) {
-                            btn.click();
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }""")
+            clicked = evaluate_script(
+                frame,
+                "detection/click_text_button.js",
+                {
+                    "textMatches": ['submit', 'apply', 'send application', 'complete'],
+                    "buttonSelector": 'button, input[type="submit"], a, [role="button"]',
+                },
+            )
             if clicked:
                 return True
         except Exception:

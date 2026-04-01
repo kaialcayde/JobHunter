@@ -13,6 +13,8 @@ import os
 import re
 import time
 
+from .browser_scripts import evaluate_script
+
 logger = logging.getLogger(__name__)
 
 # Common OTP patterns across ATS platforms
@@ -250,19 +252,7 @@ def find_otp_field(page) -> object | None:
             continue
 
     # Fallback: find input near OTP-related labels via JS
-    result = page.evaluate("""() => {
-        const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"]');
-        for (const inp of inputs) {
-            const label = (inp.getAttribute('aria-label') || inp.getAttribute('placeholder') || '').toLowerCase();
-            const parentText = (inp.closest('label, div, fieldset')?.textContent || '').toLowerCase();
-            if (['verification', 'code', 'otp', 'confirm', 'one-time'].some(
-                k => label.includes(k) || parentText.includes(k)
-            )) {
-                return true;
-            }
-        }
-        return false;
-    }""")
+    result = evaluate_script(page, "auth/has_otp_field.js")
 
     if result:
         # Use the JS-based fill approach since we can't return a locator from evaluate
@@ -277,26 +267,4 @@ class _OTPFieldProxy:
         self._page = page
 
     def fill(self, code: str):
-        self._page.evaluate("""(code) => {
-            const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"]');
-            for (const inp of inputs) {
-                const label = (inp.getAttribute('aria-label') || inp.getAttribute('placeholder') || '').toLowerCase();
-                const parentText = (inp.closest('label, div, fieldset')?.textContent || '').toLowerCase();
-                if (['verification', 'code', 'otp', 'confirm', 'one-time'].some(
-                    k => label.includes(k) || parentText.includes(k)
-                )) {
-                    inp.focus();
-                    inp.value = code;
-                    inp.dispatchEvent(new Event('input', {bubbles: true}));
-                    inp.dispatchEvent(new Event('change', {bubbles: true}));
-                    return;
-                }
-            }
-            // Last resort: fill the focused element
-            const active = document.activeElement;
-            if (active && active.tagName === 'INPUT') {
-                active.value = code;
-                active.dispatchEvent(new Event('input', {bubbles: true}));
-                active.dispatchEvent(new Event('change', {bubbles: true}));
-            }
-        }""", code)
+        evaluate_script(self._page, "auth/fill_otp_field.js", code)

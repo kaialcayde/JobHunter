@@ -251,6 +251,7 @@ Amazon Jobs uses a multi-step application form (Contact info -> General question
 Platform module: none (create when needed)
 
 ### Domain Pattern
+- Some employers host the same Avature flow on a branded domain (for example, `apply.deloitte.com`) while keeping Avature path signatures like `/careers/InviteToApply`.
 - `*.avature.net` (e.g. `bloomberg.avature.net`)
 - Each employer gets a subdomain tenant — treat each as a distinct account
 
@@ -264,6 +265,11 @@ The login page has a "Create Account" or "Sign Up" link. `handle_detect_auth_typ
 The job's `listing_url` often points to Indeed. If `try_recover_login` falls back to the Indeed URL, it hits a **Cloudflare CAPTCHA** (verified in `debug_no_submit.png` for job #280). The vision agent cannot complete this challenge.
 
 **Fix:** `try_recover_login` now short-circuits for any domain in `auto_register_domains` — skips the alternate URL entirely and returns `REQUIRES_LOGIN` so the kernel routes to `DETECT_AUTH_TYPE → REGISTER`.
+
+### Custom-Hosted Avature Domains
+Deloitte redirected `deloitteus.avature.net` to `apply.deloitte.com/en_US/careers/InviteToApply?...`, which is still Avature. Hostname-only checks missed it, so login recovery treated it like a generic site, fell back to the Indeed `listing_url`, and the run died on Indeed's Cloudflare CAPTCHA.
+
+**Fix:** detect Avature by URL path signatures as well as hostname. Reuse that shared detection in login recovery, auto-register allowlisting, platform-prefill routing, and the deterministic Avature handler inside the vision agent.
 
 ### Domain Collapse Gotcha
 `ATS_DOMAINS` contains `avature.net`, so `get_site_domain("bloomberg.avature.net")` collapses to `avature.net`. But `fnmatch.fnmatch("avature.net", "*.avature.net")` returns False (no prefix before the dot). All places that call `is_auto_register_allowed` or use the domain as an account registry key now use `urlparse(url).hostname` (full hostname) instead of the collapsed domain.
@@ -282,6 +288,16 @@ Avature's first application step is a resume-upload-only page ("Select Your Resu
 Avature (and many ATS platforms) **normalize Gmail plus-addressing**: `kalcaydecl+avature-bloomberg@gmail.com` is treated as `kalcaydecl@gmail.com` for duplicate checking. When `use_email_aliases: true`, auto-registration attempts fail with "There's an existing record with that email" if the base email already has an account on the site.
 
 **Fix:** Keep `use_email_aliases: false` and manually seed the base email credentials via `python -m src set-account bloomberg.avature.net kalcaydecl@gmail.com Pog1ako1`. When registration detects "existing record", it switches to login and uses the stored credentials automatically.
+
+### Template `-sample` Rows vs Live Dataset Rows
+Avature multi-row sections (education, work history) render both hidden/template controls like `6074-1-sample` and live row controls like `6074-1-0`. The template row often keeps the placeholder label text (`"School Select an option"`) while the live row label changes to include the chosen value. Label-based lookup and validation logging will drift back to the template row unless the code explicitly prefers visible non-`-sample` controls.
+
+**Fix:** for Avature label-based control discovery, sort candidates by visible container + non-`-sample` row before exact-label match. Also ignore `-sample` containers when dumping validation errors from the Register page.
+
+### Autocomplete "Other" Path
+Some Avature select2/autocomplete fields do NOT contain the applicant's real value in the tenant's option list. Deloitte's work-history `Employer` field explicitly instructs: *If employer is not listed, please select "Other".* When the code forced a partial match, it selected the wrong employer (`Intuit Inc.`) and hid the real root cause.
+
+**Fix:** use strict matching for employer/company autocomplete fields. If no exact-ish option exists, prefer the field's `Other` path and fill the paired `Other *` text input with the real company name instead of inventing a nearby option.
 
 ### Configuration
 - `selectors.py` `ATS_DOMAINS`: `avature.net` added
@@ -314,6 +330,18 @@ Platform module: `src/automation/platforms/adp.py` (create when needed)
 - ADP listing pages also have search/filter form inputs (keyword, location) that make `_is_listing_page()` return False — the code thinks it's a form page when it's actually a listing
 - **Fix:** `_is_listing_page()` now excludes search/filter inputs from the form field count. Added `adp.com` to the ATS domain list in `_force_apply_click()`. Vision agent's stuck handler now detects "job listing/description" keywords and tries `_force_apply_click()` before giving up
 - **Unresolved:** ADP's Apply button uses a framework-specific handler that neither URL extraction, JS click, nor `window.open` interception can trigger. `_force_apply_click()` fails. ADP jobs may need a platform-specific module with Playwright native click + popup detection
+
+---
+
+## TEKsystems
+
+Platform module: none (create when needed)
+
+### `apply.teksystems.com/v1/s/` Listing Shell
+- URL pattern: `apply.teksystems.com/v1/s/...`
+- Symptom: external redirect lands on a page titled "Job Application | TEKsystems Careers", but DOM pre-fill finds 0 fields and the only obvious control is a `Filter` button (`#filter-btn-handler`).
+- Root cause: this is still a listing/search shell, not the actual application form. `is_listing_page()` was returning `False` because the page lacked the usual listing-keyword text, so the flow skipped listing recovery and handed the shell to the vision agent.
+- Fix applied: treat `apply.teksystems.com/v1/s/` with `#filter-btn-handler` and 0 form fields as a listing page. In listing recovery, try `click_apply_button()` before `force_apply_click()` so ATS pages with a visible Apply button get one normal Playwright click before URL-extraction fallback.
 
 ---
 
