@@ -22,7 +22,7 @@ job_search:
     - "mid"
     - "senior"
   sites:
-    # - "indeed"
+    - "indeed"
     - "linkedin"
     # - "glassdoor" # broken
     # - "zip_recruiter"

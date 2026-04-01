@@ -109,15 +109,16 @@ def _dedupe_login_targets(targets: list[dict]) -> list[dict]:
 
 
 def _launch_login_browser(playwright):
-    """Prefer a real Chrome channel for manual login when available."""
+    """Launch a visible Playwright browser window for manual login."""
     launch_kwargs = {
         "headless": False,
-        "args": ["--disable-blink-features=AutomationControlled"],
+        "args": [
+            "--disable-blink-features=AutomationControlled",
+            "--new-window",
+            "--start-maximized",
+        ],
     }
-    try:
-        return playwright.chromium.launch(channel="chrome", **launch_kwargs), "Chrome"
-    except Exception:
-        return playwright.chromium.launch(**launch_kwargs), "Chromium"
+    return playwright.chromium.launch(**launch_kwargs), "Chromium"
 
 
 def _run_manual_login_sequence(targets: list[dict], title: str, retry_domains: set[str] | None = None) -> set[str]:
@@ -138,6 +139,10 @@ def _run_manual_login_sequence(targets: list[dict], title: str, retry_domains: s
     console.print("A browser window will open for each site, one at a time.")
     console.print("Log in manually, handle any 2FA/CAPTCHA prompts, then return here and press Enter.")
     console.print("Cookies/session state will be saved before moving to the next site.\n")
+    console.print("Login queue:")
+    for idx, target in enumerate(targets, start=1):
+        console.print(f"  {idx}. {target['label']} ({target['login_url']})")
+    console.print("")
 
     saved_domains = set()
 
