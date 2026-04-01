@@ -2,7 +2,8 @@
 
 import yaml
 from pathlib import Path
-from ..utils import CONFIG_DIR
+from urllib.parse import urlparse
+from ..utils import CONFIG_DIR, DOMAIN_BLACKLIST_PATH
 from .models import Profile, Settings
 
 
@@ -54,6 +55,44 @@ def load_settings_model() -> Settings:
     """Load and validate settings, returning the Pydantic model directly."""
     raw = load_settings_raw()
     return Settings(**raw)
+
+
+def load_domain_blacklist() -> list[str]:
+    """Load blocked domain/path patterns from config/domain_blacklist.txt."""
+    if not DOMAIN_BLACKLIST_PATH.exists():
+        return []
+
+    entries = []
+    with open(DOMAIN_BLACKLIST_PATH, "r", encoding="utf-8") as f:
+        for line in f:
+            value = line.strip()
+            if not value or value.startswith("#"):
+                continue
+            entries.append(value.lower())
+    return entries
+
+
+def is_blacklisted_url(url: str, blacklist: list[str] | None = None) -> bool:
+    """Return True if a URL matches any domain/path blacklist pattern."""
+    if not url:
+        return False
+
+    blacklist = blacklist if blacklist is not None else load_domain_blacklist()
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    normalized_url = url.lower()
+
+    for entry in blacklist:
+        entry = entry.strip().lower()
+        if not entry:
+            continue
+        if "/" in entry:
+            if entry in normalized_url:
+                return True
+        elif hostname == entry or hostname.endswith(f".{entry}"):
+            return True
+
+    return False
 
 
 def get_profile_summary(profile: dict) -> str:

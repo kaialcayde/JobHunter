@@ -1,5 +1,6 @@
 """JobHunter CLI -- main entry point and pipeline orchestrator."""
 
+import json
 import os
 import sys
 import logging
@@ -27,6 +28,27 @@ from .utils import (
 )
 
 console = Console(force_terminal=True)
+
+
+DEFAULT_LOGIN_TARGETS = [
+    {
+        "label": "LinkedIn",
+        "domain": "linkedin.com",
+        "login_url": "https://www.linkedin.com/login",
+        "save_mode": "storage_state",
+        "save_path": LINKEDIN_AUTH_STATE,
+        "success_hint": "your LinkedIn feed",
+        "load_existing_auth": True,
+    },
+    {
+        "label": "Indeed",
+        "domain": "indeed.com",
+        "login_url": "https://www.indeed.com/",
+        "save_mode": "cookies",
+        "success_hint": "your Indeed account/home page",
+        "load_existing_auth": False,
+    },
+]
 
 
 def _round_robin_select(jobs: list[dict], limit: int) -> list[dict]:
@@ -71,6 +93,143 @@ def setup_logging():
         ],
     )
     return logging.getLogger("jobhunter")
+
+
+def _dedupe_login_targets(targets: list[dict]) -> list[dict]:
+    """Keep login targets ordered while deduplicating by domain."""
+    deduped = []
+    seen = set()
+    for target in targets:
+        domain = target["domain"]
+        if domain in seen:
+            continue
+        seen.add(domain)
+        deduped.append(target)
+    return deduped
+
+
+def _launch_login_browser(playwright):
+    """Prefer a real Chrome channel for manual login when available."""
+    launch_kwargs = {
+        "headless": False,
+        "args": ["--disable-blink-features=AutomationControlled"],
+    }
+    try:
+        return playwright.chromium.launch(channel="chrome", **launch_kwargs), "Chrome"
+    except Exception:
+        return playwright.chromium.launch(**launch_kwargs), "Chromium"
+
+
+def _run_manual_login_sequence(targets: list[dict], title: str, retry_domains: set[str] | None = None) -> set[str]:
+    """Open a visible browser and capture auth for each target sequentially."""
+    from playwright.sync_api import sync_playwright
+    from .automation.page_checks import get_site_auth_path
+    from .utils import USER_AGENT, SITE_AUTH_DIR
+
+    ensure_dirs()
+    SITE_AUTH_DIR.mkdir(parents=True, exist_ok=True)
+
+    targets = _dedupe_login_targets(targets)
+    retry_domains = retry_domains or set()
+    if not targets:
+        return set()
+
+    console.print(f"[bold blue]== {title} ==[/]\n")
+    console.print("A browser window will open for each site, one at a time.")
+    console.print("Log in manually, handle any 2FA/CAPTCHA prompts, then return here and press Enter.")
+    console.print("Cookies/session state will be saved before moving to the next site.\n")
+
+    saved_domains = set()
+
+    with sync_playwright() as p:
+        for idx, target in enumerate(targets, start=1):
+            label = target["label"]
+            domain = target["domain"]
+            login_url = target["login_url"]
+            save_mode = target["save_mode"]
+            save_path = Path(target.get("save_path") or get_site_auth_path(login_url))
+            load_existing_auth = target.get("load_existing_auth", True)
+            browser, browser_label = _launch_login_browser(p)
+
+            console.print(f"[bold blue]({idx}/{len(targets)}) {label}[/]")
+            console.print(f"Opening in {browser_label}: {login_url}")
+
+            context_kwargs = {
+                "viewport": {"width": 1280, "height": 900},
+                "user_agent": USER_AGENT,
+            }
+            if load_existing_auth and save_mode == "storage_state" and save_path.exists():
+                context_kwargs["storage_state"] = str(save_path)
+                console.print("  [dim]Loading existing session (refreshing)...[/]")
+
+            context = browser.new_context(**context_kwargs)
+            context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+            """)
+
+            if load_existing_auth and save_mode == "cookies" and save_path.exists():
+                try:
+                    cookies = json.loads(save_path.read_text())
+                    if isinstance(cookies, list):
+                        context.add_cookies(cookies)
+                    console.print("  [dim]Loading existing cookies (refreshing)...[/]")
+                except Exception:
+                    console.print("  [yellow]Existing cookies could not be loaded, starting fresh.[/]")
+
+            page = context.new_page()
+            page.goto(login_url, wait_until="domcontentloaded", timeout=30000)
+            if domain == "indeed.com":
+                console.print("  [dim]Indeed tip: wait a few seconds, then click Sign in from the page instead of forcing a direct login path.[/]")
+                page.wait_for_timeout(4000)
+
+            input(f"Press Enter after you are signed in on {label}: ")
+
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            if save_mode == "storage_state":
+                context.storage_state(path=str(save_path))
+                console.print(f"  [green]Session saved for {label} -> {save_path}[/]")
+            else:
+                cookies = context.storage_state().get("cookies", [])
+                save_path.write_text(json.dumps(cookies, indent=2))
+                console.print(f"  [green]Cookies saved for {label} -> {save_path}[/]")
+
+            if domain in retry_domains:
+                saved_domains.add(domain)
+
+            context.close()
+            browser.close()
+            console.print("")
+
+    return saved_domains
+
+
+def _build_retry_login_targets(needs_login: list[dict]) -> tuple[list[dict], dict[str, list[dict]]]:
+    """Group needs_login jobs by domain and create one login target per domain."""
+    from collections import defaultdict
+    from .automation.page_checks import get_site_domain
+
+    sites = defaultdict(list)
+    for job in needs_login:
+        url = job.get("url", "") or job.get("listing_url", "")
+        domain = get_site_domain(url) if url else "unknown"
+        sites[domain].append(job)
+
+    targets = []
+    for domain, jobs in sites.items():
+        sample_url = jobs[0].get("url", "") or jobs[0].get("listing_url", "")
+        if not sample_url:
+            continue
+        targets.append({
+            "label": domain,
+            "domain": domain,
+            "login_url": sample_url,
+            "save_mode": "cookies",
+            "load_existing_auth": True,
+        })
+
+    return targets, dict(sites)
 
 
 def cmd_scrape():
@@ -146,39 +305,10 @@ def cmd_tailor():
 
 
 def cmd_login():
-    """Launch a browser for manual LinkedIn login, then save session cookies."""
-    from playwright.sync_api import sync_playwright
-
-    ensure_dirs()
-    console.print("[bold blue]== LinkedIn Login ==[/]\n")
-    console.print("A browser window will open. Log in to LinkedIn manually.")
-    console.print("Handle any 2FA or CAPTCHA prompts in the browser.")
-    console.print("When you see your LinkedIn feed, come back here and press Enter.\n")
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-
-        # Load existing session if refreshing -- use same UA as apply context
-        from .utils import USER_AGENT
-        context_kwargs = {
-            "viewport": {"width": 1280, "height": 900},
-            "user_agent": USER_AGENT,
-        }
-        if LINKEDIN_AUTH_STATE.exists():
-            context_kwargs["storage_state"] = str(LINKEDIN_AUTH_STATE)
-            console.print("[dim]Loading existing session (refreshing)...[/]")
-
-        context = browser.new_context(**context_kwargs)
-        page = context.new_page()
-        page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded")
-
-        input("Press Enter here after you have logged in...")
-
-        context.storage_state(path=str(LINKEDIN_AUTH_STATE))
-        browser.close()
-
-    console.print(f"\n[green]LinkedIn session saved to {LINKEDIN_AUTH_STATE}[/]")
-    console.print("Future apply/pipeline runs will use this session automatically.")
+    """Launch a browser for manual login to default job sites and save auth state."""
+    _run_manual_login_sequence(DEFAULT_LOGIN_TARGETS, "Job Site Login")
+    console.print("[green]Saved login state for the default job sites.[/]")
+    console.print("Future apply/pipeline runs will reuse these sessions/cookies automatically.")
 
 
 def _check_linkedin_auth() -> bool:
@@ -753,85 +883,33 @@ def cmd_answers():
 
 
 def cmd_login_sites():
-    """Open a visible browser to log in to sites that blocked applications one at a time, save cookies, then retry."""
-    from playwright.sync_api import sync_playwright
+    """Refresh default site auth, then log in to blocked sites sequentially and reset those jobs."""
     from .db import get_jobs_by_status, update_job_status
-    from .automation.page_checks import get_site_domain as _get_site_domain, get_site_auth_path as _get_site_auth_path
-    from .automation.applicant import _run_application_batch
+    from .automation.page_checks import get_site_domain as _get_site_domain
 
     conn = get_connection()
     needs_login = get_jobs_by_status(conn, "needs_login")
 
-    if not needs_login:
-        console.print("[yellow]No jobs pending login. All clear![/]")
-        conn.close()
-        return
+    retry_targets, sites = _build_retry_login_targets(needs_login)
 
-    # Group jobs by site domain
-    from collections import defaultdict
-    sites = defaultdict(list)
-    for j in needs_login:
-        url = j.get("url", "") or j.get("listing_url", "")
-        domain = _get_site_domain(url) if url else "unknown"
-        sites[domain].append(j)
-
-    console.print(f"[bold blue]{len(needs_login)} jobs need login across {len(sites)} site(s)[/]\n")
-    for domain, jobs in sites.items():
-        console.print(f"  [bold]{domain}[/] -- {len(jobs)} job(s)")
-        for j in jobs:
-            console.print(f"    {j['title']} at {j['company']}")
-
-    console.print(f"\n[yellow]You will log in to each site one at a time.[/]")
-    console.print("[yellow]After logging in, come back here and press Enter.[/]\n")
-
-    from .utils import USER_AGENT, SITE_AUTH_DIR
-    SITE_AUTH_DIR.mkdir(parents=True, exist_ok=True)
-
-    logged_in_domains = set()
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-
+    if sites:
+        console.print(f"[bold blue]{len(needs_login)} jobs need login across {len(sites)} site(s)[/]\n")
         for domain, jobs in sites.items():
-            # Pick a representative URL for this domain
-            sample_url = jobs[0].get("url", "") or jobs[0].get("listing_url", "")
-            site_auth = _get_site_auth_path(sample_url)
+            console.print(f"  [bold]{domain}[/] -- {len(jobs)} job(s)")
+            for job in jobs:
+                console.print(f"    {job['title']} at {job['company']}")
+        console.print("")
+    else:
+        console.print("[yellow]No jobs are currently marked needs_login.[/]")
+        console.print("Refreshing the default job-site sessions anyway.\n")
 
-            console.print(f"\n[bold blue]== Log in to {domain} ==[/]")
-            console.print(f"  Opening: {sample_url[:80]}")
-
-            # Load existing cookies if any
-            context_kwargs = {
-                "viewport": {"width": 1280, "height": 900},
-                "user_agent": USER_AGENT,
-            }
-            context = browser.new_context(**context_kwargs)
-            page = context.new_page()
-
-            # Load existing cookies if any
-            if site_auth.exists():
-                try:
-                    import json
-                    cookies = json.loads(site_auth.read_text())
-                    if isinstance(cookies, list):
-                        context.add_cookies(cookies)
-                    console.print("  [dim]Loading existing cookies (refreshing)...[/]")
-                except Exception:
-                    pass
-            page.goto(sample_url, wait_until="domcontentloaded", timeout=30000)
-
-            input(f"  Press Enter here after you have logged in to {domain}...")
-
-            # Save cookies for this domain
-            import json
-            state = context.storage_state()
-            site_auth.write_text(json.dumps(state.get("cookies", []), indent=2))
-            console.print(f"  [green]Cookies saved for {domain} -> {site_auth}[/]")
-            logged_in_domains.add(domain)
-
-            context.close()
-
-        browser.close()
+    login_targets = _dedupe_login_targets(DEFAULT_LOGIN_TARGETS + retry_targets)
+    retry_domains = {target["domain"] for target in retry_targets}
+    logged_in_domains = _run_manual_login_sequence(
+        login_targets,
+        "Job Site Login + Retry",
+        retry_domains=retry_domains,
+    )
 
     # Retry jobs for domains we logged into
     if logged_in_domains:
@@ -844,6 +922,8 @@ def cmd_login_sites():
             for j in retry_jobs:
                 update_job_status(conn, j["id"], "new")
             console.print("[green]Jobs reset to 'new' -- run 'python -m src apply' to retry.[/]")
+    elif sites:
+        console.print("[yellow]No retry-domain cookies were refreshed, so no jobs were reset.[/]")
 
     conn.close()
 
@@ -860,14 +940,14 @@ def main():
         console.print("  [bold]pipeline[/]   Run full pipeline: scrape -> tailor -> apply")
         console.print("  [bold]status[/]     Show application status summary")
         console.print("  [bold]list[/]       List jobs (optional: list <status>)")
-        console.print("  [bold]login[/]      Save LinkedIn session for authenticated applications")
+        console.print("  [bold]login[/]      Save sessions for LinkedIn and Indeed")
         console.print("  [bold]retry[/]      Reset failed jobs back to ready-for-apply")
         console.print("  [bold]delete-failed[/] Delete all failed jobs from the database")
         console.print("  [bold]view[/]       View successful applications and open folder")
         console.print("  [bold]view-failed[/] View failed applications and open folder")
         console.print("  [bold]reset[/]      Full reset: delete all applications and database")
         console.print("  [bold]remove-failed[/] Move failed apps to _failed/ folder and clean DB")
-        console.print("  [bold]login-sites[/]  Log in to sites that blocked apps, then retry those jobs")
+        console.print("  [bold]login-sites[/]  Refresh default site logins, then log in to blocked sites and reset those jobs")
         console.print("  [bold]answers[/]     Review and fill in unanswered form questions")
         console.print("  [bold]seed-answers[/] Seed answer bank from profile.yaml")
         console.print("  [bold]apply-job[/]   Apply to a specific job by ID (testing/debugging)")

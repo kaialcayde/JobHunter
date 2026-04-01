@@ -8,6 +8,7 @@ from pathlib import Path
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 CONFIG_DIR = PROJECT_ROOT / "config"
+DOMAIN_BLACKLIST_PATH = CONFIG_DIR / "domain_blacklist.txt"
 TEMPLATES_DIR = PROJECT_ROOT / "templates"
 APPLICATIONS_DIR = PROJECT_ROOT / "applications"
 ATTEMPTS_DIR = APPLICATIONS_DIR / "attempts"

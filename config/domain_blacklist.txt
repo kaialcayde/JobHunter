@@ -1,0 +1,26 @@
+# JobHunter domain blacklist
+#
+# One entry per line.
+# Blank lines and lines starting with "#" are ignored.
+#
+# How matching works:
+# - Plain domains match that hostname and all subdomains.
+#   Example: google.com
+#   Matches: google.com, www.google.com, careers.google.com
+#
+# - Entries containing "/" are treated as URL fragments.
+#   Example: google.com/about/careers
+#   Matches any URL containing that exact fragment.
+#
+# Use cases:
+# - Block an entire site:
+#   indeed.com
+#
+# - Block only one section of a site:
+#   google.com/about/careers
+#
+# - Re-enable a blocked site:
+#   Delete the line or comment it out with "#"
+#
+# Current blacklist:
+google.com/about/careers

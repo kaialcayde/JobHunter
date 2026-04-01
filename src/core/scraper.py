@@ -11,6 +11,7 @@ from ..db import (
     update_scrape_cache
 )
 from ..config import load_settings
+from ..config.loader import load_domain_blacklist, is_blacklisted_url
 
 console = Console(force_terminal=True)
 
@@ -41,6 +42,7 @@ def scrape_jobs():
     exclude_companies = [c.lower() for c in filters.get("exclude_companies", [])]
     min_salary = filters.get("min_salary", 0)
     strict_title_match = filters.get("strict_title_match", False)
+    domain_blacklist = load_domain_blacklist()
 
     conn = get_connection()
 
@@ -102,6 +104,11 @@ def scrape_jobs():
             job_data = _row_to_dict(row)
             job_data["search_role"] = role
             job_data["search_location"] = location
+
+            if is_blacklisted_url(job_data.get("url", ""), domain_blacklist) or \
+               is_blacklisted_url(job_data.get("listing_url", ""), domain_blacklist):
+                total_skipped += 1
+                continue
 
             if _should_skip(job_data, keywords_exclude, exclude_companies, min_salary,
                            roles=roles, strict_title_match=strict_title_match):

@@ -2,6 +2,10 @@
 
 ## High Priority
 
+- [ ] Move from ad hoc cookie files toward a durable auth strategy per site. Goal: self-sufficient scrape -> tailor -> apply pipeline with Playwright-first automation, stored sessions, DOM/input-first filling, and LLM only when deterministic automation is insufficient
+- [ ] Persistent browser-profile strategy for supported boards; decide final per-site policy for LinkedIn, Indeed, ZipRecruiter, and Google Careers
+- [ ] Google Careers is blacklisted for now via config/domain_blacklist.txt because automated login/apply is not currently reliable
+
 - [ ] averture websites (like bloomberg) not completely working - fix next time but i dumped like a weekend into this lol. Just go next
 
 - [ ] working on Job #267 - playright types in constantly but 15 rounds of vision?

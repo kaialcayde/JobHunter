@@ -1,14 +1,31 @@
 # JobHunter
 
-Automated job application system that scrapes listings, tailors your resume and cover letter with AI, and submits applications.
+JobHunter is a self-sufficient resume applier. The target system is a reliable `scrape -> tailor -> apply` pipeline that uses Playwright-first browser automation, persisted sessions/cookies where possible, and LLM help only when deterministic automation is not enough.
+
+## Startup
+
+The repeated VS Code flow currently used is:
+
+1. `JobHunter: Pipeline (Refresh Profile from profile.yaml)`
+2. `JobHunter: Login`
+3. `JobHunter: Apply Only`
+
+This is useful when you want to refresh the answer bank and scrape/tailor first, then repeatedly run apply with refreshed site sessions.
+
+## Current Site Status
+
+- LinkedIn is the primary supported board today.
+- Indeed login can work, but the automated apply path is still unreliable because of Cloudflare challenges.
+- ZipRecruiter is currently treated as unsupported in the automated pipeline.
+- Google Careers is currently treated as unsupported in the automated pipeline and is blacklisted in `config/domain_blacklist.txt`.
 
 ## What It Does
 
-1. **Scrapes** job listings from Indeed, LinkedIn, Glassdoor, ZipRecruiter, and Google using [JobSpy](https://github.com/speedyapply/JobSpy)
-2. **Tailors** your resume and cover letter for each job using OpenAI GPT-4o -- never fabricates experience
-3. **Applies** automatically via browser automation (Playwright) -- fills forms, uploads docs, submits
-4. **Tracks** everything in a SQLite database with screenshots as proof
-5. **Runs daily** via Windows Task Scheduler -- hands-free job applications
+1. Scrapes jobs from configured boards with JobSpy.
+2. Tailors resume and cover letter documents with OpenAI.
+3. Applies with Playwright automation using DOM/selectors first and vision fallback second.
+4. Tracks job/application state in SQLite.
+5. Saves screenshots and logs for debugging failed flows.
 
 ## Quick Start
 
@@ -24,24 +41,23 @@ playwright install chromium
 
 ### 2. Configure
 
-Copy the example configs and fill in your details:
-
 ```bash
 copy config\profile.example.yaml config\profile.yaml
 copy config\settings.example.yaml config\settings.yaml
 ```
 
-Edit these files:
+Edit:
 
-| File | What to fill in |
-|------|----------------|
-| `.env` | Your OpenAI API key: `OPENAI_API_KEY=sk-...` |
-| `config/profile.yaml` | Name, email, phone, education, skills, links, salary preferences |
-| `config/settings.yaml` | Job roles, locations, sites, filters, daily application cap |
+| File | Purpose |
+|------|---------|
+| `.env` | API keys and optional email/registry secrets |
+| `config/profile.yaml` | Personal info, work history, skills, links, preferences |
+| `config/settings.yaml` | Search settings, automation settings, caps, supported sites |
+| `config/domain_blacklist.txt` | Domains or URL fragments to skip during scraping |
 
-### 3. Add Your Resume and Cover Letter
+### 3. Add Base Documents
 
-Export your resume and cover letter from Google Docs as `.docx` files and place them at:
+Place your base documents here:
 
 - `templates/base_resume.docx`
 - `templates/base_cover_letter.docx`
@@ -49,145 +65,135 @@ Export your resume and cover letter from Google Docs as `.docx` files and place 
 ### 4. Run
 
 ```bash
-# Full pipeline: scrape -> tailor -> apply
 python -m src pipeline
-
-# Or run steps individually
-python -m src scrape     # Scrape job listings
-python -m src tailor     # Generate tailored docs
-python -m src apply      # Submit applications
-python -m src status     # View stats
-python -m src list       # List all jobs
-python -m src list new   # Filter by status
+python -m src scrape
+python -m src tailor
+python -m src apply
+python -m src login
+python -m src login-sites
+python -m src status
+python -m src list
 ```
 
-### 5. Daily Automation (Optional)
+## VS Code Launch Configs
 
-Set up a Windows scheduled task to run the pipeline daily at 9 AM:
+Primary launch configs in `.vscode/launch.json`:
 
+- `JobHunter: Pipeline (Refresh Profile from profile.yaml)`
+- `JobHunter: Login`
+- `JobHunter: Apply Only`
+- `JobHunter: Full Pipeline (scrape -> tailor -> apply)`
+- `JobHunter: Scrape Only`
+- `JobHunter: Tailor Only`
+- `JobHunter: Login Sites (Retry)`
+- `JobHunter: Apply Job (by ID)`
+- `JobHunter: Apply Job --debug (pause after DOM fill, each vision round)`
+
+Practical repeated workflow:
+
+1. Run `JobHunter: Pipeline (Refresh Profile from profile.yaml)` to refresh the answer bank and prepare jobs.
+2. Run `JobHunter: Login` to refresh LinkedIn and Indeed auth.
+3. Run `JobHunter: Apply Only` as needed.
+
+## Login and Session Notes
+
+- `python -m src login` currently targets LinkedIn and Indeed.
+- LinkedIn session state is stored in `data/linkedin_auth.json`.
+- Other site cookies are stored in `data/site_auth/{domain}.json`.
+- Google Careers is not part of the default login flow.
+- `python -m src login-sites` refreshes default logins and then walks blocked `needs_login` domains one at a time.
+
+## Domain Blacklist
+
+`config/domain_blacklist.txt` is the plain-text control point for blocked sites.
+
+Rules:
+
+- One entry per line.
+- `domain.com` blocks that hostname and subdomains.
+- `domain.com/path` blocks URLs containing that fragment.
+- Comment out a line with `#` or delete it to re-enable that site.
+
+Examples:
+
+```txt
+indeed.com
+ziprecruiter.com
+google.com/about/careers
 ```
-schtasks /create /tn "JobHunter Daily Pipeline" /tr "C:\path\to\JobHunter\run_pipeline.bat" /sc daily /st 09:00
-```
 
-Manage the task:
-- Disable: `schtasks /change /tn "JobHunter Daily Pipeline" /disable`
-- Delete: `schtasks /delete /tn "JobHunter Daily Pipeline" /f`
+## Architecture Summary
+
+High-level flow:
+
+1. Scrape inserts `new` jobs into SQLite.
+2. Tailor generates resume/cover letter outputs and moves jobs to `tailored`.
+3. Apply uses the automation kernel to drive each job through explicit states.
+
+Important architecture rules:
+
+- Playwright first, LLM second.
+- DOM-first, vision-last for application filling.
+- Handlers return structured `StepResult` values.
+- The kernel owns state transitions.
+- Selector cache and element finder reduce hardcoded selector fragility.
+- Email polling and account registry support gated ATS flows.
+
+See [notes/ARCHITECTURE.md](C:\Users\kaina\OneDrive\Documents\JobHunter\notes\ARCHITECTURE.md) for the full architecture guide.
 
 ## Project Structure
 
-```
-JobHunter/
-├── src/                         # Application source code
-│   ├── __init__.py              # Package marker
-│   ├── __main__.py              # Entry point (python -m src)
-│   ├── cli.py                   # CLI commands & pipeline orchestration
-│   ├── db.py                    # SQLite database layer (jobs, applications, logs)
-│   ├── utils.py                 # Path constants, directory helpers
-│   ├── config/                  # Configuration loading & validation
-│   │   ├── __init__.py          # Re-exports (load_profile, load_settings, etc.)
-│   │   ├── models.py            # Pydantic models for profile.yaml & settings.yaml
-│   │   └── loader.py            # YAML loading, validation, profile summary
-│   ├── core/                    # Core business logic
-│   │   ├── __init__.py
-│   │   ├── scraper.py           # JobSpy multi-board scraping, dedup, filtering
-│   │   ├── tailoring.py         # OpenAI resume/cover letter tailoring (anti-fabrication)
-│   │   └── document.py          # DOCX/PDF generation, one-page resume enforcement
-│   └── automation/              # Browser automation
-│       ├── __init__.py          # Re-exports apply_to_jobs
-│       ├── applicant.py         # Application orchestration, round-robin, batching
-│       ├── detection.py         # CAPTCHA/login detection, button clicking (Apply/Next/Submit)
-│       └── forms.py             # Form field extraction, LLM-inferred filling, file uploads
-├── config/                      # User configuration
-│   ├── profile.example.yaml     # Template -- personal info
-│   ├── settings.example.yaml    # Template -- search params & automation settings
-│   ├── profile.yaml             # Your personal info (gitignored)
-│   └── settings.yaml            # Your search settings (gitignored)
-├── templates/                   # Resume & cover letter templates (gitignored)
-│   ├── base_resume.docx         # Your base resume
-│   └── base_cover_letter.docx   # Your base cover letter
-├── applications/                # Generated output per job (gitignored)
-│   └── {Company}/{Position}/
-│       ├── resume.docx / .pdf
-│       ├── cover_letter.docx / .pdf
-│       ├── application.json
-│       ├── pre_submit_screenshot.png
-│       └── confirmation_screenshot.png
-├── data/                        # Runtime data (gitignored)
-│   ├── jobhunter.db             # SQLite database
-│   └── logs/                    # Daily pipeline logs
-├── .env                         # API keys (gitignored)
-├── run_pipeline.bat             # Batch script for Windows Task Scheduler
-├── requirements.txt             # Python dependencies
-├── CLAUDE.md                    # AI assistant context
-└── TODO.md                      # Planned features & improvements
+```text
+src/
+  cli.py                  CLI orchestration and commands
+  db.py                   SQLite schema and queries
+  utils.py                Shared paths and helpers
+  config/
+    loader.py             YAML loading, blacklist loading, profile summary
+    models.py             Pydantic config validation
+  core/
+    scraper.py            JobSpy scraping and filtering
+    tailoring.py          OpenAI tailoring and answer inference
+    document.py           DOCX/PDF generation
+  automation/
+    applicant.py          Batch orchestration
+    kernel.py             Explicit application state machine
+    handlers.py           Stateless state handlers
+    handlers_account.py   ATS auth/registration handlers
+    results.py            HandlerResult and StepResult
+    detection.py          Apply/login/CAPTCHA detection
+    page_checks.py        Blocker checks and login recovery
+    forms.py              DOM extraction/filling and uploads
+    element_finder.py     Escalating element lookup
+    selector_cache.py     Adaptive selector memory
+    selectors.py          Intent bootstrap and selector constants
+    vision_agent.py       GPT-4o vision fallback
+    captcha_solver.py     2Captcha integration
+    email_poller.py       IMAP OTP handling
+    account_registry.py   Encrypted ATS account store
+    platforms/
+      linkedin.py         LinkedIn-specific automation
+      avature.py          Avature-specific prefill
+config/
+  profile.example.yaml
+  settings.example.yaml
+  domain_blacklist.txt
+notes/
+  ARCHITECTURE.md
+  phases/
 ```
 
-## How It Works
+## Safety and Operational Notes
 
-### Pipeline Flow
+- The system is designed to never fabricate resume experience.
+- Daily caps exist to reduce account flagging risk.
+- Some sites will still require manual intervention.
+- Debug screenshots in `data/logs/` are part of the normal debugging workflow.
+- Personal config files, runtime data, and application artifacts are gitignored.
 
-```
-scrape ──> tailor ──> apply
-  │           │          │
-  │           │          ├── Navigate to job URL
-  │           │          ├── Detect CAPTCHA / login walls
-  │           │          ├── Click Apply button
-  │           │          ├── Extract form fields (DOM inspection)
-  │           │          ├── Infer answers (LLM + profile data)
-  │           │          ├── Fill form & upload documents
-  │           │          ├── Screenshot before submit
-  │           │          ├── Submit application
-  │           │          └── Screenshot confirmation
-  │           │
-  │           ├── Load base resume/cover letter from templates/
-  │           ├── Call OpenAI to tailor for each job
-  │           └── Generate DOCX + PDF to applications/{Company}/{Position}/
-  │
-  ├── Search across role × location × site combos (parallel)
-  ├── Filter by keywords, company exclusions, min salary
-  ├── Deduplicate by URL hash
-  └── Insert new jobs into SQLite with status "new"
-```
+## References
 
-### Job Status Lifecycle
-
-```
-new ──> tailoring ──> tailored ──> applying ──> applied
- │         │                          │
- └─────────┴──────────────────────────┴──> failed
-                                      └──> failed_captcha
-                                      └──> skipped (login wall / no URL)
-```
-
-### Module Responsibilities
-
-| Package | Purpose |
-|---------|---------|
-| `src/config/` | Load and validate YAML configs via Pydantic. All config access goes through `load_profile()` / `load_settings()`. |
-| `src/core/` | Business logic with no browser dependency. Scraping, AI tailoring, and document generation. |
-| `src/automation/` | Playwright browser automation. Split into detection (what's on the page), forms (extracting and filling fields), and applicant (orchestrating the full apply flow). |
-| `src/db.py` | Single SQLite connection with WAL mode. Tracks jobs, applications, audit log, and scrape cache. |
-| `src/cli.py` | Parses CLI commands, wires together core + automation, handles logging and progress output. |
-
-## Safety
-
-- **No fabrication**: The LLM is hardcoded to never invent skills, experience, or credentials. It only reorders and rewords what is in your actual resume.
-- **Daily cap**: Default 25 applications/day (configurable in settings.yaml) to avoid account flags.
-- **Screenshots**: Saves screenshots before submission and after confirmation as an audit trail.
-- **Deduplication**: Never applies to the same job twice (tracked in database).
-- **Privacy**: All data stays local. Only outbound calls are to OpenAI (for tailoring) and job application websites.
-
-## Dependencies
-
-- Python >= 3.10
-- [JobSpy](https://github.com/speedyapply/JobSpy) -- multi-board job scraping
-- [OpenAI Python SDK](https://github.com/openai/openai-python) -- LLM API
-- [Playwright](https://playwright.dev/python/) -- browser automation
-- [python-docx](https://python-docx.readthedocs.io/) -- DOCX generation
-- [fpdf2](https://py-pdf.github.io/fpdf2/) -- PDF generation
-- [Rich](https://rich.readthedocs.io/) -- terminal output formatting
-- [Pydantic](https://docs.pydantic.dev/) -- config validation
-
-## License
-
-Personal use.
+- [CLAUDE.md](C:\Users\kaina\OneDrive\Documents\JobHunter\CLAUDE.md)
+- [LEARNINGS.md](C:\Users\kaina\OneDrive\Documents\JobHunter\LEARNINGS.md)
+- [notes/ARCHITECTURE.md](C:\Users\kaina\OneDrive\Documents\JobHunter\notes\ARCHITECTURE.md)
+- [TODO.md](C:\Users\kaina\OneDrive\Documents\JobHunter\TODO.md)

@@ -22,11 +22,11 @@ job_search:
     - "mid"
     - "senior"
   sites:
-    - "indeed"
+    # - "indeed"
     - "linkedin"
     # - "glassdoor" # broken
-    - "zip_recruiter"
-    - "google"
+    # - "zip_recruiter"
+    # - "google"
   results_per_search: 50    # per role × location × site
   hours_old: 72             # only jobs posted in last N hours
 

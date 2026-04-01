@@ -6,6 +6,8 @@ You are a principal software engineer focused on software architecture, optimiza
 ## What This Project Is
 Automated job application system for the owner (Kai Alcayde). Scrapes job listings, tailors resume/cover letter with OpenAI GPT-4o, and submits applications via Playwright browser automation.
 
+Primary goal: build a self-sufficient resume applier that can reliably run the full scrape -> tailor -> apply pipeline with minimal manual intervention. The system should persist sessions/cookies where possible so it can behave like a durable browser-based operator across repeated runs.
+
 ## Architecture
 - Keep organization as you think it should be. If you need to make a new file in a new folder, do so - do not pack in thousands of line of code into a single file.
 - **Python 3.12** project, venv at `venv/`
@@ -63,6 +65,7 @@ Automated job application system for the owner (Kai Alcayde). Scrapes job listin
 - **Read the "Clicks" section of LEARNINGS.md before changing automation code** - this section logs click/navigation failures where a button is clicked but the page doesn't transition (Apply doesn't open form, Submit doesn't submit, invisible CAPTCHA gates, etc.). Use it as context for any automation change. When a new click failure is discovered, add it with platform, URL pattern, symptom, and root cause
 - **Handler functions return StepResult, never advance workflow state** - only the kernel's transition table decides the next state. Handlers are stateless workers
 - **New element intents go in selector_cache bootstrap, not hardcoded in handlers** - add new intents to `SELECTOR_INTENTS` in `selectors.py` so the cache can learn them
+- **Playwright-first, LLM-second automation** - prefer stable Playwright selectors, DOM extraction, native input filling, stored sessions, and reusable cookies first. Use the LLM or vision agent only when deterministic browser automation is insufficient.
 - **DOM-First, Vision-Last philosophy** — DOM pre-fill handles deterministic fields (name, email, phone, address, education, languages, consent checkboxes, file uploads). Vision agent handles only unpredictable free-text fields. When adding ATS support: inspect DOM via `--debug` mode first, write a platform module if custom widgets exist, then vision cleans up the rest. Never rely on vision to brute-force fields that DOM can fill.
 - **Platform modules handle non-standard DOM** — when a major ATS uses custom dropdown/widget components that don't match standard patterns (e.g. Avature's click-to-open divs, Workday shadow DOM), create `platforms/<ats>.py` with a `prefill(page, profile, settings)` function. Register it in `platforms/__init__.py:get_platform_prefill()`. Do NOT add ATS-specific hacks to the generic `extract_form_fields`.
 - **Debug/inspect mode** — `python -m src apply-job <id> --debug` pauses after DOM pre-fill and after each vision round. Saves per-pause screenshots to `data/logs/`. Use when developing new platform modules — inspect the live browser to understand component structure before writing targeted DOM code.
