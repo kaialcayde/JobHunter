@@ -289,6 +289,31 @@ Avature (and many ATS platforms) **normalize Gmail plus-addressing**: `kalcaydec
 
 **Fix:** Keep `use_email_aliases: false` and manually seed the base email credentials via `python -m src set-account bloomberg.avature.net kalcaydecl@gmail.com Pog1ako1`. When registration detects "existing record", it switches to login and uses the stored credentials automatically.
 
+### Existing-Account Message Lives in Page Text, Not Error Selectors
+On Deloitte's custom-branded Avature host (`apply.deloitte.com`), the Register step can reject the form with the plain-text message: `An account exists with this email-ID. Please log-in to register.` This message is visible on the page after clicking `Save and continue`, but it does **not** reliably appear inside generic `.error` / `.invalid` containers.
+
+**Fix:** after a same-page Register submit, scan the visible page text for `account exists with this email-id` / `please log-in to register`, then switch to the login flow immediately instead of handing the page to the vision agent.
+
+### Canonical Auto-Register Email Should Come From The Applicant Profile
+When `use_email_aliases: false`, Avature account generation should use the canonical applicant email from `profile.yaml`, not `EMAIL_USER`. `EMAIL_USER` is also used for inbox polling and can drift or be temporarily misconfigured; that should not poison the ATS account email used on the form.
+
+**Fix:** use `profile.personal.email` as the base account email when aliases are disabled, and self-heal pending registry rows whose stored email no longer matches that canonical value.
+
+### Wrong Stored Avature Password Must Route To `needs_login`
+If Register detects an existing account and the follow-up login attempt stays on `/careers/Login` with an "incorrect username or password" message, the job is blocked on real credentials. This is not a vision-fill problem.
+
+**Fix:** treat the failed login as `needs_login` / manual credential seeding (`python -m src set-account <domain> <email> <password>`) instead of retrying vision rounds on the login page.
+
+### Preserve `fill_vision` Registry Credentials Across Retries
+The account registry row created during vision-path auto-registration uses status `fill_vision`. If `has_account()` ignores that status, every retry generates a new password and overwrites the previous row. On Avature, that destroys the only saved password that might match the account created on an earlier attempt.
+
+**Fix:** treat `fill_vision` as an existing account status in the registry so retries reuse the same credentials instead of regenerating them.
+
+### Existing-Account Login Rejection Should Not Fall Through To Generic Registration
+On Deloitte's Avature login page, a failed stored-password attempt shows `The username or password may be incorrect, or access might be restricted.` Falling through from that state into the generic `REGISTER` handler is wrong: the generic handler only fills account basics, but Deloitte's "create profile" path is really the full application form with many required fields.
+
+**Fix:** if registry login stays on the login page with an explicit bad-credentials message, return `needs_login` immediately instead of trying fresh registration.
+
 ### Template `-sample` Rows vs Live Dataset Rows
 Avature multi-row sections (education, work history) render both hidden/template controls like `6074-1-sample` and live row controls like `6074-1-0`. The template row often keeps the placeholder label text (`"School Select an option"`) while the live row label changes to include the chosen value. Label-based lookup and validation logging will drift back to the template row unless the code explicitly prefers visible non-`-sample` controls.
 
@@ -343,6 +368,104 @@ Platform module: none (create when needed)
 - Root cause: this is still a listing/search shell, not the actual application form. `is_listing_page()` was returning `False` because the page lacked the usual listing-keyword text, so the flow skipped listing recovery and handed the shell to the vision agent.
 - Fix applied: treat `apply.teksystems.com/v1/s/` with `#filter-btn-handler` and 0 form fields as a listing page. In listing recovery, try `click_apply_button()` before `force_apply_click()` so ATS pages with a visible Apply button get one normal Playwright click before URL-extraction fallback.
 
+### Real Application Form Uses Shadow/Component DOM
+- URL pattern: `apply.teksystems.com/v1/s/...`
+- Symptom: once on the real form, the old JS-based `extract_form_fields()` saw only hidden OneTrust cookie controls while screenshots clearly showed visible address, select, and grouped choice fields. Vision then spent 15 rounds re-filling `State`, `Current or most recent job title`, and grouped choice fields without progress.
+- Root cause: the visible TEKsystems application controls are not reliably reachable from plain light-DOM `document.querySelectorAll(...)` traversal. Debug dumps from the old extractor were dominated by cookie-banner elements rather than the actual form.
+- Fix applied: on the generic external-ATS path, prefer Playwright locator extraction/fill (`extract_fields(..., use_playwright=True)` / `fill_fields(..., use_playwright=True)`) before handing off to vision. Playwright locators can pierce open shadow/component boundaries. Debug mode now also saves `dom_fields.json` and `dom_answers.json` so deterministic prefill can be inspected directly.
+
+### Hidden Radio Inputs + Button-Based Selects Need Generic Normalization
+- URL pattern: `apply.teksystems.com/v1/s/...`
+- Symptom: after Playwright extraction started seeing the real form, DOM prefill still left `State`, `Are you authorized to work in 'U.S.'?`, and `How many years of work experience do you have in a 'Product 360' position?` unresolved. Vision rounds `3-15` kept re-targeting the same controls.
+- Root cause:
+  - The `State` control is a button/listbox widget whose saved answer came through as `CA`; the generic answer-bank prefill path was not re-normalizing saved values to the visible option text (`California`) before filling.
+  - The radio groups use hidden native `<input type="radio">` elements with visible wrappers; requiring the input itself to be visible caused generic extraction to skip those groups entirely.
+- Fix applied: normalize prefilled dropdown/radio answers against the field metadata before filling, and treat radio/checkbox controls as extractable when the field container is visible even if the native input is hidden. Debug mode now also dumps `dom_custom_select_options.json` after clicking extracted custom selects so option text can be inspected directly.
+
+### Machine Labels Should Not Get Deterministic LLM Answers
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: after the radio fix, the remaining unlabeled required text field under `Professional Background` still extracted as an internal id like `input-104`, and the LLM confidently answered it with `California` because the field had no trustworthy semantic label.
+- Root cause: generic answer inference was still trusting model output for machine-generated/internal labels, even though those labels provide no stable meaning.
+- Fix applied: skip answer-bank substring matching for machine labels and coerce LLM answers for machine-labeled fields back to `N/A` so vision handles them instead of submitting confidently wrong deterministic values.
+
+### Field Containers Carry Better Labels Than Placeholder/Button Text
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: the Playwright extractor kept labeling fields with placeholder examples (`123 Main St.`, `90210`) or button text (`Select a StateShow menu`, `MobileShow menu`) instead of the real prompt text, which left address/current-title inference weak and hid the actual field semantics.
+- Root cause: the usable label text lives in the nearest field container's rendered text, not always in a standalone `<label>` or accessible name. Placeholder/button text is a poor fallback on component-heavy forms.
+- Fix applied: prefer nearest field-container text as a generic metadata fallback and strip out the current value/placeholder/helper text before using it as the field label.
+
+### Lightning Shadow Hosts Expose Stable `data-id` Labels
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: the real field prompt was still missing even after container-text fallback, and the generic custom-select extraction accidentally captured unrelated footer buttons while missing/mislabeling Lightning dropdowns.
+- Root cause: these controls live inside Lightning shadow hosts such as `c-lwc-drop-down-menu data-id="country"` and `c-lwc-text-inputs data-id="zipcode"`. The most stable label is often the host's `data-id` / host text, not the inner button/input text. Also, broad `button` scans over-capture non-field buttons like `Next`.
+- Fix applied: derive generic control labels from the shadow-host chain first (especially `data-id`), and tighten custom-select extraction to true menu/combobox buttons (`button[aria-haspopup]`) instead of every visible button.
+
+### Lightning Dropdowns Use `menu` / `menuitem` And May Load Asynchronously
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: the `State` dropdown still stayed unselected even when DOM prefill had the right answer (`California`). Debug context showed the opened dropdown as a sibling panel with text `Loading`, not a populated `listbox`.
+- Root cause: this control is a Lightning `lightning-button-menu` whose opened overlay is `role="menu"` with asynchronously loaded menu items. The generic custom-select filler only tried `role="option"` / combobox paths, so it never waited for the `menuitem` choices to appear.
+- Fix applied: for `button[aria-haspopup]` controls, try a menu-button path first: open the button, poll the sibling dropdown until `Loading` is replaced by real choices, then click a matching `menuitem`/`menuitemradio` entry.
+
+### Same-Page Resume Upload Can Wipe Prefilled Fields
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: after DOM prefill successfully typed `Street Address`, the debug screenshot taken immediately after resume upload showed the street field back at its placeholder while other fields remained filled.
+- Root cause: the same-page resume upload triggers an internal reparse/re-render that can overwrite fields on the current screen after deterministic fill has already run.
+- Fix applied: when a file upload occurs on the same page, rerun DOM extraction + fill once after the upload settles, but limit that second pass to text-like fields. On this form the upload re-exposes dropdowns under their CURRENT values (`Home`, `United States`, `California`) rather than their prompts, so a full second-pass refill will corrupt selects instead of repairing them.
+
+### Street Address Uses Suggestion Selection, Not Just Text Entry
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: typing `113 South Vega St` opened a visible list of address suggestions under the street field, and the form continued to treat Street Address as unresolved until one of those suggestions was chosen.
+- Root cause: this is an address-autocomplete control. Filling the input value alone is not the same as accepting one of the suggestion rows, so dependent address state/country validation can stay unsettled.
+- Fix applied: after filling street/address-like text inputs, try a generic autocomplete-selection pass that clicks a visible suggestion matching the entered address once the suggestion list appears.
+
+### Resume Parsing Can Reintroduce Stale Contact Values
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: after uploading the resume, the live form value for `email` reverted to `kai.alcayde12@gmail.com` even though `profile.yaml`, the answer bank, and deterministic fill all use `kalcaydecl@gmail.com`.
+- Root cause: the same-page resume parser can repopulate contact fields from the uploaded resume payload, and those parsed values may be stale relative to the current profile.
+- Fix applied: keep the post-upload text-field refill path and treat profile/answer-bank values as canonical. Do not assume the ATS-parsed resume contact info is correct just because it appeared after upload.
+
+### Late-Rendered Grouped Sections Need Submit-Time Recovery
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: initial Playwright prefill found only the top 13 controls, while required grouped sections like `Talent Preferences`, text-message preference, work authorization, and `Product 360` experience only surfaced in later vision rounds after scrolling. By round `12`, the model was explicitly trying to submit, but rounds `13-15` still burned on repeated submit attempts.
+- Root cause: some single-page ATS sections are materialized later in the page flow, so the first deterministic extraction is not a complete form snapshot. Separately, the vision loop only invoked deterministic submit recovery after `status="done"` or loop-bypass heuristics, not after an explicit submit-intent batch.
+- Fix applied: when the vision batch clearly targets form submission, immediately run the same DOM submit + pre-submit sanity path instead of waiting for more vision rounds. This gives the loop a deterministic recovery point once the lower sections have been filled.
+
+### Vision `check` Actions Need DOM-Assisted Checkable Clicks
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: visible options like `Yes` and `1-3 years` stayed unresolved even after repeated vision `check` actions, and pre-submit sanity kept reporting the corresponding questions as unanswered.
+- Root cause: some ATS choice widgets are rendered as clickable labels/cards/`aria-checked` elements rather than a native checkbox/radio input sitting exactly at the model's click coordinates. A raw `mouse.click(x, y)` is too brittle for those controls.
+- Fix applied: for vision `check` actions, first search near the target coordinates for a visible checkable ancestor/label/button that matches the option text and click that DOM node. Only fall back to direct input lookup or a raw coordinate click if no semantic target is found.
+
+### Label-Backed Custom Radios Must Click The Visible `label`, Not The Hidden Input
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: debug dumps for unresolved `Yes` / `None` / `I agree to receive text messages.` options showed stable visible `LABEL` nodes like `<label ... for="a7D1...">Yes</label>`, but the radio never latched even when the right option text was found.
+- Root cause: these custom radios use a visible label wrapper with a hidden target input referenced by `for=...`. Clicking the hidden input directly is not equivalent to clicking the visible label wrapper on this widget family.
+- Fix applied: when a semantic checkable candidate is a `label`, click the visible label first and use the hidden `for` target only for checked-state verification or as a last-resort fallback.
+
+### Stable Visible Option Text Can Outperform DOM-Heuristic Check Clicking
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: per-round debug dumps showed stable visible option text nodes like `Yes`, `1-3 years`, `None`, and `I agree to receive text messages.` even when coordinate-driven or DOM-tree-driven `check` attempts still missed the intended option.
+- Root cause: the rendered text node is often a more reliable click target than whatever ancestor the DOM heuristic infers from `elementFromPoint(x, y)`, especially when the actual widget is a custom radio component with hidden internals.
+- Fix applied: for vision `check` actions with an explicit option label, try clicking the nearest visible text match to the model's target coordinates before falling back to semantic DOM probing or raw coordinate clicks.
+
+### Visible `label[for]` Radio Options Belong In Deterministic Extraction
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: debug `checkables` dumps showed that the unresolved screening questions expose stable visible labels like `<label ... for="a7D...">Yes</label>` and `<label ... for="a7DH...">1-3 years</label>`, even though the hidden inputs themselves were never picked up by the original extractor.
+- Root cause: the generic extractor only grouped native visible `input[type=radio|checkbox]` elements. On this widget family, the deterministic surface is the visible `label[for]` node and the question host text, not the hidden input.
+- Fix applied: add a Playwright-side pass that groups visible `label[for]` radio/checkbox options into deterministic question fields using the host/question text as the group label, then route them through the existing text-based answer inference and Playwright fill path before vision starts.
+
+### Repeated Label Clicks Can Toggle Custom Checkbox Answers Back Off
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: after deterministic prefill selected `Hybrid` / `Remote`, round 3 pre-submit sanity still reported `What work settings are you open to?` as unanswered, and later vision rounds kept re-selecting `Remote`.
+- Root cause: these custom checkbox groups are label-backed toggle controls. The generic scroll-refill path was re-running deterministic fill multiple times, and each `label.click()` on an already-selected option could uncheck it.
+- Fix applied: for label-backed radio/checkbox options, verify the linked checked state before clicking so repeated deterministic fill passes stay idempotent instead of toggling valid answers off.
+
+### Custom Checkboxes Need Post-Click Verification, Not Blind `check()` Success
+- URL pattern: `apply.teksystems.com/v1/s/...` (generic lesson)
+- Symptom: debug logs printed `Checked 'What work settings are you open to?' = 'Hybrid, Remote'`, but the next round's `vision_round_1_checkables.json` still showed the underlying `input[type="checkbox"]` nodes for `Hybrid` / `Remote` with `checked=false`.
+- Root cause: on this widget family, a Playwright `.check()` or label click can return without the control actually latching into the checked state. Trusting the initial action result is not enough.
+- Fix applied: after selecting any radio/checkbox option in the generic Playwright fill path, re-read the checked state. If it did not latch, fall back to the linked input's `set_checked` DOM path before considering the option filled.
+
 ---
 
 ## Workday
@@ -388,6 +511,19 @@ Until then, the generic paths in `detection.py` and `forms.py` handle most platf
 ---
 
 ## Vision Agent (External ATS)
+
+### Better DOM Structure Beats More Vision Retries
+
+When a form keeps failing on custom radios, checkboxes, dropdowns, or grouped questions, the highest-value fix is usually not more vision rounds or stronger screenshot reasoning. The better fix is to improve deterministic extraction so the system has:
+- stable question text
+- exact visible option labels
+- verified post-action state (`checked`, selected value, navigation result)
+
+If the browser layer cannot prove that a control actually latched, the vision loop will keep re-targeting the same field and produce noisy retries.
+
+### Text LLMs Work Best After Field Normalization
+
+Text-based LLM inference is still useful, but only once the form has been normalized into structured fields with clean labels and exact visible options. Do not ask the model to infer from raw page clutter, machine labels, or half-extracted grouped controls when the real problem is missing structure in the DOM layer.
 
 ### Batch Actions Over Single Actions
 

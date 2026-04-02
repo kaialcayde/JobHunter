@@ -388,6 +388,8 @@ def cmd_set_account():
     from .automation.account_registry import AccountRegistry
     registry = AccountRegistry()
     registry.seed_credentials(domain, email, password)
+    console.print(f"[green]Stored[/] credentials for {domain} ({email})")
+    return
     console.print(f"[green]✓[/] Stored credentials for {domain} ({email})")
 
 

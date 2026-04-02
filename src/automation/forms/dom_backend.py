@@ -63,7 +63,25 @@ def fill_form_fields(page, fields: list[dict], answers: dict):
             page.wait_for_timeout(100)
 
             if field["type"] == "select":
-                page.select_option(selector, label=value, timeout=5000)
+                try:
+                    page.select_option(selector, label=value, timeout=5000)
+                except Exception:
+                    options = field.get("options", []) or []
+                    matched = None
+                    value_lower = value.lower()
+                    for option in options:
+                        option_lower = option.lower()
+                        if (
+                            value_lower == option_lower
+                            or value_lower in option_lower
+                            or option_lower in value_lower
+                        ):
+                            matched = option
+                            break
+                    if matched:
+                        page.select_option(selector, label=matched, timeout=5000)
+                    else:
+                        raise
             elif field["type"] == "custom_select":
                 _fill_custom_select(page, el, value)
             elif field["type"] == "checkbox":

@@ -1,12 +1,7 @@
 # JobHunter TODO
 
 ## High Priority
-- [ ] 
-Do this # Save the JS logic in 'find_elements.js'
-with open("find_elements.js", "r") as f:
-    js_logic = f.read()
-
-candidates = page.evaluate(js_logic, args) with a master javascript logic page per folder to help reduce file sizes and imprpove organization
+- [ ] add copy of responses?
 - [ ] for debugging - second it fails stop? So we can just go debug?
 
 - [ ] Move from ad hoc cookie files toward a durable auth strategy per site. Goal: self-sufficient scrape -> tailor -> apply pipeline with Playwright-first automation, stored sessions, DOM/input-first filling, and LLM only when deterministic automation is insufficient

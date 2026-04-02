@@ -8,7 +8,7 @@ console = Console(force_terminal=True)
 
 
 def handle_avature_page(page, job, settings, resume_file, cl_file,
-                        account_registry, history) -> str:
+                        account_registry, history, debug_dir=None) -> str:
     """Handle Avature-specific page transitions deterministically."""
     from ...detection import click_next_button
     from ...forms import extract_form_fields, fill_form_fields, handle_file_uploads
@@ -124,25 +124,44 @@ def handle_avature_page(page, job, settings, resume_file, cl_file,
                         });
                         return errs.slice(0, 15);
                     }""")
+                    try:
+                        page_text = page.evaluate("() => (document.body?.innerText || '')")
+                    except Exception:
+                        page_text = ""
+                    page_text_lower = page_text.lower()
+                    existing_account_msg = (
+                        "account exists with this email-id" in page_text_lower or
+                        "please log-in to register" in page_text_lower or
+                        "please log in to register" in page_text_lower
+                    )
                     if errors:
                         console.print(f"  [yellow]Avature Register: validation errors: {errors[:5]}[/]")
+                    elif existing_account_msg:
+                        console.print("  [yellow]Avature Register: existing-account message detected[/]")
                     else:
                         console.print("  [yellow]Avature Register: page did NOT advance (no visible errors)[/]")
                     try:
-                        import os
+                        from pathlib import Path
 
-                        debug_path = os.path.join("data", "logs", "debug_avature_register_validation.png")
-                        os.makedirs(os.path.dirname(debug_path), exist_ok=True)
-                        page.screenshot(path=debug_path)
+                        target_dir = Path(debug_dir) if debug_dir else Path("data/logs")
+                        target_dir.mkdir(parents=True, exist_ok=True)
+                        debug_path = target_dir / "debug_avature_register_validation.png"
+                        page.screenshot(path=str(debug_path))
                         console.print(f"  [dim]Screenshot saved: {debug_path}[/]")
                     except Exception:
                         pass
 
                     error_text = " ".join(str(e) for e in (errors or []))
-                    if "existing record" in error_text.lower():
+                    combined_error_text = f"{error_text} {page_text_lower}".lower()
+                    if (
+                        "existing record" in combined_error_text or
+                        "account exists with this email-id" in combined_error_text or
+                        "please log-in to register" in combined_error_text or
+                        "please log in to register" in combined_error_text
+                    ):
                         console.print("  [cyan]Avature: account already exists -- switching to login[/]")
                         login_clicked = False
-                        for link_text in ["Sign In", "Log In", "Login", "Already have an account"]:
+                        for link_text in ["Sign In", "Sign-in", "Log In", "Log-in", "Login", "Already have an account"]:
                             try:
                                 link = page.get_by_role("link", name=link_text, exact=False).first
                                 if link.is_visible(timeout=1000):
@@ -151,13 +170,21 @@ def handle_avature_page(page, job, settings, resume_file, cl_file,
                                     break
                             except Exception:
                                 continue
+                            try:
+                                btn = page.get_by_role("button", name=link_text, exact=False).first
+                                if btn.is_visible(timeout=1000):
+                                    btn.click(timeout=3000)
+                                    login_clicked = True
+                                    break
+                            except Exception:
+                                continue
                         if not login_clicked:
                             try:
                                 login_clicked = page.evaluate("""() => {
-                                    for (const a of document.querySelectorAll('a')) {
-                                        const t = (a.textContent || '').toLowerCase();
-                                        if (t.includes('sign in') || t.includes('log in') || t.includes('login')) {
-                                            a.click();
+                                    for (const el of document.querySelectorAll('a, button')) {
+                                        const t = (el.textContent || '').toLowerCase();
+                                        if (t.includes('sign in') || t.includes('sign-in') || t.includes('log in') || t.includes('log-in') || t.includes('login')) {
+                                            el.click();
                                             return true;
                                         }
                                     }

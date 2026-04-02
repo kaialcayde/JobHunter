@@ -139,6 +139,7 @@ class ApplicationKernel:
         # Registry login: success retries job URL, failure falls through to fresh registration
         (State.LOGIN_REGISTRY, HandlerResult.SUCCESS): State.NAVIGATE,
         (State.LOGIN_REGISTRY, HandlerResult.FAILED): State.REGISTER,
+        (State.LOGIN_REGISTRY, HandlerResult.REQUIRES_LOGIN): State.CLEANUP,
 
         # Registration flow
         (State.REGISTER, HandlerResult.SUCCESS): State.VERIFY_REGISTRATION,

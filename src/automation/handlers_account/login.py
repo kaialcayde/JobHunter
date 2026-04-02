@@ -59,6 +59,30 @@ def handle_login_registry(page, domain: str, settings: dict, finder,
             message=f"Registry login succeeded on {domain}",
         )
 
+    login_error_text = ""
+    try:
+        login_error_text = page.evaluate("() => (document.body?.innerText || '').toLowerCase()")
+    except Exception:
+        login_error_text = ""
+
+    if any(text in login_error_text for text in (
+        "username or password may be incorrect",
+        "incorrect username or password",
+        "invalid username or password",
+        "invalid credentials",
+    )):
+        console.print(f"  [yellow]Registry login failed on {domain} -- incorrect stored credentials[/]")
+        log_action(conn, "login_registry_bad_credentials", f"Stored credentials rejected on {domain}", app_id, job_id)
+        try:
+            page.screenshot(path=f"data/logs/debug_login_registry_failed_{domain}.png")
+        except Exception:
+            pass
+        return StepResult(
+            result=HandlerResult.REQUIRES_LOGIN,
+            metadata={"domain": domain},
+            message=f"Stored credentials rejected on {domain}",
+        )
+
     console.print(f"  [yellow]Registry login failed on {domain} -- will attempt re-registration[/]")
     log_action(conn, "login_registry_failed", f"Registry login failed on {domain}", app_id, job_id)
     try:

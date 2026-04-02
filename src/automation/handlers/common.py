@@ -4,6 +4,8 @@ import logging
 
 from rich.console import Console
 
+from ..browser_scripts import evaluate_script
+
 logger = logging.getLogger(__name__)
 console = Console(force_terminal=True)
 
@@ -13,74 +15,7 @@ def _debug_dump_dom(page, debug_dir, console):
     import json as _json
 
     try:
-        result = page.evaluate("""() => {
-            const results = [];
-            const candidates = document.querySelectorAll(
-                '[class*="select"], [class*="dropdown"], [class*="combobox"], ' +
-                '[role="combobox"], [role="listbox"], [aria-haspopup], ' +
-                '[class*="Select"], [class*="Dropdown"], [class*="picker"]'
-            );
-            candidates.forEach(el => {
-                const container = el.closest(
-                    '[class*="field"], [class*="group"], [class*="row"], ' +
-                    '[class*="form"], [class*="question"]'
-                );
-                const label = container
-                    ? container.querySelector('label, [class*="label"]')
-                    : null;
-                results.push({
-                    label: label ? label.innerText.trim() : '(no label)',
-                    tag: el.tagName, className: el.className.substring(0, 120),
-                    role: el.getAttribute('role'),
-                    ariaHaspopup: el.getAttribute('aria-haspopup'),
-                    id: el.id, outerHTML: el.outerHTML.substring(0, 300)
-                });
-            });
-
-            document.querySelectorAll('select').forEach(el => {
-                const container = el.closest(
-                    '[class*="field"], [class*="group"], [class*="row"], ' +
-                    '[class*="form"], [class*="question"]'
-                );
-                const label = container
-                    ? container.querySelector('label, [class*="label"]')
-                    : null;
-                const options = Array.from(el.options).slice(0, 10).map(o => o.text);
-                results.push({
-                    label: label ? label.innerText.trim() : '(no label)',
-                    tag: 'SELECT', className: el.className.substring(0, 120),
-                    id: el.id, name: el.name, options: options,
-                    outerHTML: el.outerHTML.substring(0, 500)
-                });
-            });
-
-            const fields = [];
-            document.querySelectorAll(
-                '[class*="field"], [class*="form-group"], [class*="question"]'
-            ).forEach(el => {
-                const label = el.querySelector('label, [class*="label"]');
-                const inputs = el.querySelectorAll(
-                    'input, select, textarea, [role="combobox"], [role="listbox"]'
-                );
-                if (label && inputs.length > 0) {
-                    fields.push({
-                        label: label.innerText.trim().substring(0, 60),
-                        containerClass: el.className.substring(0, 100),
-                        containerTag: el.tagName,
-                        inputTypes: Array.from(inputs).map(i => ({
-                            tag: i.tagName, type: i.type || i.getAttribute('role') || '',
-                            className: i.className.substring(0, 80),
-                            name: i.name || i.id || ''
-                        }))
-                    });
-                }
-            });
-
-            return {
-                candidates: results, fields: fields,
-                url: window.location.href, title: document.title
-            };
-        }""")
+        result = evaluate_script(page, "debug/dump_form_widgets.js")
 
         dump_path = debug_dir / "avature_dom_dump.json"
         dump_path.write_text(_json.dumps(result, indent=2))
@@ -99,31 +34,7 @@ def _debug_dump_dom(page, debug_dir, console):
         console.print(f"  [red]DOM dump failed: {e}[/]")
 
     try:
-        all_fields = page.evaluate("""() => {
-            const fields = [];
-            document.querySelectorAll(
-                'input, select, textarea, [contenteditable="true"]'
-            ).forEach(el => {
-                if (!el.offsetParent && el.type !== 'hidden') return;
-                const container = el.closest(
-                    '[class*="field"], [class*="group"], [class*="row"], ' +
-                    '[class*="form"], [class*="question"]'
-                );
-                const label = container
-                    ? container.querySelector('label, [class*="label"]')
-                    : null;
-                fields.push({
-                    label: label ? label.innerText.trim().substring(0, 60)
-                                 : '(no label)',
-                    tag: el.tagName, type: el.type || '',
-                    name: el.name || '', id: el.id || '',
-                    className: el.className.substring(0, 80),
-                    value: (el.value || '').substring(0, 40),
-                    placeholder: el.placeholder || ''
-                });
-            });
-            return fields;
-        }""")
+        all_fields = evaluate_script(page, "debug/list_visible_form_elements.js")
         fields_path = debug_dir / "avature_all_fields.json"
         fields_path.write_text(_json.dumps(all_fields, indent=2))
         console.print(f"  [bold yellow]  All fields: {fields_path} "
@@ -142,19 +53,7 @@ def _debug_dump_dom(page, debug_dir, console):
             if el and el.is_visible():
                 el.click()
                 page.wait_for_timeout(800)
-                options = page.evaluate("""() => {
-                    const opts = document.querySelectorAll(
-                        '[role="option"], [class*="option"], li[class*="item"], ' +
-                        '.Select-menu-outer li, [class*="menu"] li, ' +
-                        '[class*="listbox"] li'
-                    );
-                    return Array.from(opts).slice(0, 15).map(o => ({
-                        tag: o.tagName, className: o.className.substring(0, 80),
-                        role: o.getAttribute('role'),
-                        text: o.innerText.trim().substring(0, 60),
-                        outerHTML: o.outerHTML.substring(0, 200)
-                    }));
-                }""")
+                options = evaluate_script(page, "debug/list_open_dropdown_options.js")
                 if options:
                     click_path = debug_dir / "avature_dropdown_click.json"
                     click_path.write_text(_json.dumps(
@@ -193,10 +92,27 @@ def _fill_password_fields(page, account_registry, settings: dict) -> bool:
             return False
         platform = detect_ats_platform(current_url) or detect_ats_platform(hostname)
         tenant = extract_tenant(hostname, platform)
+        use_alias = settings.get("automation", {}).get("use_email_aliases", False)
+        desired_email = account_registry.desired_email(
+            hostname,
+            tenant=tenant,
+            platform=platform,
+            use_alias=use_alias,
+        )
         if account_registry.has_account(hostname):
             creds = account_registry.get_credentials(hostname)
+            status = (creds or {}).get("status", "")
+            if (
+                creds
+                and desired_email
+                and not use_alias
+                and status in ("pending", "fill_vision")
+                and creds.get("email") != desired_email
+            ):
+                account_registry.sync_email(hostname, desired_email)
+                creds["email"] = desired_email
+                logger.info(f"AccountRegistry: corrected stored email for {hostname}")
         else:
-            use_alias = settings.get("automation", {}).get("use_email_aliases", False)
             creds = account_registry.generate_credentials(hostname, tenant=tenant, platform=platform, use_alias=use_alias)
             account_registry._conn.execute(
                 "UPDATE accounts SET status='fill_vision' WHERE domain=?", (hostname,)

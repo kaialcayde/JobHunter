@@ -1,8 +1,65 @@
 """Action execution helpers for the vision agent."""
 
+import re
+
 from ..browser_scripts import evaluate_script
 from ..forms import dom_fill_fallback, dom_select_fallback, find_input_at_coords
 from .common import logger
+
+
+def _extract_choice_text(text: str, reasoning: str) -> str:
+    """Pull the option label from explicit text or quoted reasoning."""
+    explicit = (text or "").strip()
+    if explicit:
+        return explicit
+    reasoning_text = reasoning or ""
+    for pattern in (r"'([^']{1,80})'", r'"([^"]{1,80})"'):
+        match = re.search(pattern, reasoning_text)
+        if match:
+            return match.group(1).strip()
+    return ""
+
+
+def _click_nearest_visible_text(page, text: str, x: int, y: int) -> bool:
+    """Click the visible text node closest to the model's target coordinates."""
+    choice_text = (text or "").strip()
+    if not choice_text:
+        return False
+
+    best = None
+    best_distance = None
+    for exact in (True, False):
+        try:
+            locators = page.get_by_text(choice_text, exact=exact).all()
+        except Exception:
+            continue
+        for loc in locators:
+            try:
+                if not loc.is_visible(timeout=100):
+                    continue
+                box = loc.bounding_box()
+                if not box:
+                    continue
+                center_x = box["x"] + (box["width"] / 2)
+                center_y = box["y"] + (box["height"] / 2)
+                distance = ((center_x - x) ** 2 + (center_y - y) ** 2) ** 0.5
+                if best is None or distance < best_distance:
+                    best = loc
+                    best_distance = distance
+            except Exception:
+                continue
+        if best is not None:
+            break
+
+    if best is None:
+        return False
+
+    try:
+        best.click(timeout=2000)
+        page.wait_for_timeout(300)
+        return True
+    except Exception:
+        return False
 
 
 def _execute_action(page, action: dict, resume_file, cl_file) -> str:
@@ -152,6 +209,22 @@ def _execute_action(page, action: dict, resume_file, cl_file) -> str:
         return f"Selected '{text}' at ({x}, {y}) [type+enter]: {reasoning}"
 
     if act == "check":
+        choice_text = _extract_choice_text(text, reasoning)
+        if _click_nearest_visible_text(page, choice_text, x, y):
+            return f"Checked option at ({x}, {y}) [text match ({choice_text[:40]})]: {reasoning}"
+        try:
+            clicked = evaluate_script(
+                page,
+                "forms/click_checkable_at_coords.js",
+                {"x": x, "y": y, "text": choice_text},
+            )
+            if clicked and clicked.get("clicked"):
+                clicked_text = (clicked.get("text") or choice_text or "").strip()
+                suffix = f" ({clicked_text[:40]})" if clicked_text else ""
+                return f"Checked option at ({x}, {y}) [DOM checkable{suffix}]: {reasoning}"
+        except Exception as e:
+            logger.debug(f"DOM checkable click failed: {e}")
+
         el_info = find_input_at_coords(page, x, y)
         if el_info and el_info.get("tagName") == "INPUT" and el_info.get("type") in ("checkbox", "radio") and el_info.get("selector"):
             try:

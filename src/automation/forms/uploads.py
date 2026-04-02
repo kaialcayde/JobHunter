@@ -5,6 +5,8 @@ from typing import Optional
 
 from rich.console import Console
 
+from ..browser_scripts import evaluate_script
+
 console = Console(force_terminal=True)
 
 
@@ -12,21 +14,10 @@ def handle_file_uploads(page, resume_file: Optional[Path], cl_file: Optional[Pat
     """Handle file upload fields and attach resume / cover letter files."""
     file_inputs = page.query_selector_all('input[type="file"]')
     generic_upload_idx = 0
+    uploaded_any = False
 
     for file_input in file_inputs:
-        label = page.evaluate("""(el) => {
-            if (el.id) {
-                const label = document.querySelector(`label[for="${el.id}"]`);
-                if (label) return label.textContent.trim().toLowerCase();
-            }
-            const parent = el.closest('label, .field, .form-group, [class*="upload"], [class*="attachment"]');
-            if (parent) {
-                const heading = parent.querySelector('h3, h4, label, .field-label, [class*="label"]');
-                if (heading) return heading.textContent.trim().toLowerCase();
-                return parent.textContent.trim().toLowerCase().slice(0, 200);
-            }
-            return '';
-        }""", file_input)
+        label = evaluate_script(file_input, "forms/get_file_input_label.js")
 
         try:
             upload_file: Optional[Path] = None
@@ -64,6 +55,7 @@ def handle_file_uploads(page, resume_file: Optional[Path], cl_file: Optional[Pat
                             page.wait_for_timeout(4000)
                             console.print(f"  Uploaded {upload_label} via file chooser ({text}): {upload_file.name}")
                             uploaded = True
+                            uploaded_any = True
                             break
                     except Exception:
                         continue
@@ -71,8 +63,10 @@ def handle_file_uploads(page, resume_file: Optional[Path], cl_file: Optional[Pat
                     file_input.set_input_files(str(upload_file))
                     page.wait_for_timeout(1500)
                     console.print(f"  Uploaded {upload_label}: {upload_file.name}")
+                    uploaded_any = True
         except Exception as e:
             if "navigation" in str(e).lower() or "destroyed" in str(e).lower():
                 console.print("  [dim]Upload triggered page navigation -- continuing[/]")
-                return
+                return uploaded_any
             console.print(f"  [yellow]File upload failed: {e}[/]")
+    return uploaded_any

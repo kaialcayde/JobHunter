@@ -60,6 +60,32 @@ class AccountRegistry:
     # Credential lifecycle
     # ------------------------------------------------------------------
 
+    def desired_email(self, domain: str, tenant: str = None,
+                      platform: str = None, use_alias: bool = True) -> str:
+        """Return the canonical applicant email for a generated ATS account."""
+        env_email = (os.environ.get("EMAIL_USER", "") or "").split("#", 1)[0].strip()
+
+        profile_email = ""
+        try:
+            from ..config.loader import load_profile
+
+            profile_email = (
+                load_profile().get("personal", {}).get("email", "") or ""
+            ).strip()
+        except Exception:
+            profile_email = ""
+
+        # When aliases are disabled, trust the applicant profile email over EMAIL_USER.
+        # EMAIL_USER is still used by the poller inbox and may drift from the form email.
+        base_email = env_email if use_alias else (profile_email or env_email)
+
+        if "@" in base_email and use_alias:
+            user, domain_part = base_email.split("@", 1)
+            tag = f"{platform or 'ats'}-{tenant or domain}"
+            return f"{user}+{tag}@{domain_part}"
+
+        return base_email
+
     def generate_credentials(self, domain: str, tenant: str = None,
                              platform: str = None, use_alias: bool = True) -> dict:
         """Generate + store credentials for a new ATS tenant account.
@@ -69,13 +95,12 @@ class AccountRegistry:
 
         Returns: {"email": str, "password": str}
         """
-        base_email = os.environ.get("EMAIL_USER", "")
-        if "@" in base_email and use_alias:
-            user, domain_part = base_email.split("@", 1)
-            tag = f"{platform or 'ats'}-{tenant or domain}"
-            alias = f"{user}+{tag}@{domain_part}"
-        else:
-            alias = base_email
+        alias = self.desired_email(
+            domain,
+            tenant=tenant,
+            platform=platform,
+            use_alias=use_alias,
+        )
 
         # Generate password meeting strict ATS requirements:
         # - 8+ chars, upper + lower + digit, no 4+ sequential letters
@@ -118,7 +143,7 @@ class AccountRegistry:
         row = self._conn.execute(
             "SELECT status FROM accounts WHERE domain = ?", (domain,)
         ).fetchone()
-        return row is not None and row[0] in ("active", "pending")
+        return row is not None and row[0] in ("active", "pending", "fill_vision")
 
     def mark_active(self, domain: str):
         self._conn.execute(
@@ -132,6 +157,14 @@ class AccountRegistry:
         self._conn.execute(
             "UPDATE accounts SET status = 'failed', notes = ? WHERE domain = ?",
             (reason, domain),
+        )
+        self._conn.commit()
+
+    def sync_email(self, domain: str, email: str):
+        """Update the stored email for an in-progress ATS account."""
+        self._conn.execute(
+            "UPDATE accounts SET email = ? WHERE domain = ?",
+            (email, domain),
         )
         self._conn.commit()
 

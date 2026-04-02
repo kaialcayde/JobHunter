@@ -99,14 +99,14 @@ def pre_submit_sanity_check(page, settings: dict) -> dict | None:
 def _dom_refill_after_captcha(page, job, settings, resume_file, cl_file):
     """Re-fill form via DOM after CAPTCHA solve."""
     try:
-        from ..forms import extract_form_fields, fill_form_fields, handle_file_uploads
+        from ..forms import extract_fields, fill_fields, handle_file_uploads
         from ...core.tailoring import infer_form_answers
 
-        dom_fields = extract_form_fields(page)
+        dom_fields = extract_fields(page, use_playwright=True)
         if dom_fields:
             console.print(f"  [dim]DOM re-fill after CAPTCHA: {len(dom_fields)} fields[/]")
             dom_answers = infer_form_answers(dom_fields, job, settings)
-            fill_form_fields(page, dom_fields, dom_answers)
+            fill_fields(page, dom_fields, dom_answers, use_playwright=True)
             handle_file_uploads(page, resume_file, cl_file)
             page.wait_for_timeout(500)
     except Exception as e:
@@ -133,8 +133,8 @@ def _try_dom_advance(page, settings, history, label: str):
     return None
 
 
-def _handle_done_status(page, settings, history, job, resume_file, cl_file):
-    """Handle vision agent 'done' status."""
+def _handle_done_status(page, settings, history, job, resume_file, cl_file, *, reported_done: bool = True):
+    """Handle a vision agent completion or explicit submit attempt."""
     actually_done = verify_submission(page, settings)
     if actually_done:
         console.print("  [green]Vision agent: application submitted![/]")
@@ -183,11 +183,19 @@ def _handle_done_status(page, settings, history, job, resume_file, cl_file):
         console.print("  [yellow]CAPTCHA blocked submit and could not be solved -- giving up[/]")
         return "captcha_failed"
 
-    console.print("  [yellow]Vision agent said 'done' but page still shows form -- continuing[/]")
-    history.append(
-        "You reported 'done' but the page still shows a form — the application was NOT submitted. "
-        "Look for a Submit/Apply/Send button and click it. If there are unfilled required fields, fill them first."
-    )
+    if reported_done:
+        console.print("  [yellow]Vision agent said 'done' but page still shows form -- continuing[/]")
+        history.append(
+            "You reported 'done' but the page still shows a form — the application was NOT submitted. "
+            "Look for a Submit/Apply/Send button and click it. If there are unfilled required fields, fill them first."
+        )
+    else:
+        console.print("  [dim]Submit intent did not submit the form -- continuing[/]")
+        history.append(
+            "A Submit action was attempted but the page still shows a form. "
+            "If there are unfilled required fields, fill them before trying Submit again. "
+            "Otherwise, click the real Submit button."
+        )
     return "continue"
 
 

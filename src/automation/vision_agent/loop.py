@@ -4,6 +4,7 @@ import base64
 import json
 import time
 
+from ..browser_scripts import load_script
 from .actions import _execute_action, _extract_batch_coords
 from .client import (
     _decide_actions,
@@ -17,9 +18,32 @@ from .common import MAX_CONSECUTIVE_SCROLLS, MAX_ROUNDS, SYSTEM_PROMPT, console,
 from .otp import _try_resolve_otp
 from .submission import _handle_done_status, _handle_stuck_status, _try_dom_advance
 
+_CHOICE_CANDIDATE_METADATA_JS = load_script("debug/choice_candidate_metadata.js")
+
+
+def _has_submit_intent(actions: list[dict]) -> bool:
+    """Return True when the model is explicitly trying to submit the application."""
+    submit_terms = (
+        "submit the application",
+        "submit application",
+        "submit button",
+        "click the submit",
+        "send application",
+        "complete application",
+        "finish application",
+    )
+    for action in actions:
+        action_text = " ".join(
+            str(action.get(key, "") or "")
+            for key in ("action", "reasoning", "text")
+        ).lower()
+        if any(term in action_text for term in submit_terms):
+            return True
+    return False
+
 
 def _run_platform_page_handler(page, job, settings, resume_file, cl_file,
-                               account_registry, history):
+                               account_registry, history, debug_dir=None):
     """Run platform-owned page handlers until they stop advancing."""
     from urllib.parse import urlparse
 
@@ -37,7 +61,16 @@ def _run_platform_page_handler(page, job, settings, resume_file, cl_file,
         if visit_count >= max_path_visits:
             break
         visited[path] = visit_count + 1
-        result = handler(page, job, settings, resume_file, cl_file, account_registry, history)
+        result = handler(
+            page,
+            job,
+            settings,
+            resume_file,
+            cl_file,
+            account_registry,
+            history,
+            debug_dir=debug_dir,
+        )
         loops += 1
         if result == "done":
             return "done"
@@ -51,10 +84,38 @@ def _run_platform_page_handler(page, job, settings, resume_file, cl_file,
     return "advanced" if loops > 0 else "none"
 
 
+def _dump_visible_checkables(page, debug_dir, round_num: int):
+    """Persist visible checkable/button candidates for post-run diagnosis in debug mode."""
+    try:
+        candidates = []
+        selector = (
+            'label, button, [role="radio"], [role="checkbox"], [aria-checked], '
+            'input[type="radio"], input[type="checkbox"]'
+        )
+        for loc in page.locator(selector).all():
+            try:
+                if not loc.is_visible(timeout=100):
+                    continue
+                meta = loc.evaluate(_CHOICE_CANDIDATE_METADATA_JS)
+                if not meta:
+                    continue
+                text = (meta.get("text") or "").strip()
+                if not text and meta.get("tag") not in {"INPUT"}:
+                    continue
+                candidates.append(meta)
+            except Exception:
+                continue
+        dump_path = debug_dir / f"vision_round_{round_num + 1}_checkables.json"
+        dump_path.write_text(json.dumps(candidates, indent=2))
+    except Exception as e:
+        logger.debug(f"Visible checkable dump failed for round {round_num + 1}: {e}")
+
+
 def run_vision_agent(page, job: dict, settings: dict,
                      resume_file=None, cl_file=None,
                      initial_history: list = None,
-                     account_registry=None) -> bool:
+                     account_registry=None,
+                     debug_dir=None) -> bool:
     """Run the vision-based browser agent to complete a job application."""
     from ...config import get_profile_summary, load_profile
     from ...db import get_connection as get_db_conn, get_saved_answers
@@ -98,7 +159,16 @@ def run_vision_agent(page, job: dict, settings: dict,
 
     console.print(f"  [magenta]Vision agent active (model: {model}, detail: {detail})[/]")
 
-    platform_result = _run_platform_page_handler(page, job, settings, resume_file, cl_file, account_registry, history)
+    platform_result = _run_platform_page_handler(
+        page,
+        job,
+        settings,
+        resume_file,
+        cl_file,
+        account_registry,
+        history,
+        debug_dir=debug_dir,
+    )
     if platform_result == "done":
         return True
     round_start_url = page.url
@@ -115,7 +185,16 @@ def run_vision_agent(page, job: dict, settings: dict,
                     if resume_already_uploaded:
                         resume_already_uploaded = False
                         console.print("  [dim]New page detected -- re-enabling resume upload[/]")
-                    platform_result = _run_platform_page_handler(page, job, settings, resume_file, cl_file, account_registry, history)
+                    platform_result = _run_platform_page_handler(
+                        page,
+                        job,
+                        settings,
+                        resume_file,
+                        cl_file,
+                        account_registry,
+                        history,
+                        debug_dir=debug_dir,
+                    )
                     if platform_result == "done":
                         return True
                     if platform_result == "advanced":
@@ -130,13 +209,14 @@ def run_vision_agent(page, job: dict, settings: dict,
 
             screenshot_b64 = _take_screenshot(page)
             try:
-                import pathlib
+                from pathlib import Path
 
-                dbg_dir = pathlib.Path("data/logs")
+                dbg_dir = Path(debug_dir) if debug_dir else Path("data/logs")
                 dbg_dir.mkdir(parents=True, exist_ok=True)
                 round_shot = dbg_dir / f"vision_round_{round_num+1}.png"
                 round_shot.write_bytes(base64.b64decode(screenshot_b64))
                 if settings.get("automation", {}).get("debug_mode"):
+                    _dump_visible_checkables(page, dbg_dir, round_num)
                     console.print(f"\n  [bold yellow]DEBUG: Vision round {round_num+1} screenshot saved: {round_shot}[/]")
                     console.print("  [bold yellow]  Inspect the browser, then press Enter to send screenshot to GPT-4o...[/]")
                     try:
@@ -347,6 +427,23 @@ def run_vision_agent(page, job: dict, settings: dict,
                         page.wait_for_timeout(2000)
                     else:
                         history.append("CAPTCHA detected after click but could not solve.")
+
+            if _has_submit_intent(actions):
+                result = _handle_done_status(
+                    page,
+                    settings,
+                    history,
+                    job,
+                    resume_file,
+                    cl_file,
+                    reported_done=False,
+                )
+                if result == "submitted":
+                    return True
+                if result == "captcha_failed":
+                    return False
+                if result == "needs_verification":
+                    return "needs_verification"
 
             time.sleep(1.0 if has_clicks else 0.5)
 

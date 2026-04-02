@@ -3,6 +3,7 @@
 import os
 import json
 import logging
+import re
 import time
 from pathlib import Path
 
@@ -207,19 +208,223 @@ def _match_answer_bank(label: str, saved: dict[str, str]) -> str | None:
     if not label:
         return None
 
+    if _is_machine_generated_label(label):
+        return None
+
+    label_lower = label.lower()
+    normalized_label = _normalize_label_for_match(label)
+
     # Exact match
     if label in saved and saved[label] != "N/A":
         return saved[label]
 
     # Keyword/substring match (case-insensitive)
-    label_lower = label.lower()
     for q_label in sorted(saved.keys(), key=len, reverse=True):
         if saved[q_label] == "N/A":
             continue
         if q_label.lower() in label_lower:
             return saved[q_label]
+        normalized_q_label = _normalize_label_for_match(q_label)
+        if normalized_q_label and normalized_q_label in normalized_label:
+            return saved[q_label]
 
     return None
+
+
+def _normalize_label_for_match(text: str) -> str:
+    """Loosen label matching for small OCR/ATS typos like doubled letters."""
+    normalized = re.sub(r"[^a-z0-9]+", " ", (text or "").lower())
+    normalized = re.sub(r"([a-z])\1+", r"\1", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
+
+
+def _is_machine_generated_label(label: str) -> bool:
+    """Return True for placeholder/internal labels like input-104."""
+    import re
+
+    normalized = (label or "").lower().strip()
+    if not normalized:
+        return True
+    return bool(re.match(r"^(input|select|textarea|field|custom_select)[-_]?\d+$", normalized))
+
+
+_STATE_NAMES = {
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PA": "Pennsylvania",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming",
+    "DC": "District of Columbia",
+}
+
+
+def _match_option_text(value: str, options: list[str]) -> str | None:
+    """Return the best visible option text for a model answer."""
+    if not value or not options:
+        return None
+
+    value_lower = value.strip().lower()
+    if not value_lower:
+        return None
+
+    for option in options:
+        option_lower = option.lower()
+        if (
+            value_lower == option_lower
+            or value_lower in option_lower
+            or option_lower in value_lower
+        ):
+            return option
+    return None
+
+
+def _desired_work_setting_options(options: list[str], profile: dict, field_type: str) -> str | None:
+    """Map a generic remote/work-setting preference to real visible option text."""
+    remote_preference = (
+        profile.get("preferences", {}).get("remote_preference", "") or ""
+    ).strip().lower()
+
+    desired_labels = []
+    if not remote_preference or remote_preference in {"any", "either", "all", "no preference"}:
+        desired_labels = ["Hybrid", "Remote", "On site"]
+    else:
+        if "hybrid" in remote_preference:
+            desired_labels.append("Hybrid")
+        if "remote" in remote_preference:
+            desired_labels.append("Remote")
+        if "site" in remote_preference or "office" in remote_preference or "onsite" in remote_preference:
+            desired_labels.append("On site")
+
+    matched = []
+    for label in desired_labels:
+        option = _match_option_text(label, options)
+        if option and option not in matched:
+            matched.append(option)
+
+    if not matched:
+        return None
+    if field_type == "checkbox_group":
+        return ", ".join(matched)
+    return matched[0]
+
+
+def _default_option_answer(field: dict, profile: dict) -> str | None:
+    """Return a safe deterministic option when the model cannot answer."""
+    options = field.get("options") or []
+    if not options:
+        return None
+
+    field_type = field.get("type", "")
+    label = " ".join(
+        str(part or "").strip()
+        for part in (field.get("label"), field.get("contextLabel"))
+        if str(part or "").strip()
+    ).lower()
+
+    if "work setting" in label or "remote" in label:
+        matched = _desired_work_setting_options(options, profile, field_type)
+        if matched:
+            return matched
+
+    if (
+        any(term in label for term in ("years of work experience", "years of experience", "experience do you have"))
+        and field_type == "radio"
+    ):
+        return _match_option_text("None", options)
+
+    return None
+
+
+def _normalize_option_answer(field: dict, answer, profile: dict):
+    """Normalize model answers to exact visible option text when possible."""
+    if answer in (None, "", "N/A"):
+        fallback = _default_option_answer(field, profile)
+        return fallback or answer
+
+    options = field.get("options") or []
+    field_type = field.get("type", "")
+    label = (field.get("label", "") or "").lower()
+    answer_text = str(answer).strip()
+    if not answer_text:
+        return answer
+
+    if "state" in label or "province" in label:
+        expanded = _STATE_NAMES.get(answer_text.upper())
+        if expanded and not options:
+            return expanded
+        if expanded:
+            matched = _match_option_text(expanded, options)
+            if matched:
+                return matched
+
+    if not options:
+        return answer
+
+    if "work setting" in label or "remote" in label:
+        matched = _desired_work_setting_options(options, profile, field_type)
+        if matched:
+            return matched
+
+    if field_type == "checkbox_group":
+        matched_tokens = []
+        for token in answer_text.replace(";", ",").split(","):
+            token = token.strip()
+            if not token:
+                continue
+            matched = _match_option_text(token, options)
+            if matched and matched not in matched_tokens:
+                matched_tokens.append(matched)
+        if matched_tokens:
+            return ", ".join(matched_tokens)
+
+    matched = _match_option_text(answer_text, options)
+    return matched or answer
 
 
 def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
@@ -331,7 +536,7 @@ def infer_form_answers(fields: list[dict], job: dict, settings: dict) -> dict:
 - Company: {job.get('company', 'N/A')}
 {fabrication_section}
 ## Form Fields
-{json.dumps([{k: v for k, v in f.items() if k != '_locator'} for f in remaining_fields], indent=2)}
+{json.dumps([{k: v for k, v in f.items() if not k.startswith('_')} for f in remaining_fields], indent=2)}
 
 ## Rules
 1. For text fields: provide the appropriate value from the profile
@@ -387,6 +592,14 @@ Return ONLY valid JSON — no explanation, no markdown fences.
     text = text.strip()
 
     answers = json.loads(text)
+    for field in fields:
+        fid = field["id"]
+        if _is_machine_generated_label(field.get("label", "")) and fid in answers:
+            answers[fid] = "N/A"
+        if fid in answers:
+            answers[fid] = _normalize_option_answer(field, answers[fid], profile)
+        if fid in prefilled:
+            prefilled[fid] = _normalize_option_answer(field, prefilled[fid], profile)
     logger.debug(f"Form answers: {json.dumps(answers, indent=2)}")
 
     # Save N/A questions to the answer bank for the user to fill in later
